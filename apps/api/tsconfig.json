@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2022",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "rootDir": "./src",
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@common/*": ["src/common/*"],
+      "@modules/*": ["src/modules/*"],
+      "@config/*": ["src/config/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "test/**/*.e2e-spec.ts"]
+}
