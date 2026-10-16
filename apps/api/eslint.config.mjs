@@ -3,7 +3,7 @@
  * ESLint configuration for the API app.
  * Extends the root config and adds Node-specific rules.
  */
-import rootConfig from '../../eslint.config.js';
+import rootConfig from '../../eslint.config.mjs';
 
 export default [
   ...rootConfig,
