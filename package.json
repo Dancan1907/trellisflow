@@ -2,6 +2,7 @@
   "name": "trellisflow",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "description": "Personal wealth platform — track personal money, investments, and businesses in one place.",
   "author": "Dancan",
   "license": "UNLICENSED",
