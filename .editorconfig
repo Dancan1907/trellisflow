@@ -1,0 +1,39 @@
+# EditorConfig: https://editorconfig.org
+# Ensures consistent editor behavior across IDEs and developers.
+
+# Top-most EditorConfig file — stops searching in parent directories.
+root = true
+
+# Default settings for every file.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+max_line_length = 100
+
+# Markdown: trailing whitespace is significant (line breaks).
+[*.md]
+trim_trailing_whitespace = false
+
+# YAML: sometimes requires 2 spaces, but no tabs.
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON: 2 spaces.
+[*.json]
+indent_size = 2
+
+# Makefiles require tabs, not spaces.
+[Makefile]
+indent_style = tab
+
+# Windows batch files: CRLF endings.
+[*.{bat,cmd}]
+end_of_line = crlf
+
+# Prisma schema files.
+[*.prisma]
+indent_size = 2
