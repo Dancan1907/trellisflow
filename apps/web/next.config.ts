@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000',
   },
   typescript: { ignoreBuildErrors: false },
-  eslint: { ignoreDuringBuilds: false },
+  // ESLint runs separately via `pnpm lint`. Disabling it during build
+  // avoids duplicate work and a Next.js 15 flat-config warning.
+  eslint: { ignoreDuringBuilds: true },
 };
 
 export default nextConfig;
