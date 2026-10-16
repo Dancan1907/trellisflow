@@ -1,0 +1,27 @@
+# Normalize line endings across all files.
+# Force LF in the repository, regardless of the developer's OS.
+# This prevents cross-platform diffs where Windows CRLF and Linux LF conflict.
+* text=auto eol=lf
+
+# Explicitly mark binary files so Git never tries to normalize them.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Keep Windows-only scripts with their native line endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Ensure consistent behavior for shell scripts (LF only).
+*.sh text eol=lf
+
+# Lockfile — treated as text, LF, never merged by hand.
+pnpm-lock.yaml text eol=lf -merge
