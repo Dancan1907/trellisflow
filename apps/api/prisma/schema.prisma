@@ -1,0 +1,19 @@
+// ============================================================================
+// TrellisFlow — Prisma Schema
+// ============================================================================
+// All models from the Project Bible (docs/07-database-schema.md).
+// PostgreSQL, UUID v7 primary keys, UTC timestamps.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Models below — added next
+// ----------------------------------------------------------------------------
