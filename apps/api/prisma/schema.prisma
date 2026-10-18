@@ -69,6 +69,7 @@ model User {
   sessions           Session[]
   verificationTokens EmailVerificationToken[]
   containers         Container[]
+  accounts           Account[]
   categories         Category[]
   transactions       Transaction[]
   recurringRules     RecurringRule[]
@@ -175,20 +176,16 @@ model Container {
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessProfile         BusinessProfile?
   externalSource          ExternalBusinessSource?
-  businessProfile         BusinessProfile?
-  externalSource          ExternalBusinessSource?
   accounts                Account[]
   categories              Category[]
   transactions            Transaction[]
   recurringRules          RecurringRule[]
+  holdings                Holding[]
   investmentEvents        InvestmentEvent[]
   summaries               Summary[]
-  summaryVersions         SummaryVersion[]
-  apiTokens               ApiToken[]
   apiTokens               ApiToken[]
   budgets                 Budget[]
   savingsGoals            SavingsGoal[]
-  debtPlans               DebtPayoffPlan[]
 
   @@index([userId, status])
   @@index([userId, type])
@@ -349,6 +346,7 @@ model Account {
   container    Container     @relation(fields: [containerId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   recurringRules RecurringRule[]
+  debtPayoffPlan  DebtPayoffPlan?
 
   @@index([userId, status])
   @@index([containerId, status])
@@ -753,6 +751,7 @@ model DebtPayoffPlan {
 
   // Relations
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@map("debt_payoff_plans")
