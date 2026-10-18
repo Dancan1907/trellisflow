@@ -74,6 +74,9 @@ model User {
   recurringRules     RecurringRule[]
   holdings           Holding[]
   investmentEvents   InvestmentEvent[]
+  summaries          Summary[]
+  summaryVersions    SummaryVersion[]
+  apiTokens          ApiToken[]
 
   @@index([status])
   @@map("users")
@@ -172,6 +175,10 @@ model Container {
   categories              Category[]
   transactions            Transaction[]
   recurringRules          RecurringRule[]
+  investmentEvents        InvestmentEvent[]
+  summaries               Summary[]
+  summaryVersions         SummaryVersion[]
+  apiTokens               ApiToken[]
 
   @@index([userId, status])
   @@index([userId, type])
@@ -513,4 +520,102 @@ model InvestmentEvent {
   @@index([containerId, date(sort: Desc)])
   @@index([relatedTransactionId])
   @@map("investment_events")
+}
+
+// ============================================================================
+// Layer 5 — Summaries (External Businesses)
+// ============================================================================
+
+enum SummaryPeriod {
+  DAY
+  WEEK
+  MONTH
+  CUSTOM
+}
+
+enum SummarySource {
+  MANUAL
+  API
+}
+
+enum ApiTokenStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+model Summary {
+  id               String        @id @db.Uuid
+  userId           String        @map("user_id") @db.Uuid
+  containerId      String        @map("container_id") @db.Uuid
+  unit             String?
+  date             DateTime      @db.Date
+  period           SummaryPeriod @default(DAY)
+  periodStart      DateTime?     @map("period_start") @db.Date
+  periodEnd        DateTime?     @map("period_end") @db.Date
+  income           Decimal       @default(0) @db.Decimal(19, 4)
+  expenses         Decimal       @default(0) @db.Decimal(19, 4)
+  transfersIn      Decimal       @default(0) @map("transfers_in") @db.Decimal(19, 4)
+  transfersOut     Decimal       @default(0) @map("transfers_out") @db.Decimal(19, 4)
+  cashBalance      Decimal       @map("cash_balance") @db.Decimal(19, 4)
+  assetsValue      Decimal       @map("assets_value") @db.Decimal(19, 4)
+  liabilitiesValue Decimal       @map("liabilities_value") @db.Decimal(19, 4)
+  currency         String        @db.VarChar(3)
+  notes            String?
+  source           SummarySource @default(MANUAL)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?     @map("deleted_at") @db.Timestamptz(6)
+
+  // Relations
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container        @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  versions SummaryVersion[]
+
+  @@unique([containerId, date, unit])
+  @@index([containerId, date(sort: Desc)])
+  @@index([userId, date(sort: Desc)])
+  @@map("summaries")
+}
+
+model SummaryVersion {
+  id            String   @id @db.Uuid
+  summaryId     String   @map("summary_id") @db.Uuid
+  versionNumber Int      @map("version_number")
+  snapshot      Json
+  editedBy      String   @map("edited_by") @db.Uuid
+  editedAt      DateTime @default(now()) @map("edited_at") @db.Timestamptz(6)
+  reason        String?
+
+  summary Summary @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+  editor  User    @relation(fields: [editedBy], references: [id], onDelete: Cascade)
+
+  @@unique([summaryId, versionNumber])
+  @@index([summaryId])
+  @@map("summary_versions")
+}
+
+model ApiToken {
+  id             String         @id @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  containerId    String         @map("container_id") @db.Uuid
+  label          String
+  tokenHash      String         @unique @map("token_hash")
+  tokenPrefix    String         @map("token_prefix")
+  scopes         Json
+  expiresAt      DateTime       @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt     DateTime?      @map("last_used_at") @db.Timestamptz(6)
+  lastUsedIp     String?        @map("last_used_ip")
+  revokedAt      DateTime?      @map("revoked_at") @db.Timestamptz(6)
+  revokedReason  String?        @map("revoked_reason")
+  status         ApiTokenStatus @default(ACTIVE)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+
+  @@index([containerId, status])
+  @@index([expiresAt])
+  @@index([userId])
+  @@map("api_tokens")
 }
