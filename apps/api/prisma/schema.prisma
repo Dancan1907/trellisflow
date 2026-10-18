@@ -72,6 +72,8 @@ model User {
   categories         Category[]
   transactions       Transaction[]
   recurringRules     RecurringRule[]
+  holdings           Holding[]
+  investmentEvents   InvestmentEvent[]
 
   @@index([status])
   @@map("users")
@@ -407,4 +409,108 @@ model RecurringRule {
   @@index([nextOccurrence])
   @@index([accountId])
   @@map("recurring_rules")
+}
+
+// ============================================================================
+// Layer 4 — Investments
+// ============================================================================
+
+enum AssetClass {
+  STOCK
+  ETF
+  BOND
+  CRYPTO
+  REAL_ESTATE
+  RETIREMENT_ACCOUNT
+  VENTURE
+  COMMODITY
+  COLLECTIBLE
+  OTHER
+}
+
+enum PricingMode {
+  MANUAL
+  AUTO
+}
+
+enum HoldingStatus {
+  OPEN
+  CLOSED
+  DELETED
+}
+
+enum InvestmentEventType {
+  BUY
+  SELL
+  DIVIDEND
+  INTEREST
+  CONTRIBUTION
+  WITHDRAWAL
+  SPLIT
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+model Holding {
+  id                String        @id @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  containerId       String        @map("container_id") @db.Uuid
+  name              String
+  assetClass        AssetClass    @map("asset_class")
+  symbol            String?
+  quantity          Decimal       @db.Decimal(24, 8)
+  costBasisTotal    Decimal       @map("cost_basis_total") @db.Decimal(19, 4)
+  currentValueTotal Decimal       @map("current_value_total") @db.Decimal(19, 4)
+  currency          String        @db.VarChar(3)
+  acquiredDate      DateTime?     @map("acquired_date") @db.Date
+  pricingMode       PricingMode   @default(MANUAL) @map("pricing_mode")
+  priceProvider     String?       @map("price_provider")
+  providerSymbol    String?       @map("provider_symbol")
+  lastPricedAt      DateTime?     @map("last_priced_at") @db.Timestamptz(6)
+  notes             String?
+  status            HoldingStatus @default(OPEN)
+  closedAt          DateTime?     @map("closed_at") @db.Timestamptz(6)
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container       @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  events InvestmentEvent[]
+
+  @@index([userId, status])
+  @@index([containerId, status])
+  @@index([userId, assetClass])
+  @@index([pricingMode, lastPricedAt])
+  @@map("holdings")
+}
+
+model InvestmentEvent {
+  id                   String              @id @db.Uuid
+  userId               String              @map("user_id") @db.Uuid
+  containerId          String              @map("container_id") @db.Uuid
+  holdingId            String?             @map("holding_id") @db.Uuid
+  eventType            InvestmentEventType @map("event_type")
+  quantity             Decimal?            @db.Decimal(24, 8)
+  pricePerUnit         Decimal?            @map("price_per_unit") @db.Decimal(19, 4)
+  totalAmount          Decimal             @map("total_amount") @db.Decimal(19, 4)
+  currency             String              @db.VarChar(3)
+  date                 DateTime            @db.Date
+  realizedGain         Decimal?            @map("realized_gain") @db.Decimal(19, 4)
+  relatedTransactionId String?             @map("related_transaction_id") @db.Uuid
+  notes                String?
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container  @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  holding   Holding?   @relation(fields: [holdingId], references: [id], onDelete: SetNull)
+
+  @@index([holdingId, date(sort: Desc)])
+  @@index([userId, date(sort: Desc)])
+  @@index([containerId, date(sort: Desc)])
+  @@index([relatedTransactionId])
+  @@map("investment_events")
 }
