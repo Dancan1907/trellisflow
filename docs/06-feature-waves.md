@@ -165,3 +165,12 @@ The build order for TrellisFlow, organized as **waves**. Each wave is a coherent
 - **Ship each wave.** Deploy, verify, tag.
 - **Don't skip.** If a later wave seems more exciting, resist.
 - **Don't add to a wave mid-flight.** New ideas go to Wave 5 or 6.
+
+## Release Milestones
+
+Not every wave is a release. Only two waves merge to `main` during initial development:
+
+- **Wave 0** → tag `v0.0.1-scaffold` (baseline skeleton).
+- **Wave 5** → tag `v1.0.0` (MVP complete).
+
+Waves 1–4 are internal milestones. Work accumulates on `develop`. See chapter 15 for the full Git strategy.
