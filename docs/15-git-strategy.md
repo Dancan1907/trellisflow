@@ -100,14 +100,22 @@ If either fails, the commit is rejected. Fix and retry.
 
 ## Tags & Releases
 
-- `v0.0.1-scaffold` — Wave 0 complete.
-- `v0.1.0` — Wave 1 (V0.1 "First Ship").
-- `v0.2.0` — Wave 2 (Investments).
-- `v0.3.0` — Wave 3 (Internal Businesses).
-- `v0.4.0` — Wave 4 (External Manual).
-- `v1.0.0` — Wave 5 (MVP Complete).
+`main` receives merges **only at major release milestones**. Waves 1–4 are internal milestones that accumulate on `develop` and do not touch `main`.
 
-Each release has GitHub Release notes.
+### Release Milestones
+
+| Milestone                  | Tag               | When         |
+| -------------------------- | ----------------- | ------------ |
+| Wave 0 complete (scaffold) | `v0.0.1-scaffold` | After Wave 0 |
+| Wave 5 complete (MVP)      | `v1.0.0`          | After Wave 5 |
+
+After v1.0.0, subsequent releases are tagged `v1.1.0`, `v1.2.0`, etc., each merged to `main` from `develop` when ready to ship.
+
+### Why Only Two Merges During Initial Development?
+
+- `main` represents **released, user-facing versions**.
+- Waves 1–4 are internal build phases; there is no released product yet.
+- This mirrors professional GitFlow: `develop` is the integration line, `main` is the release line.
 
 ## Local Git Configuration
 
