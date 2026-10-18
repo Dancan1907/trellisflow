@@ -3,6 +3,16 @@
 // ============================================================================
 // All models from the Project Bible (docs/07-database-schema.md).
 // PostgreSQL, UUID v7 primary keys, UTC timestamps.
+//
+// Layers:
+//   1. Identity       — User, Session, EmailVerificationToken
+//   2. Containers     — Container, BusinessProfile, ExternalBusinessSource
+//   3. Money Core     — Category, Account, Transaction, RecurringRule
+//   4. Investments    — Holding, InvestmentEvent
+//   5. Summaries      — Summary, SummaryVersion, ApiToken
+//   6. Planning       — Budget, SavingsGoal, DebtPayoffPlan
+//   7. Reporting      — NetWorthSnapshot, Insight
+//   8. System         — AuditLog, JobRun
 
 generator client {
   provider = "prisma-client-js"
@@ -14,4 +24,85 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Models will be added layer by layer below.
+// ============================================================================
+// Layer 1 — Identity
+// ============================================================================
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum UserTier {
+  FREE
+  PAID
+}
+
+enum PersonaHint {
+  EMPLOYEE
+  INVESTOR
+  BUSINESS_OWNER
+  MULTI_BUSINESS_OWNER
+}
+
+enum VerificationPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model User {
+  id                String         @id @db.Uuid
+  email             String         @unique
+  emailVerifiedAt   DateTime?      @map("email_verified_at") @db.Timestamptz(6)
+  passwordHash      String         @map("password_hash")
+  name              String
+  timezone          String         @default("UTC")
+  reportingCurrency String         @default("USD") @map("reporting_currency") @db.VarChar(3)
+  tier              UserTier       @default(FREE)
+  personaHint       PersonaHint?   @map("persona_hint")
+  status            UserStatus     @default(ACTIVE)
+  deletedAt         DateTime?      @map("deleted_at") @db.Timestamptz(6)
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sessions           Session[]
+  verificationTokens EmailVerificationToken[]
+
+  @@index([status])
+  @@map("users")
+}
+
+model Session {
+  id         String    @id @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  userAgent  String?   @map("user_agent")
+  ipAddress  String?   @map("ip_address")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastUsedAt DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model EmailVerificationToken {
+  id        String              @id @db.Uuid
+  userId    String              @map("user_id") @db.Uuid
+  tokenHash String              @unique @map("token_hash")
+  purpose   VerificationPurpose
+  expiresAt DateTime            @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime?           @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
+}
