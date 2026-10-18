@@ -69,6 +69,9 @@ model User {
   sessions           Session[]
   verificationTokens EmailVerificationToken[]
   containers         Container[]
+  categories         Category[]
+  transactions       Transaction[]
+  recurringRules     RecurringRule[]
 
   @@index([status])
   @@map("users")
@@ -161,6 +164,12 @@ model Container {
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessProfile         BusinessProfile?
   externalSource          ExternalBusinessSource?
+  businessProfile         BusinessProfile?
+  externalSource          ExternalBusinessSource?
+  accounts                Account[]
+  categories              Category[]
+  transactions            Transaction[]
+  recurringRules          RecurringRule[]
 
   @@index([userId, status])
   @@index([userId, type])
@@ -198,4 +207,204 @@ model ExternalBusinessSource {
 
   @@index([lastSummaryAt])
   @@map("external_business_sources")
+}
+
+// ============================================================================
+// Layer 3 — Money Core
+// ============================================================================
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+enum AccountCategory {
+  ASSET
+  LIABILITY
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+  MOBILE_MONEY
+  PREPAID_CARD
+  INVESTMENT_ACCOUNT
+  CREDIT_CARD
+  PERSONAL_LOAN
+  MORTGAGE
+  OVERDRAFT
+  CUSTOM
+}
+
+enum AccountStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionSource {
+  MANUAL
+  RECURRING
+  IMPORTED
+  SYNCED
+}
+
+enum TransactionStatus {
+  PENDING
+  POSTED
+  RECONCILED
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum RecurringStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+  DELETED
+}
+
+model Category {
+  id          String       @id @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  containerId String?      @map("container_id") @db.Uuid
+  parentId    String?      @map("parent_id") @db.Uuid
+  name        String
+  type        CategoryType
+  icon        String?
+  color       String?
+  sortOrder   Int          @default(0) @map("sort_order")
+  isSystem    Boolean      @default(false) @map("is_system")
+  status      ContainerStatus @default(ACTIVE)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container    Container?    @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  parent       Category?     @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]    @relation("CategoryHierarchy")
+  transactions Transaction[]
+
+  @@index([userId, type, status])
+  @@index([userId, containerId])
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Account {
+  id             String          @id @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  containerId    String          @map("container_id") @db.Uuid
+  name           String
+  category       AccountCategory
+  accountType    AccountType     @default(CUSTOM) @map("account_type")
+  currency       String          @db.VarChar(3)
+  currentBalance Decimal         @default(0) @map("current_balance") @db.Decimal(19, 4)
+  institution    String?
+  notes          String?
+  status         AccountStatus   @default(ACTIVE)
+  archivedAt     DateTime?       @map("archived_at") @db.Timestamptz(6)
+  deletedAt      DateTime?       @map("deleted_at") @db.Timestamptz(6)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container    Container     @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  recurringRules RecurringRule[]
+
+  @@index([userId, status])
+  @@index([containerId, status])
+  @@index([userId, category])
+  @@map("accounts")
+}
+
+model Transaction {
+  id               String            @id @db.Uuid
+  userId           String            @map("user_id") @db.Uuid
+  containerId      String            @map("container_id") @db.Uuid
+  accountId        String            @map("account_id") @db.Uuid
+  type             TransactionType
+  amount           Decimal           @db.Decimal(19, 4)
+  currency         String            @db.VarChar(3)
+  date             DateTime          @db.Date
+  categoryId       String?           @map("category_id") @db.Uuid
+  description      String
+  notes            String?
+  transferPairId   String?           @map("transfer_pair_id") @db.Uuid
+  recurringRuleId  String?           @map("recurring_rule_id") @db.Uuid
+  source           TransactionSource @default(MANUAL)
+  idempotencyKey   String?           @map("idempotency_key")
+  status           TransactionStatus @default(POSTED)
+  deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container     Container      @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date(sort: Desc)])
+  @@index([accountId, date(sort: Desc)])
+  @@index([containerId, date(sort: Desc)])
+  @@index([categoryId, date])
+  @@index([transferPairId])
+  @@index([userId, idempotencyKey])
+  @@map("transactions")
+}
+
+model RecurringRule {
+  id                  String            @id @db.Uuid
+  userId              String            @map("user_id") @db.Uuid
+  containerId         String            @map("container_id") @db.Uuid
+  accountId           String            @map("account_id") @db.Uuid
+  type                TransactionType
+  amount              Decimal           @db.Decimal(19, 4)
+  currency            String            @db.VarChar(3)
+  categoryId          String?           @map("category_id") @db.Uuid
+  transferToAccountId String?           @map("transfer_to_account_id") @db.Uuid
+  description         String
+  frequency           RecurringFrequency
+  interval            Int               @default(1)
+  dayOfWeek           Int?              @map("day_of_week")
+  dayOfMonth          Int?              @map("day_of_month")
+  startDate           DateTime          @map("start_date") @db.Date
+  endDate             DateTime?         @map("end_date") @db.Date
+  nextOccurrence      DateTime          @map("next_occurrence") @db.Date
+  lastGeneratedAt     DateTime?         @map("last_generated_at") @db.Date
+  status              RecurringStatus   @default(ACTIVE)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container    Container     @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId, status])
+  @@index([nextOccurrence])
+  @@index([accountId])
+  @@map("recurring_rules")
 }
