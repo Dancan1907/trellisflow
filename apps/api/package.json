@@ -2,6 +2,7 @@
   "name": "@trellisflow/api",
   "version": "0.0.1",
   "private": true,
+  "type": "commonjs",
   "description": "TrellisFlow backend API — NestJS + Prisma + PostgreSQL",
   "scripts": {
     "dev": "nest start --watch",

@@ -10,7 +10,7 @@
  *   6. Starts the HTTP server.
  */
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
@@ -43,7 +43,7 @@ async function bootstrap() {
 
   // Global API prefix (all routes under /api, except Swagger).
   app.setGlobalPrefix('api', {
-    exclude: ['health'],
+    exclude: [{ path: 'health', method: RequestMethod.GET }],
   });
 
   // Read port from config (default 3000).
