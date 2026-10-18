@@ -82,6 +82,7 @@ model User {
   debtPlans          DebtPayoffPlan[]
   netWorthSnapshots  NetWorthSnapshot[]
   insights           Insight[]
+  auditLogs          AuditLog[]
 
   @@index([status])
   @@map("users")
@@ -832,4 +833,71 @@ model Insight {
   @@index([userId, type])
   @@index([expiresAt])
   @@map("insights")
+}
+
+// ============================================================================
+// Layer 8 — System
+// ============================================================================
+
+enum ActorType {
+  USER
+  SYSTEM
+  EXTERNAL_API
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  ARCHIVE
+  UNARCHIVE
+}
+
+enum JobStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+model AuditLog {
+  id            String       @id @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  actorType     ActorType    @map("actor_type")
+  actorId       String?      @map("actor_id") @db.Uuid
+  entityType    String       @map("entity_type")
+  entityId      String       @map("entity_id") @db.Uuid
+  action        AuditAction
+  before        Json?
+  after         Json?
+  changedFields String[]     @map("changed_fields")
+  ipAddress     String?      @map("ip_address")
+  userAgent     String?      @map("user_agent")
+  requestId     String?      @map("request_id") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([userId, entityType, action])
+  @@map("audit_logs")
+}
+
+model JobRun {
+  id             String    @id @db.Uuid
+  jobName        String    @map("job_name")
+  startedAt      DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(6)
+  status         JobStatus @default(RUNNING)
+  processedCount Int       @default(0) @map("processed_count")
+  failedCount    Int       @default(0) @map("failed_count")
+  errorMessage   String?   @map("error_message")
+  metadata       Json?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([jobName, startedAt(sort: Desc)])
+  @@index([status])
+  @@map("job_runs")
 }
