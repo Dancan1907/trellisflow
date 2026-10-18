@@ -77,6 +77,9 @@ model User {
   summaries          Summary[]
   summaryVersions    SummaryVersion[]
   apiTokens          ApiToken[]
+  budgets            Budget[]
+  savingsGoals       SavingsGoal[]
+  debtPlans          DebtPayoffPlan[]
 
   @@index([status])
   @@map("users")
@@ -179,6 +182,10 @@ model Container {
   summaries               Summary[]
   summaryVersions         SummaryVersion[]
   apiTokens               ApiToken[]
+  apiTokens               ApiToken[]
+  budgets                 Budget[]
+  savingsGoals            SavingsGoal[]
+  debtPlans               DebtPayoffPlan[]
 
   @@index([userId, status])
   @@index([userId, type])
@@ -618,4 +625,132 @@ model ApiToken {
   @@index([expiresAt])
   @@index([userId])
   @@map("api_tokens")
+}
+
+// ============================================================================
+// Layer 6 — Planning (Budgets, Goals, Debt)
+// ============================================================================
+
+enum BudgetPeriod {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum BudgetMethod {
+  TARGET
+  ENVELOPE
+}
+
+enum BudgetStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+enum GoalStatus {
+  ACTIVE
+  ACHIEVED
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+enum DebtMethod {
+  SNOWBALL
+  AVALANCHE
+  CUSTOM
+}
+
+enum DebtStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+model Budget {
+  id              String         @id @db.Uuid
+  userId          String         @map("user_id") @db.Uuid
+  containerId     String         @map("container_id") @db.Uuid
+  categoryId      String         @map("category_id") @db.Uuid
+  amount          Decimal        @db.Decimal(19, 4)
+  currency        String         @db.VarChar(3)
+  period          BudgetPeriod   @default(MONTHLY)
+  periodStart     DateTime?      @map("period_start") @db.Date
+  periodEnd       DateTime?      @map("period_end") @db.Date
+  rollover        Boolean        @default(false)
+  rolloverBalance Decimal        @default(0) @map("rollover_balance") @db.Decimal(19, 4)
+  method          BudgetMethod   @default(TARGET)
+  status          BudgetStatus   @default(ACTIVE)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+
+  @@unique([containerId, categoryId, status])
+  @@index([userId, containerId, status])
+  @@index([userId, period])
+  @@map("budgets")
+}
+
+model SavingsGoal {
+  id                String     @id @db.Uuid
+  userId            String     @map("user_id") @db.Uuid
+  containerId       String     @map("container_id") @db.Uuid
+  name              String
+  targetAmount      Decimal    @map("target_amount") @db.Decimal(19, 4)
+  currency          String     @db.VarChar(3)
+  targetDate        DateTime?  @map("target_date") @db.Date
+  linkedAccountId   String?    @map("linked_account_id") @db.Uuid
+  manualSavedAmount Decimal?   @map("manual_saved_amount") @db.Decimal(19, 4)
+  icon              String?
+  color             String?
+  notes             String?
+  status            GoalStatus @default(ACTIVE)
+  achievedAt        DateTime?  @map("achieved_at") @db.Timestamptz(6)
+  deletedAt         DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([containerId, status])
+  @@index([linkedAccountId])
+  @@map("savings_goals")
+}
+
+model DebtPayoffPlan {
+  id                     String     @id @db.Uuid
+  userId                 String     @map("user_id") @db.Uuid
+  accountId              String     @unique @map("account_id") @db.Uuid
+  method                 DebtMethod @default(SNOWBALL)
+  extraMonthlyPayment    Decimal    @map("extra_monthly_payment") @db.Decimal(19, 4)
+  minimumPayment         Decimal    @map("minimum_payment") @db.Decimal(19, 4)
+  interestRate           Decimal    @map("interest_rate") @db.Decimal(9, 6)
+  projectedPayoffDate    DateTime?  @map("projected_payoff_date") @db.Date
+  projectedInterestPaid  Decimal?   @map("projected_interest_paid") @db.Decimal(19, 4)
+  notes                  String?
+  status                 DebtStatus @default(ACTIVE)
+  completedAt            DateTime?  @map("completed_at") @db.Timestamptz(6)
+  deletedAt              DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  createdAt              DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("debt_payoff_plans")
 }
