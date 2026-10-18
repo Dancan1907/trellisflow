@@ -14,6 +14,4 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ----------------------------------------------------------------------------
-// Models below — added next
-// ----------------------------------------------------------------------------
+// Models will be added layer by layer below.
