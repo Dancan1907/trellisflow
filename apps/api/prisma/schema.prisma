@@ -80,6 +80,8 @@ model User {
   budgets            Budget[]
   savingsGoals       SavingsGoal[]
   debtPlans          DebtPayoffPlan[]
+  netWorthSnapshots  NetWorthSnapshot[]
+  insights           Insight[]
 
   @@index([status])
   @@map("users")
@@ -753,4 +755,81 @@ model DebtPayoffPlan {
 
   @@index([userId, status])
   @@map("debt_payoff_plans")
+}
+
+// ============================================================================
+// Layer 7 — Reporting
+// ============================================================================
+
+enum InsightType {
+  STALE_SUMMARY
+  TOKEN_EXPIRING
+  BUDGET_OVERSPENT
+  BUDGET_NEAR_LIMIT
+  GOAL_ACHIEVED
+  GOAL_BEHIND
+  NET_WORTH_MILESTONE
+  UNUSUAL_SPENDING
+  DEBT_COMPLETED
+  OPTIMIZATION_OPPORTUNITY
+  REBALANCE_SUGGESTED
+  PROFIT_DECLINE
+  RUNWAY_LOW
+}
+
+enum InsightSeverity {
+  INFO
+  OPPORTUNITY
+  WARNING
+}
+
+enum InsightStatus {
+  ACTIVE
+  DISMISSED
+  EXPIRED
+}
+
+model NetWorthSnapshot {
+  id                    String   @id @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  date                  DateTime @db.Date
+  totalNetWorth         Decimal  @map("total_net_worth") @db.Decimal(19, 4)
+  personalNetWorth      Decimal  @map("personal_net_worth") @db.Decimal(19, 4)
+  investmentsNetWorth   Decimal  @map("investments_net_worth") @db.Decimal(19, 4)
+  businessesNetWorth    Decimal  @map("businesses_net_worth") @db.Decimal(19, 4)
+  breakdown             Json
+  currency              String   @db.VarChar(3)
+  computedAt            DateTime @default(now()) @map("computed_at") @db.Timestamptz(6)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date(sort: Desc)])
+  @@map("net_worth_snapshots")
+}
+
+model Insight {
+  id                   String          @id @db.Uuid
+  userId               String          @map("user_id") @db.Uuid
+  type                 InsightType
+  severity             InsightSeverity
+  title                String
+  message              String
+  relatedContainerId   String?         @map("related_container_id") @db.Uuid
+  relatedEntityType    String?         @map("related_entity_type")
+  relatedEntityId      String?         @map("related_entity_id") @db.Uuid
+  actionUrl            String?         @map("action_url")
+  metadata             Json?
+  status               InsightStatus   @default(ACTIVE)
+  dismissedAt          DateTime?       @map("dismissed_at") @db.Timestamptz(6)
+  expiresAt            DateTime?       @map("expires_at") @db.Timestamptz(6)
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@map("insights")
 }
