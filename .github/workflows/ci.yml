@@ -1,14 +1,6 @@
 # ============================================================================
 # TrellisFlow — Continuous Integration
 # ============================================================================
-# Runs on every push and PR targeting `main` or `develop`.
-#
-# Jobs:
-#   1. lint      — ESLint across all packages
-#   2. typecheck — TypeScript compilation check
-#   3. build     — Production build of all packages
-#
-# Every job must pass before a PR can be merged.
 
 name: CI
 
@@ -45,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client
+        run: pnpm --filter @trellisflow/api exec prisma generate
+
       - name: Lint
         run: pnpm lint
 
@@ -67,6 +62,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client
+        run: pnpm --filter @trellisflow/api exec prisma generate
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -88,6 +86,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @trellisflow/api exec prisma generate
 
       - name: Build
         run: pnpm build
