@@ -19,7 +19,7 @@ export class AppController {
    */
   @Get()
   @ApiOperation({ summary: 'Health check' })
-  getHealth() {
+  async getHealth() {
     return this.appService.getHealth();
   }
 }
