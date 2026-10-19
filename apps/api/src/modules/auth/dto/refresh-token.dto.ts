@@ -1,12 +1,15 @@
 // ============================================================================
 // Refresh Token DTO
 // ============================================================================
-// Note: In the actual web app, the refresh token comes from an httpOnly cookie.
-// But mobile apps will send it in the body. This DTO supports both.
 
+import { ApiProperty } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 
 export class RefreshTokenDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'The refresh token issued during login or signup',
+  })
   @IsString()
   refreshToken: string;
 }
