@@ -7,6 +7,9 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
+import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 
@@ -17,25 +20,74 @@ export class AuthController {
 
   @Post('signup')
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User created successfully.' })
-  @ApiResponse({ status: 409, description: 'Email already exists.' })
+  @ApiResponse({
+    status: 201,
+    description: 'User created successfully.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Email already exists.',
+  })
   async signup(@Body() dto: SignupDto) {
     return this.authService.signup(dto);
   }
 
   @Post('login')
-  @HttpCode(HttpStatus.OK) // POST usually returns 201, but login is a 200 OK
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate a user' })
-  @ApiResponse({ status: 200, description: 'Login successful.' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials.',
+  })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get a new access token using a refresh token',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens refreshed successfully.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired refresh token.',
+  })
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshTokens(dto.refreshToken);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request a password reset token',
+  })
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reset password using a token',
+  })
+  async confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
+    return this.authService.confirmPasswordReset(dto.token, dto.newPassword);
+  }
+
   @Get('me')
-  @UseGuards(JwtAuthGuard) // <--- THIS LOCKS THE ROUTE
-  @ApiBearerAuth() // <--- Tells Swagger to use the lock icon
-  @ApiOperation({ summary: 'Get the currently authenticated user' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get the currently authenticated user',
+  })
   async getMe(@CurrentUser() user: any) {
     return user;
   }
