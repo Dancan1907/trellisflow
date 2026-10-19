@@ -2,11 +2,13 @@
 // Auth Controller
 // ============================================================================
 
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -28,5 +30,13 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials.' })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard) // <--- THIS LOCKS THE ROUTE
+  @ApiBearerAuth() // <--- Tells Swagger to use the lock icon
+  @ApiOperation({ summary: 'Get the currently authenticated user' })
+  async getMe(@CurrentUser() user: any) {
+    return user;
   }
 }
