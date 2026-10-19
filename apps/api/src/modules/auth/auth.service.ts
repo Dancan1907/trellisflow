@@ -1,7 +1,3 @@
-// ============================================================================
-// Auth Service
-// ============================================================================
-
 import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -27,7 +23,6 @@ export class AuthService {
    * 4. Generate tokens.
    */
   async signup(dto: SignupDto) {
-    // 1. Check for existing user
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -36,11 +31,8 @@ export class AuthService {
       throw new ConflictException('Email is already registered');
     }
 
-    // 2. Hash the password (Argon2id)
     const passwordHash = await argon2.hash(dto.password);
 
-    // 3. Create the user and container in a single DB transaction.
-    // If either fails, both are rolled back.
     const user = await this.prisma.user.create({
       data: {
         id: randomUUID(),
@@ -62,7 +54,6 @@ export class AuthService {
       },
     });
 
-    // 4. Generate tokens
     const tokens = await this.generateTokens(user.id, user.email);
 
     return {
@@ -86,7 +77,6 @@ export class AuthService {
       where: { email: dto.email.toLowerCase() },
     });
 
-    // Use a generic message so we don't reveal if the email exists.
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -110,18 +100,139 @@ export class AuthService {
   }
 
   /**
+   * Refresh Token
+   * Validates a refresh token and issues a new access token + refresh token pair.
+   */
+  async refreshTokens(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user || user.deletedAt) {
+        throw new UnauthorizedException('User no longer exists');
+      }
+
+      return this.generateTokens(user.id, user.email);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+
+  /**
+   * Request Password Reset
+   * Generates a short-lived token and saves it to the DB.
+   */
+  async requestPasswordReset(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: email.toLowerCase(),
+      },
+    });
+
+    // Security: Always return success, even if email doesn't exist.
+    if (!user) {
+      return {
+        message: 'If that email exists, a reset link has been sent.',
+      };
+    }
+
+    const rawToken = randomUUID();
+    const tokenHash = await argon2.hash(rawToken);
+
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        id: randomUUID(),
+        userId: user.id,
+        tokenHash,
+        purpose: 'PASSWORD_RESET',
+        expiresAt,
+      },
+    });
+
+    // In production, send via email.
+    // Returning for Swagger/testing only.
+    return {
+      message: 'If that email exists, a reset link has been sent.',
+      devToken: rawToken,
+    };
+  }
+
+  /**
+   * Confirm Password Reset
+   * Verifies the token and updates the password.
+   */
+  async confirmPasswordReset(rawToken: string, newPassword: string) {
+    const tokens = await this.prisma.emailVerificationToken.findMany({
+      where: {
+        purpose: 'PASSWORD_RESET',
+        usedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    let validToken = null;
+
+    for (const token of tokens) {
+      if (await argon2.verify(token.tokenHash, rawToken)) {
+        validToken = token;
+        break;
+      }
+    }
+
+    if (!validToken) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    const newHash = await argon2.hash(newPassword);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: {
+          id: validToken.userId,
+        },
+        data: {
+          passwordHash: newHash,
+        },
+      }),
+
+      this.prisma.emailVerificationToken.update({
+        where: {
+          id: validToken.id,
+        },
+        data: {
+          usedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return {
+      message: 'Password has been reset successfully.',
+    };
+  }
+
+  /**
    * Helper: Generate JWT Access Token and Refresh Token
    */
   private async generateTokens(userId: string, email: string) {
-    const payload = { sub: userId, email };
+    const payload = {
+      sub: userId,
+      email,
+    };
 
-    // 1. Access Token (short-lived, 15m)
     const accessToken = await this.jwtService.signAsync(payload);
 
-    // 2. Refresh Token (long-lived)
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get('JWT_REFRESH_SECRET'),
-      expiresIn: '30d', // We'll make this dynamic later based on rememberMe
+      expiresIn: '30d',
     });
 
     return {
