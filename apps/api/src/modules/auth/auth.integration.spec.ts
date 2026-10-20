@@ -6,6 +6,19 @@ import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../../common/services/email.service';
 import { ConflictException } from '@nestjs/common';
 
+// Use real secrets from process.env (loaded by test/setup.ts).
+const mockConfig = {
+  get: jest.fn((key: string) => {
+    const config = {
+      JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'test-access-secret',
+      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'test-refresh-secret',
+      JWT_ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY || '15m',
+    };
+
+    return config[key as keyof typeof config];
+  }),
+};
+
 // We are NOT mocking Prisma here. We are using the real database.
 describe('AuthService (Integration)', () => {
   let service: AuthService;
@@ -19,7 +32,10 @@ describe('AuthService (Integration)', () => {
         AuthService,
         PrismaService, // Real Prisma
         JwtService,
-        ConfigService,
+        {
+          provide: ConfigService,
+          useValue: mockConfig,
+        },
         EmailService,
       ],
     }).compile();
@@ -29,7 +45,7 @@ describe('AuthService (Integration)', () => {
   });
 
   afterAll(async () => {
-    // Clean up ALL integration test users, just in case old ones are stuck.
+    // Clean up all integration test users, including leftovers from previous runs.
     await prisma.user.deleteMany({
       where: {
         email: {
@@ -50,7 +66,7 @@ describe('AuthService (Integration)', () => {
 
     expect(result.user.email).toBe(testEmail);
 
-    // Query the database directly to verify it was saved.
+    // Query the database directly to verify the user was saved.
     const userInDb = await prisma.user.findUnique({
       where: { email: testEmail },
       include: { containers: true },
@@ -61,8 +77,7 @@ describe('AuthService (Integration)', () => {
     expect(userInDb?.containers[0].type).toBe('PERSONAL');
   });
 
-  it('should throw a Prisma error if we try to sign up with the same email twice', async () => {
-    // We already created the user in the previous test.
+  it('should throw a ConflictException if we try to sign up with the same email twice', async () => {
     await expect(
       service.signup({
         email: testEmail,
