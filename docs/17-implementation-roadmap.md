@@ -30,28 +30,30 @@
 
 ### 1.1 — Database & Prisma
 
-- ☐ `prisma/schema.prisma` — all 22 tables
-- ☐ Prisma service + module
-- ☐ Pooled + direct DB URLs
-- ☐ First migration
-- ☐ Seed script
+- ☑ `prisma/schema.prisma` — all 22 tables
+- ☑ Prisma service + module
+- ☑ Pooled + direct DB URLs
+- ☑ First migration
+- ☑ Seed script
 - ☐ Prisma tenant extension (auto `user_id` scoping)
 - ☐ Unit tests for tenant extension
 
 ### 1.2 — Auth Module
 
-- ☐ Auth module skeleton
-- ☐ Signup endpoint (Argon2id)
-- ☐ Login endpoint (JWT + refresh)
-- ☐ Refresh endpoint (rotation)
-- ☐ Logout + logout-all
-- ☐ Password reset (request + confirm)
-- ☐ Email verification (request + confirm + resend)
-- ☐ `JwtAuthGuard` + `@CurrentUser()`
-- ☐ Rate limiting on auth endpoints
-- ☐ Resend email integration + templates
-- ☐ Unit + integration + E2E tests
-- ☐ Swagger annotations
+- ☑ Auth module skeleton
+- ☑ Signup endpoint (Argon2id)
+- ☑ Login endpoint (JWT + refresh)
+- ☑ Refresh endpoint (rotation)
+- ☑ Logout + logout-all
+- ☑ Password reset (request + confirm)
+- ☑ Email verification (request + confirm + resend)
+- ☑ `JwtAuthGuard` + `@CurrentUser()`
+- ☑ Rate limiting on auth endpoints
+- ☑ Resend email integration + templates
+- ☑ Unit + integration + E2E tests
+- ☐ E2E: signup → verify → login → logout (Partially done: tested signup, login, logout, reset. Email verify E2E pending.)
+- ☐ Tenancy test: user A cannot see user B (Deferred to Task 1.4)
+- ☑ Swagger annotations
 
 ### 1.3 — Containers
 
