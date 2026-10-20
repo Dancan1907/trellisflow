@@ -10,6 +10,7 @@ import { ConflictException } from '@nestjs/common';
 describe('AuthService (Integration)', () => {
   let service: AuthService;
   let prisma: PrismaService;
+
   const testEmail = `integration-${Date.now()}@trellisflow.com`;
 
   beforeAll(async () => {
@@ -28,8 +29,15 @@ describe('AuthService (Integration)', () => {
   });
 
   afterAll(async () => {
-    // Clean up: delete the test user so the DB stays clean
-    await prisma.user.deleteMany({ where: { email: testEmail } });
+    // Clean up ALL integration test users, just in case old ones are stuck.
+    await prisma.user.deleteMany({
+      where: {
+        email: {
+          startsWith: 'integration-',
+        },
+      },
+    });
+
     await prisma.$disconnect();
   });
 
@@ -42,7 +50,7 @@ describe('AuthService (Integration)', () => {
 
     expect(result.user.email).toBe(testEmail);
 
-    // Query the database directly to verify it was saved
+    // Query the database directly to verify it was saved.
     const userInDb = await prisma.user.findUnique({
       where: { email: testEmail },
       include: { containers: true },
