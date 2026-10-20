@@ -12,4 +12,6 @@ module.exports = {
   transformIgnorePatterns: ['node_modules/(?!.*(@nestjs/jwt)/)'],
   // This file runs before any tests, ensuring we use the test DB.
   setupFiles: ['<rootDir>/test/setup.ts'],
+  // Allow additional time for Argon2 hashing during tests.
+  testTimeout: 15000,
 };
