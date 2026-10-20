@@ -9,9 +9,7 @@ module.exports = {
   collectCoverageFrom: ['**/*.(t|j)s'],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
-  // This is the magic line that fixes the @nestjs/jwt ESM error
   transformIgnorePatterns: ['node_modules/(?!.*(@nestjs/jwt)/)'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-  },
+  // This file runs before any tests, ensuring we use the test DB.
+  setupFiles: ['<rootDir>/test/setup.ts'],
 };
