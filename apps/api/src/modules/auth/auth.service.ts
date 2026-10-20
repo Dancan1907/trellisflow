@@ -207,6 +207,82 @@ export class AuthService {
   }
 
   /**
+   * Request Email Verification
+   * Generates a token and (eventually) emails it.
+   */
+  async requestEmailVerification(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.emailVerifiedAt) {
+      return { message: 'Email already verified' };
+    }
+
+    const rawToken = randomUUID();
+    const tokenHash = await argon2.hash(rawToken);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        id: randomUUID(),
+        userId,
+        tokenHash,
+        purpose: 'EMAIL_VERIFICATION',
+        expiresAt,
+      },
+    });
+
+    return {
+      message: 'Verification email sent',
+      devToken: rawToken,
+    };
+  }
+
+  /**
+   * Confirm Email Verification
+   */
+  async confirmEmailVerification(rawToken: string) {
+    const tokens = await this.prisma.emailVerificationToken.findMany({
+      where: {
+        purpose: 'EMAIL_VERIFICATION',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    let validToken = null;
+
+    for (const token of tokens) {
+      if (await argon2.verify(token.tokenHash, rawToken)) {
+        validToken = token;
+        break;
+      }
+    }
+
+    if (!validToken) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: validToken.userId },
+        data: { emailVerifiedAt: new Date() },
+      }),
+      this.prisma.emailVerificationToken.update({
+        where: { id: validToken.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    return { message: 'Email verified successfully' };
+  }
+
+  /**
    * Logout (Single Session)
    * Revokes the current session by deleting it from the database.
    */
