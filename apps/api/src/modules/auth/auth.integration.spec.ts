@@ -74,7 +74,7 @@ describe('AuthService (Integration)', () => {
 
     expect(userInDb).toBeDefined();
     expect(userInDb?.containers.length).toBe(1);
-    expect(userInDb?.containers[0].type).toBe('PERSONAL');
+    expect(userInDb?.containers[0]?.type).toBe('PERSONAL');
   });
 
   it('should throw a ConflictException if we try to sign up with the same email twice', async () => {
