@@ -107,6 +107,15 @@ export class AuthController {
     return this.authService.requestEmailVerification(user.id);
   }
 
+  @Post('verify-email/resend')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resend email verification token' })
+  async resendEmailVerification(@CurrentUser() user: any) {
+    return this.authService.requestEmailVerification(user.id);
+  }
+
   @Post('verify-email/confirm')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm email using a token' })
