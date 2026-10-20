@@ -26,31 +26,35 @@ export function tenantExtension(cls: ClsService) {
       query: {
         $allModels: {
           async $allOperations({ model, operation, args, query }) {
-            // Get the current user from CLS
+            // 1. Get the current user from CLS
             const userId = cls.get('userId');
 
-            // If there's no user (e.g. public routes), or it's not a tenant table, run normally
+            // 2. If there's no user (e.g. public routes), or it's not a tenant table, run normally
             if (!userId || !USER_TABLES.includes(model)) {
               return query(args);
             }
 
-            // Apply automatic filtering
+            // 3. Cast args to 'any' to bypass the union type restriction.
+            // We know what we are doing based on the operation type.
+            const typedArgs = args as any;
+
+            // 4. Apply automatic filtering based on the operation
             if (['findMany', 'findFirst', 'count', 'aggregate', 'groupBy'].includes(operation)) {
-              args.where = { ...args.where, userId };
+              typedArgs.where = { ...typedArgs.where, userId };
             } else if (['update', 'updateMany', 'delete', 'deleteMany'].includes(operation)) {
-              args.where = { ...args.where, userId };
+              typedArgs.where = { ...typedArgs.where, userId };
             } else if (['create', 'createMany'].includes(operation)) {
-              if (Array.isArray(args.data)) {
-                args.data = args.data.map((d: any) => ({ ...d, userId }));
+              if (Array.isArray(typedArgs.data)) {
+                typedArgs.data = typedArgs.data.map((d: any) => ({ ...d, userId }));
               } else {
-                args.data = { ...args.data, userId };
+                typedArgs.data = { ...typedArgs.data, userId };
               }
             } else if (operation === 'upsert') {
-              args.where = { ...args.where, userId };
-              args.create = { ...args.create, userId };
+              typedArgs.where = { ...typedArgs.where, userId };
+              typedArgs.create = { ...typedArgs.create, userId };
             }
 
-            return query(args);
+            return query(typedArgs);
           },
         },
       },
