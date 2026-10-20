@@ -1,23 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../../common/services/email.service';
 import { ConflictException } from '@nestjs/common';
-
-// Use real secrets from process.env (loaded by test/setup.ts).
-const mockConfig = {
-  get: jest.fn((key: string) => {
-    const config = {
-      JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'test-access-secret',
-      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'test-refresh-secret',
-      JWT_ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY || '15m',
-    };
-
-    return config[key as keyof typeof config];
-  }),
-};
 
 // We are NOT mocking Prisma here. We are using the real database.
 describe('AuthService (Integration)', () => {
@@ -28,13 +15,25 @@ describe('AuthService (Integration)', () => {
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [
+        // Explicitly provide a JwtService for the test with a dummy secret
+        JwtModule.register({
+          secret: 'test-access-secret',
+          signOptions: { expiresIn: '15m' },
+        }),
+      ],
       providers: [
         AuthService,
         PrismaService, // Real Prisma
-        JwtService,
         {
           provide: ConfigService,
-          useValue: mockConfig,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'JWT_REFRESH_SECRET') return 'test-refresh-secret';
+              if (key === 'JWT_ACCESS_SECRET') return 'test-access-secret';
+              return null;
+            }),
+          },
         },
         EmailService,
       ],
