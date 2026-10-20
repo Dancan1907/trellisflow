@@ -98,6 +98,22 @@ export class AuthController {
     return this.authService.logoutAll(user.id);
   }
 
+  @Post('verify-email/request')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Request an email verification token' })
+  async requestEmailVerification(@CurrentUser() user: any) {
+    return this.authService.requestEmailVerification(user.id);
+  }
+
+  @Post('verify-email/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm email using a token' })
+  async confirmEmailVerification(@Body() dto: { token: string }) {
+    return this.authService.confirmEmailVerification(dto.token);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
