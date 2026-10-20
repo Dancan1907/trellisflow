@@ -82,6 +82,22 @@ export class AuthController {
     return this.authService.confirmPasswordReset(dto.token, dto.newPassword);
   }
 
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout (single session)' })
+  async logout(@Body() dto: RefreshTokenDto) {
+    return this.authService.logout(dto.refreshToken);
+  }
+
+  @Post('logout-all')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout from all devices' })
+  async logoutAll(@CurrentUser() user: any) {
+    return this.authService.logoutAll(user.id);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
