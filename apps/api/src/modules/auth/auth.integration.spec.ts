@@ -44,15 +44,14 @@ describe('AuthService (Integration)', () => {
   });
 
   afterAll(async () => {
-    // Clean up all integration test users, including leftovers from previous runs.
-    await prisma.user.deleteMany({
-      where: {
-        email: {
-          startsWith: 'integration-',
-        },
-      },
-    });
-
+    // Clean up ALL test users, even if the test failed
+    try {
+      await prisma.user.deleteMany({
+        where: { email: { startsWith: 'integration-' } },
+      });
+    } catch (e) {
+      console.warn('Cleanup failed:', e);
+    }
     await prisma.$disconnect();
   });
 
