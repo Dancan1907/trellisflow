@@ -5,19 +5,24 @@
 // disconnecting on shutdown.
 //
 // Every other service in the app injects PrismaService to talk to the
-// database. Tenancy enforcement (auto user_id scoping) will be added
-// as a Prisma client extension in a later task, after the Auth module
-// exists to provide the "current user" context.
+// database. Tenancy enforcement (auto user_id scoping) is applied
+// via a Prisma client extension using the ClsService context.
 
-import { INestApplication, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { ClsService } from 'nestjs-cls';
+import { tenantExtension } from './tenant.extension';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  constructor() {
+export class PrismaService extends PrismaClient implements OnModuleInit {
+  constructor(private readonly cls: ClsService) {
     super({
       log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
     });
+    // Apply the extension to this instance
+    const extended = this.$extends(tenantExtension(this.cls));
+    // Copy the extended methods back onto `this`
+    Object.assign(this, extended);
   }
 
   /**
@@ -34,15 +39,5 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
    */
   async onModuleDestroy() {
     await this.$disconnect();
-  }
-
-  /**
-   * Gracefully shuts down the app on SIGTERM/SIGINT.
-   * Call this from `main.ts`.
-   */
-  async enableShutdownHooks(app: INestApplication) {
-    process.on('beforeExit', () => {
-      void app.close();
-    });
   }
 }

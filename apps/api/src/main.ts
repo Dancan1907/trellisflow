@@ -12,47 +12,59 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-
-  // Create the NestJS application.
   const app = await NestFactory.create(AppModule);
-
   const config = app.get(ConfigService);
 
-  // Global validation pipe: strips unknown fields, transforms payloads,
-  // and validates DTOs using class-validator.
+  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties not in the DTO.
-      forbidNonWhitelisted: true, // Throw if extra properties are sent.
-      transform: true, // Auto-transform payloads to DTO instances.
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // Enable CORS for the frontend (dev + prod origins).
+  // Enable CORS
   app.enableCors({
-    origin: true, // Will be locked down per environment later.
+    origin: true,
     credentials: true,
   });
 
-  // Global API prefix (all routes under /api, except Swagger).
+  // Global API prefix
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'health', method: RequestMethod.GET }],
   });
 
-  // Read port from config (default 3000).
-  const port = config.get<number>('PORT', 3000);
+  // ==========================================================================
+  // Swagger Setup
+  // ==========================================================================
+  // Only expose Swagger in non-production environments for security.
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('TrellisFlow API')
+      .setDescription('The backend API for TrellisFlow — Personal Wealth Platform')
+      .setVersion('1.0')
+      .addBearerAuth() // Tells Swagger we use JWT Bearer tokens
+      .build();
 
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+
+    // Serves Swagger UI at http://localhost:3000/api/docs
+    SwaggerModule.setup('api/docs', app, document);
+
+    logger.log(`📚 Swagger UI available at http://localhost:3000/api/docs`);
+  }
+
+  const port = config.get<number>('PORT', 3000);
   await app.listen(port);
 
   logger.log(`🚀 TrellisFlow API is running on http://localhost:${port}`);
-  logger.log(`📚 API docs will be available at http://localhost:${port}/api/docs (once enabled)`);
 }
 
 bootstrap();
