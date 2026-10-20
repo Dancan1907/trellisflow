@@ -106,27 +106,55 @@ export class AuthService {
 
   /**
    * Refresh Token
+   * Validates a refresh token and issues a new access token + refresh token pair.
    */
   async refreshTokens(refreshToken: string) {
-    let payload: { sub: string; email: string };
-
     try {
-      payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      // 1. Verify the token signature
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
       });
-    } catch {
+
+      // 2. Ensure the user still exists
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user || user.deletedAt) {
+        throw new UnauthorizedException('User no longer exists');
+      }
+
+      // 3. Verify that the session still exists in the database.
+      // We find all active sessions for this user, and check if any match this token.
+      const sessions = await this.prisma.session.findMany({
+        where: {
+          userId: user.id,
+          expiresAt: { gt: new Date() },
+          revokedAt: null,
+        },
+      });
+
+      let sessionIsValid = false;
+      for (const session of sessions) {
+        if (await argon2.verify(session.tokenHash, refreshToken)) {
+          sessionIsValid = true;
+          break;
+        }
+      }
+
+      if (!sessionIsValid) {
+        throw new UnauthorizedException('Session has been revoked');
+      }
+
+      // 4. Generate a brand new pair of tokens (Token Rotation)
+      return this.generateTokens(user.id, user.email);
+    } catch (error) {
+      // Catch expired, tampered, or revoked tokens
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-    });
-
-    if (!user || user.deletedAt) {
-      throw new UnauthorizedException('User no longer exists');
-    }
-
-    return this.generateTokens(user.id, user.email);
   }
 
   /**
