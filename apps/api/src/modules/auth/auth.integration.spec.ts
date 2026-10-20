@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../../common/services/email.service';
 import { ConflictException } from '@nestjs/common';
+import { ClsModule } from 'nestjs-cls';
 
 // We are NOT mocking Prisma here. We are using the real database.
 describe('AuthService (Integration)', () => {
@@ -16,6 +17,7 @@ describe('AuthService (Integration)', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
+        ClsModule.forRoot({ global: true }),
         // Explicitly provide a JwtService for the test with a dummy secret
         JwtModule.register({
           secret: 'test-access-secret',
