@@ -6,7 +6,6 @@ import { randomUUID } from 'crypto';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +19,6 @@ export class AuthService {
    * Signup
    */
   async signup(dto: SignupDto) {
-    // 1. Check for existing user
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -29,11 +27,9 @@ export class AuthService {
       throw new ConflictException('Email is already registered');
     }
 
-    // 2. Hash the password
     const passwordHash = await argon2.hash(dto.password);
 
     try {
-      // 3. Create the user and personal container atomically
       const user = await this.prisma.user.create({
         data: {
           id: randomUUID(),
@@ -55,24 +51,21 @@ export class AuthService {
         },
       });
 
-      // 4. Generate tokens
       const tokens = await this.generateTokens(user.id, user.email);
 
       return {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        },
+        user: { id: user.id, email: user.email, name: user.name },
         ...tokens,
       };
-    } catch (error) {
-      // Handle Prisma unique constraint errors (P2002)
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code: string }).code === 'P2002'
+      ) {
         throw new ConflictException('Email is already registered');
       }
-
-      // Re-throw any other errors
       throw error;
     }
   }
