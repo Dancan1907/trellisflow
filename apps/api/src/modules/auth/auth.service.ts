@@ -71,12 +71,11 @@ export class AuthService {
     });
 
     // A real Argon2id hash of the string 'dummy-password'.
-    // We use this to burn CPU time if the user doesn't exist,
-    // preventing timing-based user enumeration.
+    // Used to reduce timing differences when the user does not exist.
     const dummyHash = '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$Q2xvdWR5VHJlZUZvcmV2ZXIxMjM0NTY=';
 
-    if (!user) {
-      await argon2.verify(dummyHash, dto.password);
+    if (!user || user.deletedAt) {
+      await argon2.verify(dummyHash, dto.password).catch(() => false);
 
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -103,23 +102,25 @@ export class AuthService {
    * Refresh Token
    */
   async refreshTokens(refreshToken: string) {
+    let payload: { sub: string; email: string };
+
     try {
-      const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
-      });
-
-      if (!user || user.deletedAt) {
-        throw new UnauthorizedException('User no longer exists');
-      }
-
-      return this.generateTokens(user.id, user.email);
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user || user.deletedAt) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    return this.generateTokens(user.id, user.email);
   }
 
   /**
@@ -132,7 +133,7 @@ export class AuthService {
       },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
       return {
         message: 'If that email exists, a reset link has been sent.',
       };
@@ -153,10 +154,18 @@ export class AuthService {
       },
     });
 
-    return {
+    const response: {
+      message: string;
+      devToken?: string;
+    } = {
       message: 'If that email exists, a reset link has been sent.',
-      devToken: rawToken,
     };
+
+    if (this.configService.get<string>('NODE_ENV') !== 'production') {
+      response.devToken = rawToken;
+    }
+
+    return response;
   }
 
   /**
@@ -173,7 +182,7 @@ export class AuthService {
       },
     });
 
-    let validToken = null;
+    let validToken: (typeof tokens)[number] | null = null;
 
     for (const token of tokens) {
       if (await argon2.verify(token.tokenHash, rawToken)) {
@@ -222,7 +231,7 @@ export class AuthService {
       where: { id: userId },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
       throw new UnauthorizedException('User not found');
     }
 
@@ -232,7 +241,7 @@ export class AuthService {
 
     const rawToken = randomUUID();
     const tokenHash = await argon2.hash(rawToken);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await this.prisma.emailVerificationToken.create({
       data: {
@@ -244,10 +253,18 @@ export class AuthService {
       },
     });
 
-    return {
+    const response: {
+      message: string;
+      devToken?: string;
+    } = {
       message: 'Verification email sent',
-      devToken: rawToken,
     };
+
+    if (this.configService.get<string>('NODE_ENV') !== 'production') {
+      response.devToken = rawToken;
+    }
+
+    return response;
   }
 
   /**
@@ -258,11 +275,13 @@ export class AuthService {
       where: {
         purpose: 'EMAIL_VERIFICATION',
         usedAt: null,
-        expiresAt: { gt: new Date() },
+        expiresAt: {
+          gt: new Date(),
+        },
       },
     });
 
-    let validToken = null;
+    let validToken: (typeof tokens)[number] | null = null;
 
     for (const token of tokens) {
       if (await argon2.verify(token.tokenHash, rawToken)) {
@@ -280,6 +299,7 @@ export class AuthService {
         where: { id: validToken.userId },
         data: { emailVerifiedAt: new Date() },
       }),
+
       this.prisma.emailVerificationToken.update({
         where: { id: validToken.id },
         data: { usedAt: new Date() },
@@ -296,11 +316,13 @@ export class AuthService {
   async logout(refreshToken: string) {
     try {
       const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: this.configService.get('JWT_REFRESH_SECRET'),
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
       await this.prisma.session.deleteMany({
-        where: { userId: payload.sub },
+        where: {
+          userId: payload.sub,
+        },
       });
 
       return { message: 'Logged out successfully' };
@@ -333,7 +355,7 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync(payload);
 
     const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: this.configService.get('JWT_REFRESH_SECRET'),
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: '30d',
     });
 
