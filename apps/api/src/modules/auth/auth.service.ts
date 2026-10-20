@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
    * Signup
    */
   async signup(dto: SignupDto) {
+    // 1. Check for existing user
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -27,39 +29,52 @@ export class AuthService {
       throw new ConflictException('Email is already registered');
     }
 
+    // 2. Hash the password
     const passwordHash = await argon2.hash(dto.password);
 
-    const user = await this.prisma.user.create({
-      data: {
-        id: randomUUID(),
-        email: dto.email.toLowerCase(),
-        passwordHash,
-        name: dto.name,
-        timezone: dto.timezone ?? 'UTC',
-        reportingCurrency: dto.reportingCurrency ?? 'USD',
-        personaHint: dto.personaHint,
-        containers: {
-          create: {
-            id: randomUUID(),
-            type: 'PERSONAL',
-            name: 'Personal',
-            currency: dto.reportingCurrency ?? 'USD',
-            status: 'ACTIVE',
+    try {
+      // 3. Create the user and personal container atomically
+      const user = await this.prisma.user.create({
+        data: {
+          id: randomUUID(),
+          email: dto.email.toLowerCase(),
+          passwordHash,
+          name: dto.name,
+          timezone: dto.timezone ?? 'UTC',
+          reportingCurrency: dto.reportingCurrency ?? 'USD',
+          personaHint: dto.personaHint,
+          containers: {
+            create: {
+              id: randomUUID(),
+              type: 'PERSONAL',
+              name: 'Personal',
+              currency: dto.reportingCurrency ?? 'USD',
+              status: 'ACTIVE',
+            },
           },
         },
-      },
-    });
+      });
 
-    const tokens = await this.generateTokens(user.id, user.email);
+      // 4. Generate tokens
+      const tokens = await this.generateTokens(user.id, user.email);
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-      ...tokens,
-    };
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        ...tokens,
+      };
+    } catch (error) {
+      // Handle Prisma unique constraint errors (P2002)
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Email is already registered');
+      }
+
+      // Re-throw any other errors
+      throw error;
+    }
   }
 
   /**
@@ -70,13 +85,11 @@ export class AuthService {
       where: { email: dto.email.toLowerCase() },
     });
 
-    // A real Argon2id hash of the string 'dummy-password'.
-    // Used to reduce timing differences when the user does not exist.
+    // Dummy hash used to reduce timing differences.
     const dummyHash = '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$Q2xvdWR5VHJlZUZvcmV2ZXIxMjM0NTY=';
 
     if (!user || user.deletedAt) {
       await argon2.verify(dummyHash, dto.password).catch(() => false);
-
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -128,9 +141,7 @@ export class AuthService {
    */
   async requestPasswordReset(email: string) {
     const user = await this.prisma.user.findUnique({
-      where: {
-        email: email.toLowerCase(),
-      },
+      where: { email: email.toLowerCase() },
     });
 
     if (!user || user.deletedAt) {
@@ -141,7 +152,6 @@ export class AuthService {
 
     const rawToken = randomUUID();
     const tokenHash = await argon2.hash(rawToken);
-
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await this.prisma.emailVerificationToken.create({
@@ -154,10 +164,7 @@ export class AuthService {
       },
     });
 
-    const response: {
-      message: string;
-      devToken?: string;
-    } = {
+    const response: { message: string; devToken?: string } = {
       message: 'If that email exists, a reset link has been sent.',
     };
 
@@ -176,9 +183,7 @@ export class AuthService {
       where: {
         purpose: 'PASSWORD_RESET',
         usedAt: null,
-        expiresAt: {
-          gt: new Date(),
-        },
+        expiresAt: { gt: new Date() },
       },
     });
 
@@ -199,21 +204,12 @@ export class AuthService {
 
     await this.prisma.$transaction([
       this.prisma.user.update({
-        where: {
-          id: validToken.userId,
-        },
-        data: {
-          passwordHash: newHash,
-        },
+        where: { id: validToken.userId },
+        data: { passwordHash: newHash },
       }),
-
       this.prisma.emailVerificationToken.update({
-        where: {
-          id: validToken.id,
-        },
-        data: {
-          usedAt: new Date(),
-        },
+        where: { id: validToken.id },
+        data: { usedAt: new Date() },
       }),
     ]);
 
@@ -224,7 +220,6 @@ export class AuthService {
 
   /**
    * Request Email Verification
-   * Generates a token and (eventually) emails it.
    */
   async requestEmailVerification(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -253,10 +248,7 @@ export class AuthService {
       },
     });
 
-    const response: {
-      message: string;
-      devToken?: string;
-    } = {
+    const response: { message: string; devToken?: string } = {
       message: 'Verification email sent',
     };
 
@@ -275,9 +267,7 @@ export class AuthService {
       where: {
         purpose: 'EMAIL_VERIFICATION',
         usedAt: null,
-        expiresAt: {
-          gt: new Date(),
-        },
+        expiresAt: { gt: new Date() },
       },
     });
 
@@ -299,7 +289,6 @@ export class AuthService {
         where: { id: validToken.userId },
         data: { emailVerifiedAt: new Date() },
       }),
-
       this.prisma.emailVerificationToken.update({
         where: { id: validToken.id },
         data: { usedAt: new Date() },
@@ -311,7 +300,6 @@ export class AuthService {
 
   /**
    * Logout (Single Session)
-   * Revokes the current session by deleting it from the database.
    */
   async logout(refreshToken: string) {
     try {
@@ -320,9 +308,7 @@ export class AuthService {
       });
 
       await this.prisma.session.deleteMany({
-        where: {
-          userId: payload.sub,
-        },
+        where: { userId: payload.sub },
       });
 
       return { message: 'Logged out successfully' };
@@ -333,7 +319,6 @@ export class AuthService {
 
   /**
    * Logout All
-   * Revokes every session for the user.
    */
   async logoutAll(userId: string) {
     await this.prisma.session.deleteMany({
@@ -347,10 +332,7 @@ export class AuthService {
    * Helper: Generate JWT Access Token and Refresh Token
    */
   private async generateTokens(userId: string, email: string) {
-    const payload = {
-      sub: userId,
-      email,
-    };
+    const payload = { sub: userId, email };
 
     const accessToken = await this.jwtService.signAsync(payload);
 
