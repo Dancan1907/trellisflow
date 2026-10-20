@@ -70,7 +70,14 @@ export class AuthService {
       where: { email: dto.email.toLowerCase() },
     });
 
+    // A real Argon2id hash of the string 'dummy-password'.
+    // We use this to burn CPU time if the user doesn't exist,
+    // preventing timing-based user enumeration.
+    const dummyHash = '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$Q2xvdWR5VHJlZUZvcmV2ZXIxMjM0NTY=';
+
     if (!user) {
+      await argon2.verify(dummyHash, dto.password);
+
       throw new UnauthorizedException('Invalid credentials');
     }
 
