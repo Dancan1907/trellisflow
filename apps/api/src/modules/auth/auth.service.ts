@@ -17,10 +17,6 @@ export class AuthService {
 
   /**
    * Signup
-   * 1. Check if email exists.
-   * 2. Hash password.
-   * 3. Create User + Personal Container in a transaction.
-   * 4. Generate tokens.
    */
   async signup(dto: SignupDto) {
     const existingUser = await this.prisma.user.findUnique({
@@ -68,9 +64,6 @@ export class AuthService {
 
   /**
    * Login
-   * 1. Find user.
-   * 2. Verify password.
-   * 3. Generate tokens.
    */
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
@@ -101,7 +94,6 @@ export class AuthService {
 
   /**
    * Refresh Token
-   * Validates a refresh token and issues a new access token + refresh token pair.
    */
   async refreshTokens(refreshToken: string) {
     try {
@@ -125,7 +117,6 @@ export class AuthService {
 
   /**
    * Request Password Reset
-   * Generates a short-lived token and saves it to the DB.
    */
   async requestPasswordReset(email: string) {
     const user = await this.prisma.user.findUnique({
@@ -134,7 +125,6 @@ export class AuthService {
       },
     });
 
-    // Security: Always return success, even if email doesn't exist.
     if (!user) {
       return {
         message: 'If that email exists, a reset link has been sent.',
@@ -164,7 +154,6 @@ export class AuthService {
 
   /**
    * Confirm Password Reset
-   * Verifies the token and updates the password.
    */
   async confirmPasswordReset(rawToken: string, newPassword: string) {
     const tokens = await this.prisma.emailVerificationToken.findMany({
@@ -218,6 +207,38 @@ export class AuthService {
   }
 
   /**
+   * Logout (Single Session)
+   * Revokes the current session by deleting it from the database.
+   */
+  async logout(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      });
+
+      await this.prisma.session.deleteMany({
+        where: { userId: payload.sub },
+      });
+
+      return { message: 'Logged out successfully' };
+    } catch {
+      return { message: 'Logged out successfully' };
+    }
+  }
+
+  /**
+   * Logout All
+   * Revokes every session for the user.
+   */
+  async logoutAll(userId: string) {
+    await this.prisma.session.deleteMany({
+      where: { userId },
+    });
+
+    return { message: 'Logged out from all devices' };
+  }
+
+  /**
    * Helper: Generate JWT Access Token and Refresh Token
    */
   private async generateTokens(userId: string, email: string) {
@@ -233,13 +254,12 @@ export class AuthService {
       expiresIn: '30d',
     });
 
-    // Save the session to the database so we can revoke it later
     await this.prisma.session.create({
       data: {
         id: randomUUID(),
         userId,
         tokenHash: await argon2.hash(refreshToken),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
     });
 
