@@ -92,4 +92,34 @@ describe('Auth (E2E)', () => {
     // 3. Try to use the refresh token after logout (should fail with 401)
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
+
+  it('should complete the password reset flow (200)', async () => {
+    // 1. Request a password reset
+    const forgotRes = await request(app.getHttpServer())
+      .post('/api/auth/forgot-password')
+      .send({ email: testEmail })
+      .expect(200);
+
+    // 2. Grab the devToken (only returned in dev/test)
+    const devToken = forgotRes.body.devToken;
+    expect(devToken).toBeDefined();
+
+    // 3. Reset the password
+    await request(app.getHttpServer())
+      .post('/api/auth/reset-password')
+      .send({ token: devToken, newPassword: 'newpassword456' })
+      .expect(200);
+
+    // 4. Login with the new password
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: testEmail, password: 'newpassword456' })
+      .expect(200);
+
+    // 5. Try to login with the OLD password (should fail with 401)
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: testEmail, password: 'password123' })
+      .expect(401);
+  });
 });
