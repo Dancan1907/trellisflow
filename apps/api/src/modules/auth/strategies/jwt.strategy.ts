@@ -8,6 +8,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 // The shape of the payload we signed in AuthService.generateTokens
@@ -21,6 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     config: ConfigService,
     private prisma: PrismaService,
+    private readonly cls: ClsService,
   ) {
     super({
       // 1. Look for the token in the Authorization header as "Bearer <token>"
@@ -44,6 +46,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!user || user.deletedAt) {
       throw new UnauthorizedException('User no longer exists');
     }
+
+    // Store the user ID in CLS so the Prisma extension can use it
+    this.cls.set('userId', user.id);
 
     // Whatever we return here gets attached to `req.user` in the controllers
     return { id: user.id, email: user.email, name: user.name };
