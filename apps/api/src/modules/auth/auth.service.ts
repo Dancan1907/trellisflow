@@ -144,7 +144,7 @@ export class AuthService {
     const rawToken = randomUUID();
     const tokenHash = await argon2.hash(rawToken);
 
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await this.prisma.emailVerificationToken.create({
       data: {
@@ -156,8 +156,6 @@ export class AuthService {
       },
     });
 
-    // In production, send via email.
-    // Returning for Swagger/testing only.
     return {
       message: 'If that email exists, a reset link has been sent.',
       devToken: rawToken,
@@ -233,6 +231,16 @@ export class AuthService {
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get('JWT_REFRESH_SECRET'),
       expiresIn: '30d',
+    });
+
+    // Save the session to the database so we can revoke it later
+    await this.prisma.session.create({
+      data: {
+        id: randomUUID(),
+        userId,
+        tokenHash: await argon2.hash(refreshToken),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
     });
 
     return {
