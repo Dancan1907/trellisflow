@@ -31,22 +31,28 @@ describe('CategoriesService', () => {
 
   describe('create', () => {
     it('should throw BadRequestException if nesting deeper than 1 level', async () => {
-      // Mock: Parent category exists, but it already has a parent
-      mockPrisma.category.findFirst.mockResolvedValueOnce({ id: '1', parentId: 'some-other-id' });
+      // The service calls findOne (which uses findFirst), then findOne again.
+      // We mock findFirst to return a category that ALREADY has a parent.
+      mockPrisma.category.findFirst.mockResolvedValue({
+        id: 'parent-1',
+        parentId: 'grandparent-1', // <--- This triggers the nesting check
+      });
 
       await expect(
         service.create('user-1', {
           name: 'Child',
           type: 'EXPENSE',
-          parentId: '1',
+          parentId: 'parent-1',
         }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException if duplicate name exists at same level', async () => {
-      // Mock: Parent check passes (no parent provided), but duplicate name found
-      mockPrisma.category.findFirst.mockResolvedValueOnce(null); // findOne check (not called)
-      mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 'dup' }); // duplicate check
+      // 1st call: findOne for parent (we pass no parentId, so this is skipped)
+      // 2nd call: check for duplicate name -> return a match
+      mockPrisma.category.findFirst
+        .mockResolvedValueOnce(null) // Just in case findOne is called
+        .mockResolvedValueOnce({ id: 'dup' }); // The duplicate check
 
       await expect(
         service.create('user-1', {
@@ -59,14 +65,24 @@ describe('CategoriesService', () => {
 
   describe('archive', () => {
     it('should prevent archiving system categories', async () => {
-      mockPrisma.category.findFirst.mockResolvedValue({ id: '1', isSystem: true });
+      // findOne returns a system category
+      mockPrisma.category.findFirst.mockResolvedValue({
+        id: '1',
+        isSystem: true,
+      });
 
       await expect(service.archive('user-1', '1')).rejects.toThrow(ConflictException);
     });
 
     it('should prevent archiving if it has active subcategories', async () => {
-      mockPrisma.category.findFirst.mockResolvedValue({ id: '1', isSystem: false });
-      mockPrisma.category.count.mockResolvedValue(2); // 2 children exist
+      // findOne returns a normal category
+      mockPrisma.category.findFirst.mockResolvedValue({
+        id: '1',
+        isSystem: false,
+      });
+
+      // count returns 2 (meaning it has children)
+      mockPrisma.category.count.mockResolvedValue(2);
 
       await expect(service.archive('user-1', '1')).rejects.toThrow(ConflictException);
     });
