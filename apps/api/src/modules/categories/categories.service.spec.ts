@@ -31,11 +31,10 @@ describe('CategoriesService', () => {
 
   describe('create', () => {
     it('should throw BadRequestException if nesting deeper than 1 level', async () => {
-      // The service calls findOne (which uses findFirst), then findOne again.
-      // We mock findFirst to return a category that ALREADY has a parent.
+      // Mock findFirst to return a category that already has a parent
       mockPrisma.category.findFirst.mockResolvedValue({
         id: 'parent-1',
-        parentId: 'grandparent-1', // <--- This triggers the nesting check
+        parentId: 'grandparent-1',
       });
 
       await expect(
@@ -48,11 +47,15 @@ describe('CategoriesService', () => {
     });
 
     it('should throw ConflictException if duplicate name exists at same level', async () => {
-      // 1st call: findOne for parent (we pass no parentId, so this is skipped)
-      // 2nd call: check for duplicate name -> return a match
-      mockPrisma.category.findFirst
-        .mockResolvedValueOnce(null) // Just in case findOne is called
-        .mockResolvedValueOnce({ id: 'dup' }); // The duplicate check
+      // We use mockImplementation to inspect the query arguments.
+      // If it's looking for a duplicate name, return a match.
+      // Otherwise (looking up a parent), return null.
+      mockPrisma.category.findFirst.mockImplementation((args) => {
+        if (args.where.name === 'Food') {
+          return Promise.resolve({ id: 'dup' });
+        }
+        return Promise.resolve(null);
+      });
 
       await expect(
         service.create('user-1', {
@@ -65,7 +68,7 @@ describe('CategoriesService', () => {
 
   describe('archive', () => {
     it('should prevent archiving system categories', async () => {
-      // findOne returns a system category
+      // Mock findFirst to return a system category
       mockPrisma.category.findFirst.mockResolvedValue({
         id: '1',
         isSystem: true,
@@ -75,13 +78,13 @@ describe('CategoriesService', () => {
     });
 
     it('should prevent archiving if it has active subcategories', async () => {
-      // findOne returns a normal category
+      // Mock findFirst to return a normal category
       mockPrisma.category.findFirst.mockResolvedValue({
         id: '1',
         isSystem: false,
       });
 
-      // count returns 2 (meaning it has children)
+      // Mock count to return 2 (meaning it has children)
       mockPrisma.category.count.mockResolvedValue(2);
 
       await expect(service.archive('user-1', '1')).rejects.toThrow(ConflictException);
