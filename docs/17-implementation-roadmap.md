@@ -75,14 +75,14 @@ _(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 
 #### 1.4a — Categories Module
 
-- ☐ Category module scaffold
-- ☐ Create/Update/Archive endpoints
-- ☐ Nesting support (parent category)
-- ☐ Reorder endpoint
-- ☐ Default category seeding on signup (move from seed.ts to Auth signup)
-- ☐ Unit + integration tests
-- ☐ Swagger annotations
-- ☐ PR: `feat(categories): category CRUD and default seeding`
+- ☑ Category module scaffold
+- ☑ Create/Update/Archive endpoints
+- ☑ Nesting support (parent category)
+- ☑ Reorder endpoint
+- ☑ Default category seeding on signup
+- ☑ Unit tests for CategoriesService
+- ☑ Swagger annotations
+- ☑ PR: `feat(categories): category CRUD and default seeding`
 
 #### 1.4b — Accounts Module
 
