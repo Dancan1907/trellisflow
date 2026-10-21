@@ -71,16 +71,64 @@ _(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 
 ### 1.4 — Accounts, Categories, Transactions
 
-- ☐ Account module (CRUD + archive)
-- ☐ Category module (CRUD + nest + reorder)
-- ☐ Default category seeding per user (moved from seed.ts to signup logic)
-- ☐ Transaction module (CRUD)
-- ☐ Transfer creation (two linked rows, one DB transaction)
-- ☐ Balance cache update logic
-- ☐ Filters + pagination
-- ☐ Audit log integration
+**Effort:** ~2 weeks · **Status:** ☐ pending
+
+#### 1.4a — Categories Module
+
+- ☑ Category module scaffold
+- ☑ Create/Update/Archive endpoints
+- ☑ Nesting support (parent category)
+- ☑ Reorder endpoint
+- ☑ Default category seeding on signup
+- ☑ Unit tests for CategoriesService
+- ☑ Swagger annotations
+- ☑ PR: `feat(categories): category CRUD and default seeding`
+
+#### 1.4b — Accounts Module
+
+- ☐ Account module scaffold
+- ☐ Create/Update/Archive endpoints
+- ☐ Net worth calculation endpoint (`GET /api/accounts/net-worth`)
 - ☐ Unit + integration tests
 - ☐ Swagger annotations
+- ☐ PR: `feat(accounts): account CRUD and net worth`
+
+#### 1.4c — Transactions Module
+
+- ☐ Transaction module scaffold
+- ☐ Create/Update/Delete endpoints (income, expense)
+- ☐ Filters (date range, category, account, type)
+- ☐ Pagination
+- ☐ Balance cache update on create/update/delete
+- ☐ Unit + integration tests
+- ☐ Swagger annotations
+- ☐ PR: `feat(transactions): transaction CRUD with filters and pagination`
+
+#### 1.4d — Transfers
+
+- ☐ Transfer creation (two linked rows via `transfer_pair_id` in a single Prisma `$transaction`)
+- ☐ Update/delete with pair management
+- ☐ Balance cache updates for both accounts
+- ☐ Integration test: transfer atomicity (both rows or neither)
+- ☐ Integration test: transfer rollback (failure mid-transaction)
+- ☐ Integration test: cross-container transfer rejected
+- ☐ PR: `feat(transfers): linked transfer transactions`
+
+#### 1.4e — Audit Log
+
+- ☐ Build AuditLog service
+- ☐ Integrate into every write for Accounts, Categories, Transactions
+- ☐ Unit tests
+- ☐ PR: `feat(audit): audit log integration for financial writes`
+
+#### 1.4f — E2E Tests
+
+- ☐ E2E: create account → add transaction → balance updates
+- ☐ E2E: transfer → both accounts update atomically
+- ☐ E2E: verify net worth reflects transactions
+- ☐ PR: `test(accounts): E2E tests for money movement`
+
+**Deliverable:** Users track personal money end-to-end. Transfers work correctly. Balances and net worth are accurate. Every write is audited.
 
 ### 1.5 — Recurring Rules
 
