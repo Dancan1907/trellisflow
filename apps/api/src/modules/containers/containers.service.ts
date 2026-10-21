@@ -14,11 +14,14 @@ export class ContainersService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * List all active containers for the user.
+   * List active containers for the user, with an optional flag to include archived ones.
    */
-  async findAllForUser(userId: string) {
+  async findAllForUser(userId: string, includeArchived: boolean = false) {
     return this.prisma.container.findMany({
-      where: { userId, status: { not: 'DELETED' } },
+      where: {
+        userId,
+        status: includeArchived ? { in: ['ACTIVE', 'ARCHIVED'] } : 'ACTIVE',
+      },
       include: {
         _count: {
           select: { accounts: true },
