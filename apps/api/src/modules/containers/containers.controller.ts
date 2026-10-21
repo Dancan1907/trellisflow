@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateContainerDto } from './dto/create-container.dto';
 import { UpdateContainerDto } from './dto/update-container.dto';
+import { CreateBusinessProfileDto } from './dto/create-business-profile.dto';
 
 @ApiTags('containers')
 @ApiBearerAuth()
@@ -45,5 +46,21 @@ export class ContainersController {
   @ApiOperation({ summary: 'Archive a container' })
   async archive(@CurrentUser() user: any, @Param('id') id: string) {
     return this.containersService.archive(user.id, id);
+  }
+
+  @Get(':id/business-profile')
+  @ApiOperation({ summary: 'Get the business profile for a container' })
+  async getBusinessProfile(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.containersService.getBusinessProfile(user.id, id);
+  }
+
+  @Post(':id/business-profile')
+  @ApiOperation({ summary: 'Create a business profile for a container' })
+  async createBusinessProfile(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: CreateBusinessProfileDto,
+  ) {
+    return this.containersService.createBusinessProfile(user.id, id, dto);
   }
 }
