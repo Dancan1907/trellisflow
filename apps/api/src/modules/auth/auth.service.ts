@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
+import { DEFAULT_CATEGORIES } from '../../common/constants/default-categories';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.password);
 
     try {
+      // 3. Create the user and container in a single DB transaction.
       const user = await this.prisma.user.create({
         data: {
           id: randomUUID(),
@@ -39,6 +41,8 @@ export class AuthService {
           timezone: dto.timezone ?? 'UTC',
           reportingCurrency: dto.reportingCurrency ?? 'USD',
           personaHint: dto.personaHint,
+
+          // Create the Personal container
           containers: {
             create: {
               id: randomUUID(),
@@ -46,6 +50,20 @@ export class AuthService {
               name: 'Personal',
               currency: dto.reportingCurrency ?? 'USD',
               status: 'ACTIVE',
+            },
+          },
+
+          // Create the default categories
+          categories: {
+            createMany: {
+              data: DEFAULT_CATEGORIES.map((cat) => ({
+                id: randomUUID(),
+                name: cat.name,
+                type: cat.type,
+                icon: cat.icon,
+                isSystem: true,
+                status: 'ACTIVE',
+              })),
             },
           },
         },
