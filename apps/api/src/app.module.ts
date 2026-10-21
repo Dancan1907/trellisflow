@@ -13,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ContainersModule } from './modules/containers/containers.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { AccountsModule } from './modules/accounts/accounts.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
       },
     ]),
     CategoriesModule,
+    AccountsModule,
   ],
   controllers: [AppController],
   providers: [
