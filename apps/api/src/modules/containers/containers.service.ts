@@ -6,6 +6,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateContainerDto } from './dto/create-container.dto';
 import { UpdateContainerDto } from './dto/update-container.dto';
+import { CreateBusinessProfileDto } from './dto/create-business-profile.dto';
 import { randomUUID } from 'crypto';
 import { ContainerType } from '@prisma/client';
 
@@ -108,6 +109,49 @@ export class ContainersService {
       data: {
         status: 'ARCHIVED',
         archivedAt: new Date(),
+      },
+    });
+  }
+
+  async getBusinessProfile(userId: string, containerId: string) {
+    const container = await this.findOne(userId, containerId);
+
+    const profile = await this.prisma.businessProfile.findUnique({
+      where: { containerId: container.id },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('This container has no business profile');
+    }
+
+    return profile;
+  }
+
+  async createBusinessProfile(userId: string, containerId: string, dto: CreateBusinessProfileDto) {
+    const container = await this.findOne(userId, containerId);
+
+    // Only business containers can have profiles
+    if (container.type !== 'INTERNAL_BUSINESS' && container.type !== 'EXTERNAL_BUSINESS') {
+      throw new ConflictException('Only business containers can have a business profile');
+    }
+
+    // Check if profile already exists
+    const existing = await this.prisma.businessProfile.findUnique({
+      where: { containerId: container.id },
+    });
+
+    if (existing) {
+      throw new ConflictException('This container already has a business profile');
+    }
+
+    return this.prisma.businessProfile.create({
+      data: {
+        id: randomUUID(),
+        containerId: container.id,
+        businessType: dto.businessType,
+        businessTypeCustom: dto.businessTypeCustom,
+        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+        notes: dto.notes,
       },
     });
   }
