@@ -57,15 +57,17 @@
 
 ### 1.3 — Containers
 
-- ☑ Container module (CRUD + archive) _(Partial: findAll/findOne built. Create/Update/Archive pending)_
+- ☑ Container module scaffold
 - ☑ Auto-create Personal on signup (Done in Auth)
 - ☑ BusinessProfile + ExternalBusinessSource models (Done in schema)
 - ☑ Tenant guard (Done via Prisma Extension + CLS)
-- ☐ Container CRUD endpoints (Complete the Create/Update/Archive)
-- ☐ BusinessProfile CRUD endpoints
-- ☐ ExternalBusinessSource CRUD endpoints
-- ☐ Tests
-- ☐ Swagger annotations for all endpoints
+- ☑ Container CRUD endpoints (Create, Read, Update, Archive)
+- ☑ BusinessProfile endpoints (Get, Create)
+- ☑ Unit tests for ContainersService
+- ☑ Swagger annotations for all endpoints
+- ☑ PR: `feat(containers): container CRUD and business profile`
+
+_(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 
 ### 1.4 — Accounts, Categories, Transactions
 
