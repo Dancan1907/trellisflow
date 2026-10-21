@@ -57,22 +57,28 @@
 
 ### 1.3 — Containers
 
-- ☐ Container module (CRUD + archive)
-- ☐ Auto-create Personal on signup
-- ☐ BusinessProfile + ExternalBusinessSource models
-- ☐ Tenant guard
-- ☐ Tests
+- ☑ Container module scaffold
+- ☑ Auto-create Personal on signup (Done in Auth)
+- ☑ BusinessProfile + ExternalBusinessSource models (Done in schema)
+- ☑ Tenant guard (Done via Prisma Extension + CLS)
+- ☑ Container CRUD endpoints (Create, Read, Update, Archive)
+- ☑ BusinessProfile endpoints (Get, Create)
+- ☑ Unit and Integration tests for ContainersService
+- ☑ Swagger annotations for all endpoints
+- ☑ PR: `feat(containers): container CRUD and business profile`
+
+_(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 
 ### 1.4 — Accounts, Categories, Transactions
 
 - ☐ Account module (CRUD + archive)
 - ☐ Category module (CRUD + nest + reorder)
+- ☐ Default category seeding per user (moved from seed.ts to signup logic)
 - ☐ Transaction module (CRUD)
 - ☐ Transfer creation (two linked rows, one DB transaction)
 - ☐ Balance cache update logic
 - ☐ Filters + pagination
 - ☐ Audit log integration
-- ☐ Default category seeding
 - ☐ Unit + integration tests
 - ☐ Swagger annotations
 
