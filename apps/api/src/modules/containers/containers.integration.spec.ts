@@ -3,6 +3,7 @@ import { ContainersService } from './containers.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConflictException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { ClsModule } from 'nestjs-cls';
 
 describe('ContainersService (Integration)', () => {
   let service: ContainersService;
@@ -11,6 +12,7 @@ describe('ContainersService (Integration)', () => {
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ClsModule.forRoot({ global: true })],
       providers: [ContainersService, PrismaService],
     }).compile();
 
