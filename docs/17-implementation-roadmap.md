@@ -63,7 +63,7 @@
 - ☑ Tenant guard (Done via Prisma Extension + CLS)
 - ☑ Container CRUD endpoints (Create, Read, Update, Archive)
 - ☑ BusinessProfile endpoints (Get, Create)
-- ☑ Unit tests for ContainersService
+- ☑ Unit and Integration tests for ContainersService
 - ☑ Swagger annotations for all endpoints
 - ☑ PR: `feat(containers): container CRUD and business profile`
 
