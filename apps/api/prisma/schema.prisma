@@ -633,6 +633,7 @@ model ApiToken {
 // ============================================================================
 
 enum BudgetPeriod {
+  DAILY
   WEEKLY
   BIWEEKLY
   MONTHLY
