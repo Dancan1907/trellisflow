@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
 import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogService } from '../../common/services/audit.service';
 import { ClsModule } from 'nestjs-cls';
 import { randomUUID } from 'crypto';
 
@@ -15,7 +16,7 @@ describe('Transactions (Integration)', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ClsModule.forRoot({ global: true })],
-      providers: [TransactionsService, BalanceService, PrismaService],
+      providers: [TransactionsService, BalanceService, PrismaService, AuditLogService],
     }).compile();
 
     service = module.get<TransactionsService>(TransactionsService);
