@@ -4,6 +4,7 @@ import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { ClsModule } from 'nestjs-cls';
 
 describe('Transfers (Integration)', () => {
   let service: TransactionsService;
@@ -15,6 +16,7 @@ describe('Transfers (Integration)', () => {
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ClsModule.forRoot({ global: true })], // <--- ADDED
       providers: [TransactionsService, BalanceService, PrismaService],
     }).compile();
 
