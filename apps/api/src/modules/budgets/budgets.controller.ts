@@ -35,6 +35,18 @@ export class BudgetsController {
     return this.budgetsService.findAll(user.id, query);
   }
 
+  @Get('report')
+  @ApiOperation({ summary: 'Get a summary of all budgets vs actual spending' })
+  async getReport(@CurrentUser() user: any) {
+    return this.budgetsService.getReport(user.id);
+  }
+
+  @Post('copy-previous')
+  @ApiOperation({ summary: 'Copy budgets from the previous month to the current month' })
+  async copyPrevious(@CurrentUser() user: any) {
+    return this.budgetsService.copyPreviousMonth(user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a single budget' })
   async findOne(@CurrentUser() user: any, @Param('id') id: string) {
