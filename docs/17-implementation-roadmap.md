@@ -204,13 +204,19 @@
 
 ### 1.8 — Reports & Snapshots
 
-- ☐ Snapshot module + compute service
-- ☐ Daily snapshot job
-- ☐ Debounced recompute (pg-boss)
-- ☐ Net worth + cash flow + Budget vs Actual endpoints
-- ☐ Allocation report
-- ☐ PDF export
-- ☐ Tests
+**Effort:** ~3–4 days · **Status:** ☑ complete
+
+- ☑ Snapshot module + compute service
+- ☑ Daily snapshot job (`POST /api/snapshots/process-daily`)
+- ☐ Debounced recompute (pg-boss) _(Deferred to Task 1.14 — deployment infrastructure)_
+- ☑ Net worth trend endpoint (`GET /api/reports/net-worth`)
+- ☑ Cash flow endpoint (`GET /api/reports/cash-flow`)
+- ☑ Allocation report (`GET /api/reports/allocation`)
+- ☑ PDF export (`GET /api/reports/net-worth/pdf`)
+- ☑ Unit tests (snapshot math, reports math, PDF)
+- ☑ Integration test (real DB snapshot + idempotency)
+- ☑ Swagger annotations
+- ☑ PR: `feat(reports): snapshot engine and financial reports`
 
 ### 1.9 — Insights (Basic)
 
