@@ -2,6 +2,7 @@
 // Recurring Controller
 // ============================================================================
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Controller,
   Get,
