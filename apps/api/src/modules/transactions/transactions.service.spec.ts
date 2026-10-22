@@ -4,6 +4,17 @@ import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
 
+// Create the mock transaction client first
+const mockTx = {
+  transaction: {
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  account: {
+    update: jest.fn(),
+  },
+};
+
 const mockPrisma = {
   account: { findFirst: jest.fn() },
   category: { findFirst: jest.fn() },
@@ -13,7 +24,8 @@ const mockPrisma = {
     findFirst: jest.fn(),
     update: jest.fn(),
   },
-  $transaction: jest.fn((cb) => cb(mockPrisma)), // Execute the callback immediately with the mock
+  // Now we can safely reference mockTx
+  $transaction: jest.fn((cb) => cb(mockTx)),
 };
 
 const mockBalanceService = {
@@ -63,7 +75,7 @@ describe('TransactionsService', () => {
       });
 
       // Mock transaction creation
-      mockPrisma.transaction.create.mockResolvedValue({ id: 'tx-1' });
+      mockTx.transaction.create.mockResolvedValue({ id: 'tx-1' });
 
       const result = await service.create('user-1', {
         type: 'EXPENSE',
@@ -74,11 +86,11 @@ describe('TransactionsService', () => {
       });
 
       // Verify transaction was created
-      expect(mockPrisma.transaction.create).toHaveBeenCalled();
+      expect(mockTx.transaction.create).toHaveBeenCalled();
 
       // Verify BalanceService was called with the right math
       expect(mockBalanceService.applyTransactionEffect).toHaveBeenCalledWith(
-        expect.anything(),
+        mockTx,
         'acc-1',
         'EXPENSE',
         100,
@@ -99,13 +111,13 @@ describe('TransactionsService', () => {
         amount: '100',
       });
 
-      mockPrisma.transaction.update.mockResolvedValue({ id: 'tx-1', deletedAt: new Date() });
+      mockTx.transaction.update.mockResolvedValue({ id: 'tx-1', deletedAt: new Date() });
 
       await service.remove('user-1', 'tx-1');
 
       // Verify BalanceService was called to reverse the effect (-1)
       expect(mockBalanceService.applyTransactionEffect).toHaveBeenCalledWith(
-        expect.anything(),
+        mockTx, // <-- Change to mockTx
         'acc-1',
         'EXPENSE',
         100,
@@ -113,7 +125,7 @@ describe('TransactionsService', () => {
       );
 
       // Verify soft delete
-      expect(mockPrisma.transaction.update).toHaveBeenCalledWith(
+      expect(mockTx.transaction.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'tx-1' },
           data: { deletedAt: expect.any(Date) },
