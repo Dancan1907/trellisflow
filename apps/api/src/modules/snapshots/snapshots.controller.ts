@@ -3,7 +3,8 @@
 // ============================================================================
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Controller, Post, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Query, UseGuards, Res, Header } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SnapshotsService } from './snapshots.service';
 import { ReportsService } from './reports.service';
@@ -31,6 +32,15 @@ export class SnapshotsController {
   async getNetWorthTrend(@CurrentUser() user: any, @Query('days') days?: string) {
     const daysNum = days ? parseInt(days, 10) : 30;
     return this.reportsService.getNetWorthTrend(user.id, daysNum);
+  }
+
+  @Get('net-worth/pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename=net-worth.pdf')
+  @ApiOperation({ summary: 'Download net worth statement as PDF' })
+  async downloadPDF(@CurrentUser() user: any, @Res() res: Response) {
+    const pdfBuffer = await this.reportsService.generateNetWorthPDF(user.id);
+    res.send(pdfBuffer);
   }
 
   @Get('cash-flow')
