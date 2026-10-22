@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
 import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogService } from '../../common/services/audit.service';
 import { NotFoundException } from '@nestjs/common';
 
 // Create the mock transaction client first
@@ -32,6 +33,10 @@ const mockBalanceService = {
   applyTransactionEffect: jest.fn(),
 };
 
+const mockAuditLog = {
+  log: jest.fn(),
+};
+
 describe('TransactionsService', () => {
   let service: TransactionsService;
 
@@ -41,6 +46,7 @@ describe('TransactionsService', () => {
         TransactionsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: BalanceService, useValue: mockBalanceService },
+        { provide: AuditLogService, useValue: mockAuditLog },
       ],
     }).compile();
 
@@ -117,7 +123,7 @@ describe('TransactionsService', () => {
 
       // Verify BalanceService was called to reverse the effect (-1)
       expect(mockBalanceService.applyTransactionEffect).toHaveBeenCalledWith(
-        mockTx, // <-- Change to mockTx
+        mockTx,
         'acc-1',
         'EXPENSE',
         100,

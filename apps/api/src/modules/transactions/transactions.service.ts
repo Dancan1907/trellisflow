@@ -9,6 +9,8 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { QueryTransactionsDto } from './dto/query-transactions.dto';
 import { CreateTransferDto } from './dto/create-transfer.dto';
+import { AuditLogService } from '../../common/services/audit.service';
+import { AuditAction } from '@prisma/client';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -16,6 +18,7 @@ export class TransactionsService {
   constructor(
     private prisma: PrismaService,
     private balanceService: BalanceService,
+    private auditLog: AuditLogService,
   ) {}
 
   /**
@@ -71,7 +74,16 @@ export class TransactionsService {
         1, // direction: apply
       );
 
-      // c. (Audit log will be added in a later task)
+      // c. Write the audit log
+      await this.auditLog.log(
+        tx,
+        userId,
+        'Transaction',
+        transaction.id,
+        AuditAction.CREATE,
+        null, // No 'before' state
+        transaction, // The new 'after' state
+      );
 
       return transaction;
     });
@@ -186,7 +198,7 @@ export class TransactionsService {
       }
 
       // b. Update the row
-      return tx.transaction.update({
+      const updated = await tx.transaction.update({
         where: { id },
         data: {
           amount: dto.amount,
@@ -195,6 +207,19 @@ export class TransactionsService {
           notes: dto.notes,
         },
       });
+
+      // c. Write the audit log
+      await this.auditLog.log(
+        tx,
+        userId,
+        'Transaction',
+        id,
+        AuditAction.UPDATE,
+        existing, // The 'before' state
+        updated, // The 'after' state
+      );
+
+      return updated;
     });
   }
 
@@ -216,10 +241,23 @@ export class TransactionsService {
       );
 
       // b. Soft delete
-      return tx.transaction.update({
+      const deleted = await tx.transaction.update({
         where: { id },
         data: { deletedAt: new Date() },
       });
+
+      // c. Write the audit log
+      await this.auditLog.log(
+        tx,
+        userId,
+        'Transaction',
+        id,
+        AuditAction.DELETE,
+        existing, // The 'before' state
+        deleted, // The 'after' state
+      );
+
+      return deleted;
     });
   }
 

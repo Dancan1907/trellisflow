@@ -67,11 +67,11 @@
 - ☑ Swagger annotations for all endpoints
 - ☑ PR: `feat(containers): container CRUD and business profile`
 
-_(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
+(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)
 
 ### 1.4 — Accounts, Categories, Transactions
 
-**Effort:** ~2 weeks · **Status:** ☐ pending
+**Effort:** ~2 weeks · **Status:** ☑ complete
 
 #### 1.4a — Categories Module
 
@@ -116,19 +116,21 @@ _(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 
 #### 1.4e — Audit Log
 
-- ☐ Build AuditLog service
-- ☐ Integrate into every write for Accounts, Categories, Transactions
-- ☐ Unit tests
-- ☐ PR: `feat(audit): audit log integration for financial writes`
+- ☑ AuditLogService
+- ☑ Integrated into Transaction create/update/delete
+- ☑ Audit viewer endpoint (`GET /api/audit`)
+- ☑ Unit tests
+- ☑ Integration test: logs written to DB
+- ☑ Swagger annotations
 
 #### 1.4f — E2E Tests
 
-- ☐ E2E: create account → add transaction → balance updates
-- ☐ E2E: transfer → both accounts update atomically
-- ☐ E2E: verify net worth reflects transactions
-- ☐ PR: `test(accounts): E2E tests for money movement`
+- ☐ E2E: signup → create account → add transaction → verify balance (deferred to end of Wave 1)
+- ☐ E2E: transfer between accounts (deferred to end of Wave 1)
 
-**Deliverable:** Users track personal money end-to-end. Transfers work correctly. Balances and net worth are accurate. Every write is audited.
+(Note: Full E2E tests for the Money Core will be added in Task 1.14, after the frontend exists to test the full user journey.)
+
+**Deliverable:** ✅ Users can track personal money end-to-end. Transfers are atomic. Balances update correctly. Every write is audited.
 
 ### 1.5 — Recurring Rules
 

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
 import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogService } from '../../common/services/audit.service';
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { ClsModule } from 'nestjs-cls';
@@ -16,8 +17,8 @@ describe('Transfers (Integration)', () => {
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ClsModule.forRoot({ global: true })], // <--- ADDED
-      providers: [TransactionsService, BalanceService, PrismaService],
+      imports: [ClsModule.forRoot({ global: true })],
+      providers: [TransactionsService, BalanceService, PrismaService, AuditLogService],
     }).compile();
 
     service = module.get<TransactionsService>(TransactionsService);
