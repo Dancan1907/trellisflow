@@ -127,7 +127,7 @@ export class TransactionsService {
     let nextCursor: string | null = null;
     if (items.length > limit) {
       items.pop(); // Remove the extra item
-      nextCursor = items[items.length - 1].id;
+      nextCursor = items[items.length - 1]!.id; // <--- Added '!'
     }
 
     return { items, nextCursor };
