@@ -62,7 +62,8 @@ describe('Budgets (Integration)', () => {
       period: 'MONTHLY',
     });
 
-    expect(budget.amount).toBe('10000');
+    // Fix: Cast Prisma Decimal to String before comparing
+    expect(String(budget.amount)).toBe('10000');
 
     // 2. Add a real transaction of 3,000
     const accountId = randomUUID();
