@@ -194,6 +194,7 @@ export class RecurringService {
     });
 
     let processed = 0;
+    let failed = 0;
 
     for (const rule of dueRules) {
       try {
@@ -252,11 +253,12 @@ export class RecurringService {
 
         processed++;
       } catch (error) {
-        // Log the error but continue processing other rules
+        // Log the error and increment the failed counter so it doesn't masquerade as success
         console.error(`Failed to process rule ${rule.id}:`, error);
+        failed++;
       }
     }
 
-    return { processed, total: dueRules.length };
+    return { processed, failed, total: dueRules.length };
   }
 }
