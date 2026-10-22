@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from '../../modules/transactions/transactions.service';
 import { BalanceService } from '../../modules/transactions/balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogService } from './audit.service';
 import { ClsModule } from 'nestjs-cls';
 import { randomUUID } from 'crypto';
 
@@ -15,7 +16,12 @@ describe('AuditLog (Integration)', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ClsModule.forRoot({ global: true })],
-      providers: [TransactionsService, BalanceService, PrismaService],
+      providers: [
+        TransactionsService,
+        BalanceService,
+        PrismaService,
+        AuditLogService, // <--- ADDED
+      ],
     }).compile();
 
     txService = module.get<TransactionsService>(TransactionsService);
@@ -78,12 +84,12 @@ describe('AuditLog (Integration)', () => {
     });
 
     expect(logs.length).toBe(1);
-    expect(logs[0].action).toBe('CREATE');
-    expect(logs[0].entityType).toBe('Transaction');
-    expect(logs[0].after).toBeDefined();
+    expect(logs[0]!.action).toBe('CREATE');
+    expect(logs[0]!.entityType).toBe('Transaction');
+    expect(logs[0]!.after).toBeDefined();
 
     // Verify the 'after' state holds the description
-    const afterState = logs[0].after as any;
+    const afterState = logs[0]!.after as any;
     expect(afterState.description).toBe('Audit test purchase');
   });
 });
