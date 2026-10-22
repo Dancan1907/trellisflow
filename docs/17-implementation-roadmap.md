@@ -86,12 +86,12 @@ _(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 
 #### 1.4b — Accounts Module
 
-- ☐ Account module scaffold
-- ☐ Create/Update/Archive endpoints
-- ☐ Net worth calculation endpoint (`GET /api/accounts/net-worth`)
-- ☐ Unit + integration tests
-- ☐ Swagger annotations
-- ☐ PR: `feat(accounts): account CRUD and net worth`
+- ☑ Account module scaffold
+- ☑ Create/Update/Archive endpoints
+- ☑ Net worth calculation endpoint (`GET /api/accounts/net-worth`)
+- ☑ Unit tests for AccountsService
+- ☑ Swagger annotations
+- ☑ PR: `feat(accounts): account CRUD and net worth`
 
 #### 1.4c — Transactions Module
 
