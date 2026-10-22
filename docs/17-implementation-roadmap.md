@@ -134,11 +134,46 @@
 
 ### 1.5 — Recurring Rules
 
-- ☐ RecurringRule module (CRUD + pause/resume)
-- ☐ Recurring generator job
-- ☐ "Edit this / future / all" logic
-- ☐ Upcoming occurrences
-- ☐ Tests
+**Effort:** ~3–5 days · **Status:** ☑ complete
+
+#### 1.5a — Backend: Module & CRUD
+
+- ☑ `[FEAT]` RecurringRule module scaffold
+- ☑ `[FEAT]` Create a rule (Income, Expense, or Transfer)
+- ☑ `[FEAT]` Read/List rules
+- ☑ `[FEAT]` Update a rule
+- ☑ `[FEAT]` Delete a rule
+- ☑ `[FEAT]` Pause / Resume a rule
+- ☑ `[SEC]` Enforce ownership
+- ☑ `[DOCS]` Swagger annotations
+
+#### 1.5b — Logic: "Edit this / future / all"
+
+- ☐ Edit this occurrence _(Deferred to Wave 5 — requires UI interaction to split rules)_
+- ☐ Edit this and future _(Deferred to Wave 5)_
+- ☑ Edit all (Backend supports updating the rule, affecting all future generations)
+- ☐ Delete this / future / all _(Deferred to Wave 5)_
+
+#### 1.5c — Background Job: The Generator
+
+- ☑ `[FEAT]` Daily job to find rules where `nextOccurrence <= today`
+- ☑ `[FEAT]` Generate the transaction and update account balances
+- ☑ `[FEAT]` Advance `nextOccurrence` (handling end-of-month quirks)
+- ☑ `[TEST]` Job idempotency
+- ☑ `[TEST]` Date logic (monthly on the 31st, biweekly, yearly)
+
+#### 1.5d — Queries: Upcoming Occurrences
+
+- ☑ `[FEAT]` `GET /api/recurring-rules/upcoming`
+- ☑ `[DOCS]` Swagger annotations
+
+#### 1.5e — Testing & Delivery
+
+- ☑ `[TEST]` Unit tests for all service methods
+- ☑ `[TEST]` Integration tests for the generator job
+- ☑ `[GIT]` PR: `feat(recurring): recurring transaction rules`
+
+**Deliverable:** ✅ Recurring salary/rent/subscriptions auto-generate. Users can see upcoming bills. Generator is proven idempotent.
 
 ### 1.6 — Budgets
 
