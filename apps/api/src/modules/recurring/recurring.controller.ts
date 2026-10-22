@@ -1,3 +1,7 @@
+// ============================================================================
+// Recurring Controller
+// ============================================================================
+
 import {
   Controller,
   Get,
@@ -74,5 +78,16 @@ export class RecurringController {
   @ApiOperation({ summary: 'Delete a recurring rule' })
   async remove(@CurrentUser() user: any, @Param('id') id: string) {
     return this.recurringService.remove(user.id, id);
+  }
+
+  @Post('process-due')
+  @ApiOperation({
+    summary: 'Trigger the daily generator job',
+    description: 'Normally called by a cron job. Processes all due recurring rules.',
+  })
+  async processDue() {
+    // Note: In production, this should be protected by a secret header
+    // so random users can't trigger it.
+    return this.recurringService.generateDueTransactions();
   }
 }
