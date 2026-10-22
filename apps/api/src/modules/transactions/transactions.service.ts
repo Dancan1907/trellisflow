@@ -2,12 +2,13 @@
 // Transactions Service
 // ============================================================================
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BalanceService } from './balance.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { QueryTransactionsDto } from './dto/query-transactions.dto';
+import { CreateTransferDto } from './dto/create-transfer.dto';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -219,6 +220,93 @@ export class TransactionsService {
         where: { id },
         data: { deletedAt: new Date() },
       });
+    });
+  }
+
+  /**
+   * Create a transfer between two accounts.
+   *
+   * Rules:
+   * 1. Both accounts must belong to the user.
+   * 2. Both accounts must belong to the SAME container.
+   * 3. Two transactions are created, linked by transfer_pair_id.
+   * 4. Both happen inside a single DB transaction.
+   */
+  async transfer(userId: string, dto: CreateTransferDto) {
+    // 1. Verify both accounts
+    const fromAccount = await this.prisma.account.findFirst({
+      where: { id: dto.fromAccountId, userId, status: 'ACTIVE' },
+    });
+
+    const toAccount = await this.prisma.account.findFirst({
+      where: { id: dto.toAccountId, userId, status: 'ACTIVE' },
+    });
+
+    if (!fromAccount) throw new NotFoundException('Source account not found');
+    if (!toAccount) throw new NotFoundException('Destination account not found');
+    if (fromAccount.id === toAccount.id) {
+      throw new BadRequestException('Cannot transfer to the same account');
+    }
+    if (fromAccount.containerId !== toAccount.containerId) {
+      throw new BadRequestException('Transfers must be within the same container');
+    }
+    if (fromAccount.currency !== toAccount.currency) {
+      throw new BadRequestException('Transfers must be between accounts of the same currency');
+    }
+
+    // 2. Execute atomically
+    return this.prisma.$transaction(async (tx) => {
+      const pairId = randomUUID();
+
+      // a. Create the "OUT" transaction (from account)
+      const outTx = await tx.transaction.create({
+        data: {
+          id: randomUUID(),
+          userId,
+          containerId: fromAccount.containerId,
+          accountId: fromAccount.id,
+          type: 'TRANSFER',
+          amount: -dto.amount, // Negative because money is leaving
+          currency: fromAccount.currency,
+          date: new Date(dto.date),
+          description: dto.description,
+          notes: dto.notes,
+          transferPairId: pairId,
+          source: 'MANUAL',
+          status: 'POSTED',
+        },
+      });
+
+      // b. Create the "IN" transaction (to account)
+      const inTx = await tx.transaction.create({
+        data: {
+          id: randomUUID(),
+          userId,
+          containerId: toAccount.containerId,
+          accountId: toAccount.id,
+          type: 'TRANSFER',
+          amount: dto.amount, // Positive because money is arriving
+          currency: toAccount.currency,
+          date: new Date(dto.date),
+          description: dto.description,
+          notes: dto.notes,
+          transferPairId: pairId,
+          source: 'MANUAL',
+          status: 'POSTED',
+        },
+      });
+
+      // c. Update balances
+      await this.balanceService.applyTransactionEffect(
+        tx,
+        fromAccount.id,
+        'TRANSFER',
+        -dto.amount,
+        1,
+      );
+      await this.balanceService.applyTransactionEffect(tx, toAccount.id, 'TRANSFER', dto.amount, 1);
+
+      return { outTx, inTx };
     });
   }
 }

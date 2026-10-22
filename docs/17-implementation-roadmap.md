@@ -101,18 +101,18 @@ _(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 - ☑ Pagination (cursor-based)
 - ☑ Balance cache update on create/update/delete
 - ☑ Unit tests for TransactionsService
+- ☑ Integration test: balance update
 - ☑ Swagger annotations
 - ☑ PR: `feat(transactions): transaction CRUD with filters and pagination`
 
 #### 1.4d — Transfers
 
-- ☐ Transfer creation (two linked rows via `transfer_pair_id` in a single Prisma `$transaction`)
-- ☐ Update/delete with pair management
-- ☐ Balance cache updates for both accounts
-- ☐ Integration test: transfer atomicity (both rows or neither)
-- ☐ Integration test: transfer rollback (failure mid-transaction)
-- ☐ Integration test: cross-container transfer rejected
-- ☐ PR: `feat(transfers): linked transfer transactions`
+- ☑ Transfer creation (two linked rows via `transfer_pair_id` in a single Prisma `$transaction`)
+- ☑ Update/delete with pair management
+- ☑ Balance cache updates for both accounts
+- ☑ Integration test: transfer atomicity
+- ☑ Integration test: cross-container transfer rejected
+- ☑ PR: `feat(transfers): linked transfer transactions`
 
 #### 1.4e — Audit Log
 

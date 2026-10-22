@@ -1,3 +1,7 @@
+// ============================================================================
+// Transactions Controller
+// ============================================================================
+
 import {
   Controller,
   Get,
@@ -16,6 +20,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { QueryTransactionsDto } from './dto/query-transactions.dto';
+import { CreateTransferDto } from './dto/create-transfer.dto';
 
 @ApiTags('transactions')
 @ApiBearerAuth()
@@ -40,6 +45,12 @@ export class TransactionsController {
   @ApiOperation({ summary: 'Create a new transaction (income or expense)' })
   async create(@CurrentUser() user: any, @Body() dto: CreateTransactionDto) {
     return this.transactionsService.create(user.id, dto);
+  }
+
+  @Post('transfer')
+  @ApiOperation({ summary: 'Create a transfer between two accounts in the same container' })
+  async transfer(@CurrentUser() user: any, @Body() dto: CreateTransferDto) {
+    return this.transactionsService.transfer(user.id, dto);
   }
 
   @Patch(':id')
