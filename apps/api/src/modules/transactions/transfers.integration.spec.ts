@@ -101,7 +101,7 @@ describe('Transfers (Integration)', () => {
       where: { accountId: { in: [accountAId, accountBId] }, type: 'TRANSFER' },
     });
     expect(transactions.length).toBe(2);
-    expect(transactions[0].transferPairId).toBe(transactions[1].transferPairId);
+    expect(transactions[0]!.transferPairId).toBe(transactions[1]!.transferPairId);
   });
 
   it('should reject transfers between different containers', async () => {
