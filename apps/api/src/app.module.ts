@@ -15,6 +15,7 @@ import { ContainersModule } from './modules/containers/containers.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     CategoriesModule,
     AccountsModule,
     TransactionsModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [
