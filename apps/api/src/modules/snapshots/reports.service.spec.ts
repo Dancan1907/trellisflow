@@ -1,3 +1,7 @@
+// ============================================================================
+// Reports Service Unit Tests
+// ============================================================================
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsService } from './reports.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -48,8 +52,8 @@ describe('ReportsService (Unit)', () => {
 
       const result = await service.getAllocation('u1');
 
-      // Type assertion to help TypeScript know it's the breakdown version
-      const typedResult = result as {
+      // Type assertion via unknown to bypass Prisma Decimal vs number mismatch in test
+      const typedResult = result as unknown as {
         total: number;
         breakdown: { personal: number; investments: number; businesses: number };
       };
