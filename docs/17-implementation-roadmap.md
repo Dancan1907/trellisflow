@@ -191,10 +191,16 @@
 
 ### 1.7 — Savings Goals
 
-- ☐ SavingsGoal module (CRUD)
-- ☐ Link to account OR manual amount
-- ☐ Progress computation
-- ☐ Tests
+**Effort:** ~2 days · **Status:** ☑ complete
+
+- ☑ SavingsGoal module scaffold
+- ☑ Create/Read/Update/Delete endpoints
+- ☑ Link to account OR manual amount
+- ☑ Progress computation (currentAmount, remaining, percentage)
+- ☑ Unit tests (logic math, fallback)
+- ☑ Integration test (real linked account updates)
+- ☑ Swagger annotations
+- ☑ PR: `feat(goals): savings goal CRUD and progress tracking`
 
 ### 1.8 — Reports & Snapshots
 
