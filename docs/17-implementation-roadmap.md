@@ -177,11 +177,17 @@
 
 ### 1.6 — Budgets
 
-- ☐ Budget module (CRUD)
-- ☐ Progress computation
-- ☐ Budget vs. Actual endpoint
-- ☐ Copy previous month
-- ☐ Tests
+**Effort:** ~2–3 days · **Status:** ☑ complete
+
+- ☑ Budget module scaffold
+- ☑ Create/Read/Update/Delete endpoints
+- ☑ Progress computation (spent, remaining, percentage)
+- ☑ Budget vs. Actual report (`GET /api/budgets/report`)
+- ☑ Copy previous month (`POST /api/budgets/copy-previous`)
+- ☑ Unit tests (math logic, division by zero)
+- ☑ Integration test (real transaction updates real budget)
+- ☑ Swagger annotations
+- ☑ PR: `feat(budgets): budget CRUD and progress tracking`
 
 ### 1.7 — Savings Goals
 
