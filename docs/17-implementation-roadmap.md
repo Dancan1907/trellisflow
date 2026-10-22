@@ -177,11 +177,38 @@
 
 ### 1.6 — Budgets
 
-- ☐ Budget module (CRUD)
-- ☐ Progress computation
-- ☐ Budget vs. Actual endpoint
-- ☐ Copy previous month
-- ☐ Tests
+**Effort:** ~2–3 days · **Status:** ☐ pending
+
+#### 1.6a — Module & CRUD
+
+- ☐ `[FEAT]` Budget module scaffold
+- ☐ `[FEAT]` Create a budget (Target amount, Category, Container, Period: Daily/Weekly/Monthly/Quarterly/Yearly)
+- ☐ `[FEAT]` Read/List budgets
+- ☐ `[FEAT]` Update a budget (change the target amount)
+- ☐ `[FEAT]` Delete/Archive a budget
+- ☐ `[SEC]` Enforce ownership and container-scoping (Personal vs. Business budgets are separate)
+- ☐ `[DOCS]` Swagger annotations
+
+#### 1.6b — Progress Computation (The Math)
+
+- ☐ `[FEAT]` Add a helper to calculate `spent` for a budget based on its specific timeframe (e.g., only sum transactions from Nov 1 to Nov 30 for a monthly budget)
+- ☐ `[FEAT]` Add a helper to calculate `remaining` (target - spent)
+- ☐ `[FEAT]` Add a helper to calculate `progress percentage`
+- ☐ `[FEAT]` Attach these computed values to the `GET /api/budgets` and `GET /api/budgets/:id` responses
+
+#### 1.6c — Budget vs. Actual Report
+
+- ☐ `[FEAT]` `GET /api/budgets/actual` — Returns a summary of all budgets vs. what was actually spent for the current active period
+
+#### 1.6d — Copy Previous Month
+
+- ☐ `[FEAT]` `POST /api/budgets/copy-previous` — Clones all active budgets from the previous period into the current period
+
+#### 1.6e — Testing & Delivery
+
+- ☐ `[TEST]` Unit tests for progress math (spent, remaining, percentage)
+- ☐ `[TEST]` Integration test: create budget → add transaction → verify progress updates
+- ☐ `[GIT]` PR: `feat(budgets): budget CRUD and progress tracking`
 
 ### 1.7 — Savings Goals
 
