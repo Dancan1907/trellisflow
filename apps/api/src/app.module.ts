@@ -17,6 +17,7 @@ import { AccountsModule } from './modules/accounts/accounts.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { RecurringModule } from './modules/recurring/recurring.module';
+import { BudgetsModule } from './modules/budgets/budgets.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { RecurringModule } from './modules/recurring/recurring.module';
     TransactionsModule,
     AuditModule,
     RecurringModule,
+    BudgetsModule,
   ],
   controllers: [AppController],
   providers: [
