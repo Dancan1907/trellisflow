@@ -95,14 +95,14 @@ _(Note: ExternalBusinessSource endpoints are deferred to Wave 4 — Task 4.1.)_
 
 #### 1.4c — Transactions Module
 
-- ☐ Transaction module scaffold
-- ☐ Create/Update/Delete endpoints (income, expense)
-- ☐ Filters (date range, category, account, type)
-- ☐ Pagination
-- ☐ Balance cache update on create/update/delete
-- ☐ Unit + integration tests
-- ☐ Swagger annotations
-- ☐ PR: `feat(transactions): transaction CRUD with filters and pagination`
+- ☑ Transaction module scaffold
+- ☑ Create/Update/Delete endpoints
+- ☑ Filters (date range, category, account, type, search)
+- ☑ Pagination (cursor-based)
+- ☑ Balance cache update on create/update/delete
+- ☑ Unit tests for TransactionsService
+- ☑ Swagger annotations
+- ☑ PR: `feat(transactions): transaction CRUD with filters and pagination`
 
 #### 1.4d — Transfers
 
