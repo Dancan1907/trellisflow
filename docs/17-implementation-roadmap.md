@@ -233,12 +233,17 @@
 
 ### 1.10 — Dashboard Endpoints
 
-- ☐ Summary endpoint
-- ☐ Net worth trend
-- ☐ Cash flow
-- ☐ Container cards
-- ☐ Insights endpoint
-- ☐ Tests
+**Effort:** ~1–2 days · **Status:** ☑ complete
+
+- ☑ Summary endpoint (`GET /api/dashboard/summary`)
+- ☑ Net worth trend (`GET /api/dashboard/net-worth-trend`)
+- ☑ Cash flow (included in summary)
+- ☑ Container cards (`GET /api/dashboard/containers`)
+- ☑ Insights endpoint (`GET /api/dashboard/insights`)
+- ☑ Unit tests (summary aggregator, container math)
+- ☑ Integration test (real DB summary and cards)
+- ☑ Swagger annotations
+- ☑ PR: `feat(dashboard): unified dashboard aggregator endpoints`
 
 ### 1.11 — Frontend Foundation
 
