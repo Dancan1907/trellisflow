@@ -106,6 +106,6 @@ describe('Insights (Integration)', () => {
     // 4. Verify the insight is in the database
     const insights = await prisma.insight.findMany({ where: { userId: testUserId } });
     expect(insights.length).toBe(1);
-    expect(insights[0].type).toBe('BUDGET_OVERSPENT');
+    expect(insights[0]!.type).toBe('BUDGET_OVERSPENT');
   });
 });
