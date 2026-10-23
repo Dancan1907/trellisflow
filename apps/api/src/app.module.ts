@@ -20,6 +20,7 @@ import { RecurringModule } from './modules/recurring/recurring.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { GoalsModule } from './modules/goals/goals.module';
 import { SnapshotsModule } from './modules/snapshots/snapshots.module';
+import { InsightsModule } from './modules/insights/insights.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { SnapshotsModule } from './modules/snapshots/snapshots.module';
     BudgetsModule,
     GoalsModule,
     SnapshotsModule,
+    InsightsModule,
   ],
   controllers: [AppController],
   providers: [
