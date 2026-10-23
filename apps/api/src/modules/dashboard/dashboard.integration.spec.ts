@@ -108,7 +108,7 @@ describe('Dashboard (Integration)', () => {
   it('should return correct container cards with real data', async () => {
     const result = await service.getContainerCards(testUserId);
     expect(result.length).toBe(1);
-    expect(result[0].netWorth).toBe(5000); // Our account has 5000
-    expect(result[0].accountCount).toBe(1);
+    expect(result[0]!.netWorth).toBe(5000);
+    expect(result[0]!.accountCount).toBe(1);
   });
 });
