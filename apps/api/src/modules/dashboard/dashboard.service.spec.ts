@@ -75,8 +75,8 @@ describe('DashboardService (Unit)', () => {
       const result = await service.getContainerCards('u1');
 
       expect(result.length).toBe(1);
-      expect(result[0].netWorth).toBe(4000);
-      expect(result[0].accountCount).toBe(2);
+      expect(result[0]!.netWorth).toBe(4000);
+      expect(result[0]!.accountCount).toBe(2);
     });
   });
 });
