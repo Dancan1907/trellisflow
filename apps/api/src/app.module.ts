@@ -21,6 +21,7 @@ import { BudgetsModule } from './modules/budgets/budgets.module';
 import { GoalsModule } from './modules/goals/goals.module';
 import { SnapshotsModule } from './modules/snapshots/snapshots.module';
 import { InsightsModule } from './modules/insights/insights.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { InsightsModule } from './modules/insights/insights.module';
     GoalsModule,
     SnapshotsModule,
     InsightsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
