@@ -220,11 +220,16 @@
 
 ### 1.9 — Insights (Basic)
 
-- ☐ Insight module
-- ☐ 3 rules (budget overspent, near limit, goal achieved)
-- ☐ Generation job
-- ☐ Dismiss / dismissAll
-- ☐ Tests
+**Effort:** ~2 days · **Status:** ☑ complete
+
+- ☑ Insight module
+- ☑ 3 rules (budget overspent, near limit, goal achieved)
+- ☑ Generation job (`POST /api/insights/generate`)
+- ☑ Dismiss / dismissAll endpoints
+- ☑ Unit tests (rules, deduplication)
+- ☑ Integration test (real DB)
+- ☑ Swagger annotations
+- ☑ PR: `feat(insights): basic rules engine and generation`
 
 ### 1.10 — Dashboard Endpoints
 
