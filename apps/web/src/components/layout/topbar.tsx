@@ -1,7 +1,7 @@
 'use client';
 
 import { Search, Bell, User as UserIcon, ChevronDown } from 'lucide-react';
-import { useAuthStore } from '@/lib/auth-store';
+import { useAuthStore } from '@/lib/auth/auth-store';
 
 export function Topbar() {
   const { user } = useAuthStore();
