@@ -68,6 +68,10 @@ export class EmailService {
       this.logger.log(`Email sent successfully to ${to}`);
     } catch (error) {
       this.logger.error(`Failed to send email to ${to}`, error);
+
+      if (error && typeof error === 'object' && 'message' in error) {
+        this.logger.error(`Resend API Error: ${(error as { message: string }).message}`);
+      }
     }
   }
 }
