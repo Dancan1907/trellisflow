@@ -203,15 +203,9 @@ export class AuthService {
       },
     });
 
-    const response: { message: string; devToken?: string } = {
+    return {
       message: 'If that email exists, a reset link has been sent.',
     };
-
-    if (this.configService.get<string>('NODE_ENV') !== 'production') {
-      response.devToken = rawToken;
-    }
-
-    return response;
   }
 
   /**
