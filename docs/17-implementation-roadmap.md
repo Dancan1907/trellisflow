@@ -247,15 +247,42 @@
 
 ### 1.11 — Frontend Foundation
 
-- ☐ Next.js app shell
-- ☐ Tailwind + shadcn/ui
-- ☐ Layout: sidebar, topbar, container switcher, quick-add
-- ☐ Auth pages
-- ☐ Onboarding flow
-- ☐ Generated REST client
-- ☐ Auth token handling
-- ☐ TanStack Query setup
-- ☐ Error/loading/empty components
+**Effort:** ~5 days · **Status:** ☑ complete
+
+#### 1.11a — Foundation & Design System
+
+- ☑ `[FEAT]` Next.js 15 (App Router) setup inside `apps/web`
+- ☑ `[DOCS]` Design system tokens created in `docs/18-design-system.md`
+- ☑ `[FEAT]` Tailwind CSS configuration with custom design tokens
+- ☑ `[FEAT]` Next.js Fonts (Inter, JetBrains Mono)
+- ☑ `[FEAT]` Global CSS setup
+- ☑ `[FEAT]` Install `lucide-react` and utility packages (`clsx`, `tailwind-merge`)
+
+#### 1.11b — Core Infrastructure
+
+- ☑ `[FEAT]` Generated REST API client from backend Swagger/OpenAPI
+- ☑ `[FEAT]` Auth Token handling (Zustand store + cookie sync)
+- ☑ `[FEAT]` TanStack Query provider setup
+- ☑ `[FEAT]` Base `lib/api` wrapper (inject auth headers, handle 401s)
+
+#### 1.11c — App Shell & Layout
+
+- ☑ `[FEAT]` App layout wrapper `(app)/layout.tsx`
+- ☑ `[FEAT]` Sidebar navigation (responsive)
+- ☑ `[FEAT]` Topbar (Container Switcher, Global Search, Profile Menu)
+- ☑ `[FEAT]` Mobile hamburger menu and sliding drawer overlay
+- ☑ `[FEAT]` Shared `Logo` component
+
+#### 1.11d — Auth & Onboarding
+
+- ☑ `[FEAT]` Login page (with eye toggle and standard autocomplete)
+- ☑ `[FEAT]` Signup page (with eye toggle and autofill prevention)
+- ☑ `[FEAT]` Forgot Password page (with real Resend email integration)
+- ☑ `[FEAT]` Reset Password page (clean URL token handling, no auto-fill)
+- ☑ `[FEAT]` Route protection via Next.js middleware
+- ☑ `[GIT]` PR: `feat(web): foundation, shell, and authentication`
+
+**Deliverable:** ✅ A fully functional, production-grade web app shell with authentication, protected routing, real email delivery, and responsive navigation.
 
 ### 1.12 — Frontend Screens (Wave 1)
 

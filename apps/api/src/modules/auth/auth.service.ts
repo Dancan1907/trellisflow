@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../../common/services/email.service'; // <--- ADDED
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import { SignupDto } from './dto/signup.dto';
@@ -14,11 +15,9 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService, // <--- ADDED
   ) {}
 
-  /**
-   * Signup
-   */
   async signup(dto: SignupDto) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
@@ -31,7 +30,6 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.password);
 
     try {
-      // 3. Create the user and container in a single DB transaction.
       const user = await this.prisma.user.create({
         data: {
           id: randomUUID(),
@@ -41,8 +39,6 @@ export class AuthService {
           timezone: dto.timezone ?? 'UTC',
           reportingCurrency: dto.reportingCurrency ?? 'USD',
           personaHint: dto.personaHint,
-
-          // Create the Personal container
           containers: {
             create: {
               id: randomUUID(),
@@ -52,8 +48,6 @@ export class AuthService {
               status: 'ACTIVE',
             },
           },
-
-          // Create the default categories
           categories: {
             createMany: {
               data: DEFAULT_CATEGORIES.map((cat) => ({
@@ -88,15 +82,11 @@ export class AuthService {
     }
   }
 
-  /**
-   * Login
-   */
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
 
-    // Dummy hash used to reduce timing differences.
     const dummyHash = '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$Q2xvdWR5VHJlZUZvcmV2ZXIxMjM0NTY=';
 
     if (!user || user.deletedAt) {
@@ -122,18 +112,12 @@ export class AuthService {
     };
   }
 
-  /**
-   * Refresh Token
-   * Validates a refresh token and issues a new access token + refresh token pair.
-   */
   async refreshTokens(refreshToken: string) {
     try {
-      // 1. Verify the token signature
       const payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
       });
 
-      // 2. Ensure the user still exists
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
       });
@@ -142,8 +126,6 @@ export class AuthService {
         throw new UnauthorizedException('User no longer exists');
       }
 
-      // 3. Verify that the session still exists in the database.
-      // We find all active sessions for this user, and check if any match this token.
       const sessions = await this.prisma.session.findMany({
         where: {
           userId: user.id,
@@ -164,10 +146,8 @@ export class AuthService {
         throw new UnauthorizedException('Session has been revoked');
       }
 
-      // 4. Generate a brand new pair of tokens (Token Rotation)
       return this.generateTokens(user.id, user.email);
     } catch (error) {
-      // Catch expired, tampered, or revoked tokens
       if (error instanceof UnauthorizedException) {
         throw error;
       }
@@ -175,9 +155,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Request Password Reset
-   */
   async requestPasswordReset(email: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -203,20 +180,14 @@ export class AuthService {
       },
     });
 
-    const response: { message: string; devToken?: string } = {
+    // <--- THE MISSING PIECE: Actually send the email!
+    await this.emailService.sendPasswordResetEmail(user.email, rawToken);
+
+    return {
       message: 'If that email exists, a reset link has been sent.',
     };
-
-    if (this.configService.get<string>('NODE_ENV') !== 'production') {
-      response.devToken = rawToken;
-    }
-
-    return response;
   }
 
-  /**
-   * Confirm Password Reset
-   */
   async confirmPasswordReset(rawToken: string, newPassword: string) {
     const tokens = await this.prisma.emailVerificationToken.findMany({
       where: {
@@ -257,9 +228,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Request Email Verification
-   */
   async requestEmailVerification(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -287,6 +255,9 @@ export class AuthService {
       },
     });
 
+    // <--- ADDED: Actually send the email
+    await this.emailService.sendVerificationEmail(user.email, rawToken);
+
     const response: { message: string; devToken?: string } = {
       message: 'Verification email sent',
     };
@@ -298,9 +269,6 @@ export class AuthService {
     return response;
   }
 
-  /**
-   * Confirm Email Verification
-   */
   async confirmEmailVerification(rawToken: string) {
     const tokens = await this.prisma.emailVerificationToken.findMany({
       where: {
@@ -337,9 +305,6 @@ export class AuthService {
     return { message: 'Email verified successfully' };
   }
 
-  /**
-   * Logout (Single Session)
-   */
   async logout(refreshToken: string) {
     try {
       const payload = await this.jwtService.verifyAsync(refreshToken, {
@@ -356,9 +321,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Logout All
-   */
   async logoutAll(userId: string) {
     await this.prisma.session.deleteMany({
       where: { userId },
@@ -367,9 +329,6 @@ export class AuthService {
     return { message: 'Logged out from all devices' };
   }
 
-  /**
-   * Helper: Generate JWT Access Token and Refresh Token
-   */
   private async generateTokens(userId: string, email: string) {
     const payload = { sub: userId, email };
 
