@@ -300,9 +300,9 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12b — Personal Overview & Accounts
 
-- ☐ `[FEAT]` Personal overview page (list of accounts with balances)
-- ☐ `[FEAT]` Create/Edit Account modal form
-- ☐ `[FEAT]` Account detail page (transaction history)
+- ☑ Personal overview page (list of accounts with balances)
+- ☑ Create Account modal form (with toast feedback)
+- ☐ Account detail page (transaction history) _(Deferred to 1.12c)_
 
 #### 1.12c — Transactions & Categories
 
