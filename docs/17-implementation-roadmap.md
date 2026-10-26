@@ -292,11 +292,11 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12a — Dashboard (Wealth Accelerator)
 
-- ☐ `[FEAT]` Hero Net Worth Card (total + breakdown)
-- ☐ `[FEAT]` Net Worth Trend Chart (wrapped with Recharts)
-- ☐ `[FEAT]` Container Cards (Personal, Investments, Businesses)
-- ☐ `[FEAT]` Insights Widget (top 3 insights)
-- ☐ `[FEAT]` Cash Flow Summary (this month's income vs. expenses)
+- ☑ Hero Net Worth Card (total + breakdown)
+- ☑ Container Cards (Personal, Investments, Businesses)
+- ☑ Cash Flow Summary (this month's income vs. expenses)
+- ☑ Insights Widget (top 3 insights)
+- ☐ Net Worth Trend Chart (Deferred to Wave 2 — requires Recharts setup)
 
 #### 1.12b — Personal Overview & Accounts
 
