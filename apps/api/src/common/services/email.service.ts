@@ -38,7 +38,7 @@ export class EmailService {
    * Reads an HTML template from disk and replaces the {{token}} placeholder.
    */
   private renderTemplate(templateName: string, token: string): string {
-    // Resolve path relative to the compiled dist directory
+    // Resolve path relative to the compiled dist directory.
     const templatePath = path.join(__dirname, '..', 'templates', templateName);
 
     try {
@@ -46,7 +46,8 @@ export class EmailService {
       return template.replace('{{token}}', token);
     } catch (error) {
       this.logger.error(`Failed to load template: ${templateName}`, error);
-      // Fallback to plain text if file isn't found
+
+      // Fallback to plain HTML if the template cannot be found.
       return `<p>Your token is: <strong>${token}</strong></p>`;
     }
   }
@@ -54,23 +55,31 @@ export class EmailService {
   private async send(to: string, subject: string, html: string) {
     if (!this.resend) {
       this.logger.log(`📧 [DEV EMAIL] To: ${to} | Subject: ${subject}`);
-      this.logger.debug(`📧 HTML Body:\n${html}`);
+      this.logger.debug(`📧 Body: ${html}`);
       return;
     }
 
     try {
-      await this.resend.emails.send({
-        from: this.config.get('EMAIL_FROM') || 'noreply@trellisflow.com',
+      const response = await this.resend.emails.send({
+        from: this.config.get<string>('EMAIL_FROM') || 'onboarding@resend.dev',
         to,
         subject,
         html,
       });
-      this.logger.log(`Email sent successfully to ${to}`);
-    } catch (error) {
-      this.logger.error(`Failed to send email to ${to}`, error);
 
-      if (error && typeof error === 'object' && 'message' in error) {
-        this.logger.error(`Resend API Error: ${(error as { message: string }).message}`);
+      // Log the full response from Resend for debugging.
+      this.logger.log(`Resend response: ${JSON.stringify(response)}`);
+
+      if (response.error) {
+        this.logger.error(`Resend API Error: ${response.error.message}`);
+      } else {
+        this.logger.log(`Email sent successfully to ${to}`);
+      }
+    } catch (error) {
+      this.logger.error(`Exception sending email to ${to}`, error);
+
+      if (error instanceof Error) {
+        this.logger.error(`Error details: ${error.message}`);
       }
     }
   }
