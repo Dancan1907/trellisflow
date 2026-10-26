@@ -1,28 +1,36 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '@/lib/api/api-client';
 import { Logo } from '@/components/shared/logo';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [token, setToken] = useState('');
+  const searchParams = useSearchParams();
+
+  // 1. Read the token from the URL silently
+  const token = searchParams.get('token') || '';
+
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Read token from URL query parameter
+  // 2. If there is no token in the URL, show an error
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-    if (urlToken) setToken(urlToken);
-  }, []);
+    if (!token) {
+      setError('Invalid or missing reset token. Please request a new link.');
+    }
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!token) return;
+
     setError(null);
     setMessage(null);
     setIsLoading(true);
@@ -69,40 +77,49 @@ export default function ResetPasswordPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-fg-primary mb-2">Reset Token</label>
-              <input
-                type="text"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                required
-                className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary placeholder:text-fg-tertiary focus:outline-none focus:border-accent-primary transition-colors font-mono text-sm"
-                placeholder="Paste your reset token"
-              />
+          {/* If the token is missing, don't show the form */}
+          {!token ? (
+            <div className="text-center">
+              <Link href="/forgot-password" className="text-accent-primary hover:underline">
+                Request a new reset link
+              </Link>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-fg-primary mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete="new-password" // <--- Prevents browser from auto-filling
+                    className="w-full h-10 pl-3 pr-10 rounded-md border border-border-subtle bg-bg-primary text-fg-primary placeholder:text-fg-tertiary focus:outline-none focus:border-accent-primary transition-colors"
+                    placeholder="At least 8 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-tertiary hover:text-fg-secondary"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-fg-primary mb-2">New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary placeholder:text-fg-tertiary focus:outline-none focus:border-accent-primary transition-colors"
-                placeholder="At least 8 characters"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || !!message}
-              className="w-full h-10 rounded-md bg-accent-primary text-white font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isLoading || !!message}
+                className="w-full h-10 rounded-md bg-accent-primary text-white font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </form>
+          )}
 
           <p className="mt-6 text-center text-sm text-fg-secondary">
             <Link href="/login" className="text-accent-primary hover:underline">
