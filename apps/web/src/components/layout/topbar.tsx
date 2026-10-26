@@ -1,10 +1,14 @@
 'use client';
 
-import { Search, Bell, User as UserIcon, ChevronDown, LogOut } from 'lucide-react';
+import { Search, Bell, User as UserIcon, ChevronDown, LogOut, Menu } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth/auth-store';
 import { useRouter } from 'next/navigation';
 
-export function Topbar() {
+interface TopbarProps {
+  onMenuClick: () => void;
+}
+
+export function Topbar({ onMenuClick }: TopbarProps) {
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
 
@@ -14,17 +18,24 @@ export function Topbar() {
   };
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 border-b border-border-subtle bg-bg-secondary">
-      {/* Left side: Container Switcher */}
-      <div className="flex items-center gap-4">
+    <header className="h-16 flex items-center justify-between px-4 md:px-6 border-b border-border-subtle bg-bg-secondary">
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Hamburger Menu Button - Mobile Only */}
+        <button
+          onClick={onMenuClick}
+          className="p-2 rounded-md md:hidden hover:bg-bg-tertiary text-fg-primary transition-colors"
+        >
+          <Menu size={24} />
+        </button>
+
+        {/* Container Switcher */}
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border-subtle hover:bg-bg-tertiary text-sm font-medium text-fg-primary transition-colors">
           Personal
           <ChevronDown size={14} className="text-fg-secondary" />
         </button>
       </div>
 
-      {/* Right side: Search, Notifications & Logout */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Search Input */}
         <div className="relative hidden md:block">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-tertiary" />
@@ -40,7 +51,7 @@ export function Topbar() {
           <Bell size={20} />
         </button>
 
-        {/* User Profile & Logout Action */}
+        {/* User Profile & Logout */}
         <button
           onClick={handleLogout}
           title="Click to Log Out"
