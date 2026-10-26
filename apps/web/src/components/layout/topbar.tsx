@@ -1,23 +1,31 @@
 'use client';
 
-import { Search, Bell, User as UserIcon, ChevronDown } from 'lucide-react';
+import { Search, Bell, User as UserIcon, ChevronDown, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth/auth-store';
+import { useRouter } from 'next/navigation';
 
 export function Topbar() {
-  const { user } = useAuthStore();
+  const { user, clearAuth } = useAuthStore();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    clearAuth();
+    router.push('/login');
+  };
 
   return (
     <header className="h-16 flex items-center justify-between px-6 border-b border-border-subtle bg-bg-secondary">
+      {/* Left side: Container Switcher */}
       <div className="flex items-center gap-4">
-        {/* Container Switcher Placeholder */}
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border-subtle hover:bg-bg-tertiary text-sm font-medium text-fg-primary transition-colors">
           Personal
           <ChevronDown size={14} className="text-fg-secondary" />
         </button>
       </div>
 
+      {/* Right side: Search, Notifications & Logout */}
       <div className="flex items-center gap-4">
-        {/* Search */}
+        {/* Search Input */}
         <div className="relative hidden md:block">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-tertiary" />
           <input
@@ -32,15 +40,19 @@ export function Topbar() {
           <Bell size={20} />
         </button>
 
-        {/* User Profile */}
-        <button className="flex items-center gap-2 p-1 rounded-md hover:bg-bg-tertiary transition-colors">
+        {/* User Profile & Logout Action */}
+        <button
+          onClick={handleLogout}
+          title="Click to Log Out"
+          className="flex items-center gap-2 p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+        >
           <div className="w-8 h-8 rounded-full bg-accent-subtle flex items-center justify-center">
             <UserIcon size={16} className="text-accent-primary" />
           </div>
           <span className="text-sm font-medium text-fg-primary hidden md:block">
             {user?.name || 'Account'}
           </span>
-          <ChevronDown size={14} className="text-fg-secondary hidden md:block" />
+          <LogOut size={14} className="text-fg-secondary hidden md:block" />
         </button>
       </div>
     </header>
