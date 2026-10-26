@@ -286,13 +286,71 @@
 
 ### 1.12 — Frontend Screens (Wave 1)
 
-- ☐ Dashboard (Wealth Accelerator)
-- ☐ Personal overview
-- ☐ Personal accounts, transactions, categories, recurring
-- ☐ Budgets, goals
-- ☐ Reports (net worth, cash flow, budget vs actual)
-- ☐ Insights page
-- ☐ Settings (all sub-pages)
+**Effort:** ~2–3 weeks · **Status:** ☐ pending
+
+We will build this in phases within a single `feature/screens` branch.
+
+#### 1.12a — Dashboard (Wealth Accelerator)
+
+- ☐ `[FEAT]` Hero Net Worth Card (total + breakdown)
+- ☐ `[FEAT]` Net Worth Trend Chart (wrapped with Recharts)
+- ☐ `[FEAT]` Container Cards (Personal, Investments, Businesses)
+- ☐ `[FEAT]` Insights Widget (top 3 insights)
+- ☐ `[FEAT]` Cash Flow Summary (this month's income vs. expenses)
+
+#### 1.12b — Personal Overview & Accounts
+
+- ☐ `[FEAT]` Personal overview page (list of accounts with balances)
+- ☐ `[FEAT]` Create/Edit Account modal form
+- ☐ `[FEAT]` Account detail page (transaction history)
+
+#### 1.12c — Transactions & Categories
+
+- ☐ `[FEAT]` Transaction list page (filters, search, infinite scroll)
+- ☐ `[FEAT]` Quick-add transaction form (modal)
+- ☐ `[FEAT]` Categories management page (tree view, CRUD)
+- ☐ `[FEAT]` Transfer form (modal)
+
+#### 1.12d — Recurring Rules
+
+- ☐ `[FEAT]` Recurring rules list page
+- ☐ `[FEAT]` Create/Edit rule form
+- ☐ `[FEAT]` Upcoming bills widget
+
+#### 1.12e — Budgets & Goals
+
+- ☐ `[FEAT]` Budgets overview page (progress bars)
+- ☐ `[FEAT]` Create/Edit Budget form
+- ☐ `[FEAT]` Goals overview page
+- ☐ `[FEAT]` Create/Edit Goal form
+
+#### 1.12f — Reports
+
+- ☐ `[FEAT]` Reports landing page
+- ☐ `[FEAT]` Net Worth Statement page (with PDF download button)
+- ☐ `[FEAT]` Cash Flow Statement page
+- ☐ `[FEAT]` Allocation Report page
+- ☐ `[FEAT]` Budget vs. Actual report page
+
+#### 1.12g — Insights & Settings
+
+- ☐ `[FEAT]` Insights full page (list, dismiss all)
+- ☐ `[FEAT]` Settings: Profile & Preferences
+- ☐ `[FEAT]` Settings: Security & Sessions
+- ☐ `[FEAT]` Settings: Containers
+- ☐ `[FEAT]` Settings: Audit Log
+
+#### 1.12h — Shared UI Components
+
+- ☐ `[FEAT]` Empty states (every list)
+- ☐ `[FEAT]` Loading skeletons
+- ☐ `[FEAT]` Toasts for success/error feedback
+- ☐ `[FEAT]` Modal / Dialog primitive
+- ☐ `[FEAT]` Amount formatting utility component
+
+- ☐ `[GIT]` PR: `feat(web): complete application screens for Wave 1`
+
+**Deliverable:** ✅ A complete, navigable, beautiful UI for the entire Wave 1 feature set.
 
 ### 1.13 — Testing & CI
 
