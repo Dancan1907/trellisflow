@@ -14,10 +14,11 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Auto-fill token from dev storage
+  // Read token from URL query parameter
   useEffect(() => {
-    const stored = localStorage.getItem('reset-token');
-    if (stored) setToken(stored);
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    if (urlToken) setToken(urlToken);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,7 +34,6 @@ export default function ResetPasswordPage() {
       });
 
       setMessage(data.message);
-      localStorage.removeItem('reset-token'); // cleanup
 
       // Redirect to login after 2 seconds
       setTimeout(() => router.push('/login'), 2000);
