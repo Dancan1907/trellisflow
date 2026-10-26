@@ -18,21 +18,11 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const data = await apiFetch<{ message: string; devToken?: string }>(
-        '/api/auth/forgot-password',
-        {
-          method: 'POST',
-          body: JSON.stringify({ email }),
-        },
-      );
-
+      const data = await apiFetch<{ message: string }>('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
       setMessage(data.message);
-
-      // In development, the API returns a devToken.
-      // We'll store it in localStorage so the reset page can pick it up.
-      if (data.devToken) {
-        localStorage.setItem('reset-token', data.devToken);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed');
     } finally {
@@ -62,12 +52,7 @@ export default function ForgotPasswordPage() {
           {message && (
             <div className="mb-4 p-3 bg-status-positive/10 border border-status-positive rounded-md text-status-positive text-sm">
               {message}
-              {/* Add a button to go to the reset page in dev mode */}
-              <div className="mt-3">
-                <Link href="/reset-password" className="font-semibold underline">
-                  Click here to reset your password
-                </Link>
-              </div>
+              <p className="mt-2 text-xs">Check your email inbox for the reset link.</p>
             </div>
           )}
 
