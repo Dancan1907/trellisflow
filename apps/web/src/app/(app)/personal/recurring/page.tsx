@@ -1,24 +1,59 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Calendar, Clock } from 'lucide-react';
+import { Plus, Calendar, Clock, Edit, PauseCircle, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useRecurringRules, useUpcomingBills } from '@/lib/hooks/use-recurring';
+import {
+  useRecurringRules,
+  useUpcomingBills,
+  useUpdateRecurringRule,
+  useToggleRuleStatus,
+} from '@/lib/hooks/use-recurring';
 import { CreateRuleModal } from '@/components/features/recurring/create-rule-modal';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
+import { Modal } from '@/components/ui/modal';
+import { showToast } from '@/components/ui/toast';
 
 export default function RecurringPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<any>(null);
+  const [editAmount, setEditAmount] = useState('');
+
   const { data: rules, isLoading } = useRecurringRules();
   const { data: upcoming } = useUpcomingBills();
+  const updateRule = useUpdateRecurringRule();
+  const toggleStatus = useToggleRuleStatus();
   const pathname = usePathname();
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRule) return;
+    try {
+      await updateRule.mutateAsync({ id: editingRule.id, amount: parseFloat(editAmount) });
+      showToast('success', 'Rule updated');
+      setEditingRule(null);
+    } catch (err) {
+      showToast('error', 'Failed to update', err instanceof Error ? err.message : 'Error');
+    }
+  };
+
+  const handleToggle = async (id: string, currentStatus: string) => {
+    try {
+      await toggleStatus.mutateAsync({
+        id,
+        action: currentStatus === 'ACTIVE' ? 'pause' : 'resume',
+      });
+      showToast('success', `Rule ${currentStatus === 'ACTIVE' ? 'paused' : 'resumed'}`);
+    } catch (err) {
+      showToast('error', 'Failed to toggle status', err instanceof Error ? err.message : 'Error');
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-fg-primary mb-1">Recurring Rules</h1>
@@ -32,7 +67,6 @@ export default function RecurringPage() {
         </button>
       </div>
 
-      {/* Tab Navigation */}
       <div className="flex items-center gap-1 border-b border-border-subtle">
         <Link
           href="/personal"
@@ -55,7 +89,6 @@ export default function RecurringPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Rules List */}
         <div className="lg:col-span-2 space-y-4">
           <h2 className="text-lg font-medium text-fg-primary">All Rules</h2>
           {isLoading ? (
@@ -65,20 +98,55 @@ export default function RecurringPage() {
               {rules.map((rule) => (
                 <div
                   key={rule.id}
-                  className="flex items-center justify-between p-4 bg-bg-secondary border border-border-subtle rounded-lg"
+                  className="flex items-center justify-between p-4 bg-bg-secondary border border-border-subtle rounded-lg group"
                 >
                   <div>
-                    <p className="font-medium text-fg-primary">{rule.description}</p>
+                    <div className="flex items-center gap-2">
+                      <p
+                        className={`font-medium ${rule.status === 'ACTIVE' ? 'text-fg-primary' : 'text-fg-secondary line-through'}`}
+                      >
+                        {rule.description}
+                      </p>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded uppercase ${rule.status === 'ACTIVE' ? 'bg-status-positive/10 text-status-positive' : 'bg-bg-tertiary text-fg-secondary'}`}
+                      >
+                        {rule.status}
+                      </span>
+                    </div>
                     <p className="text-xs text-fg-secondary flex items-center gap-1 mt-1">
                       <Clock size={12} /> {rule.frequency} • Next:{' '}
                       {new Date(rule.nextOccurrence).toLocaleDateString()}
                     </p>
                   </div>
-                  <AmountDisplay
-                    value={rule.amount}
-                    currency={rule.currency}
-                    colorize={rule.type === 'INCOME'}
-                  />
+                  <div className="flex items-center gap-4">
+                    <AmountDisplay
+                      value={rule.amount}
+                      currency={rule.currency}
+                      colorize={rule.type === 'INCOME'}
+                    />
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => {
+                          setEditingRule(rule);
+                          setEditAmount(rule.amount);
+                        }}
+                        className="p-1 text-fg-tertiary hover:text-accent-primary"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleToggle(rule.id, rule.status)}
+                        className="p-1 text-fg-tertiary hover:text-status-warning"
+                      >
+                        {rule.status === 'ACTIVE' ? (
+                          <PauseCircle size={16} />
+                        ) : (
+                          <PlayCircle size={16} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -91,7 +159,6 @@ export default function RecurringPage() {
           )}
         </div>
 
-        {/* Right: Upcoming Bills Widget */}
         <div className="lg:col-span-1">
           <h2 className="text-lg font-medium text-fg-primary mb-4">Upcoming (30 days)</h2>
           <div className="bg-bg-secondary border border-border-subtle rounded-lg p-4 space-y-3">
@@ -118,6 +185,37 @@ export default function RecurringPage() {
       </div>
 
       <CreateRuleModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+      <Modal isOpen={!!editingRule} onClose={() => setEditingRule(null)} title="Edit Rule Amount">
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-fg-primary mb-2">Amount (KES)</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary"
+            />
+          </div>
+          <div className="pt-4 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setEditingRule(null)}
+              className="px-4 py-2 text-sm text-fg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-md bg-accent-primary text-white text-sm"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
