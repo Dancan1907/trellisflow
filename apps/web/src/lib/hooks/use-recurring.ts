@@ -42,7 +42,7 @@ export function useUpdateRecurringRule() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string; amount?: number; description?: string }) =>
-      apiFetch<RecurringRule>(`/api/recurring-rules/${id}`, {
+      apiFetch<any>(`/api/recurring-rules/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
@@ -54,7 +54,7 @@ export function useToggleRuleStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'pause' | 'resume' }) =>
-      apiFetch<RecurringRule>(`/api/recurring-rules/${id}/${action}`, { method: 'POST' }),
+      apiFetch<any>(`/api/recurring-rules/${id}/${action}`, { method: 'POST' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring-rules'] }),
   });
 }
