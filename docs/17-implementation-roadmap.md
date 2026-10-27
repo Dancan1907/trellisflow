@@ -332,11 +332,12 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12f — Reports
 
-- ☐ `[FEAT]` Reports landing page
-- ☐ `[FEAT]` Net Worth Statement page (with PDF download button)
-- ☐ `[FEAT]` Cash Flow Statement page
-- ☐ `[FEAT]` Allocation Report page
-- ☐ `[FEAT]` Budget vs. Actual report page
+- ☑ Reports landing page
+- ☑ Net Worth Statement page (with PDF download)
+- ☑ Cash Flow Statement page
+- ☑ Allocation Report page
+- ☑ Auto-snapshot computation (triggers on account/transaction creation)
+- ☐ Budget vs. Actual report _(Already built into the Budgets page in 1.12e)_
 
 #### 1.12g — Insights & Settings
 
