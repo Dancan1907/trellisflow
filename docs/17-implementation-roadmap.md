@@ -316,9 +316,11 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12d — Recurring Rules
 
-- ☐ `[FEAT]` Recurring rules list page
-- ☐ `[FEAT]` Create/Edit rule form
-- ☐ `[FEAT]` Upcoming bills widget
+- ☑ Recurring rules list page
+- ☑ Create/Edit rule form
+- ☑ Upcoming bills widget (30 days)
+- ☑ Pause/Resume functionality
+- ☑ Tab navigation integration
 
 #### 1.12e — Budgets & Goals
 
