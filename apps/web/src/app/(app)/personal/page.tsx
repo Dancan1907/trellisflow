@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { useAccounts } from '@/lib/hooks/use-accounts';
 import { useDashboardContainers } from '@/lib/hooks/use-dashboard';
@@ -11,6 +13,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 
 export default function PersonalPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const pathname = usePathname();
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const { data: containers, isLoading: isLoadingContainers } = useDashboardContainers();
 
@@ -35,6 +38,30 @@ export default function PersonalPage() {
           <Plus size={18} />
           Add Account
         </button>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-1 border-b border-border-subtle">
+        <Link
+          href="/personal"
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            pathname === '/personal'
+              ? 'border-accent-primary text-fg-primary'
+              : 'border-transparent text-fg-secondary hover:text-fg-primary'
+          }`}
+        >
+          Accounts
+        </Link>
+        <Link
+          href="/personal/categories"
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            pathname === '/personal/categories'
+              ? 'border-accent-primary text-fg-primary'
+              : 'border-transparent text-fg-secondary hover:text-fg-primary'
+          }`}
+        >
+          Categories
+        </Link>
       </div>
 
       {/* Accounts Grid */}

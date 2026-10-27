@@ -40,7 +40,23 @@ interface Insight {
 export function useDashboardSummary() {
   return useQuery({
     queryKey: ['dashboard', 'summary'],
-    queryFn: () => apiFetch<DashboardSummary>('/api/dashboard/summary'),
+    queryFn: async () => {
+      // Fetch the live net worth from the accounts endpoint
+      const netWorth = await apiFetch<any>('/api/accounts/net-worth');
+      // Fetch the cash flow from the dashboard endpoint
+      const summary = await apiFetch<any>('/api/dashboard/summary');
+
+      return {
+        netWorth: {
+          total: netWorth.totalNetWorth,
+          personal: netWorth.totalAssets - netWorth.totalLiabilities, // Simplified for now
+          investments: 0,
+          businesses: 0,
+          currency: 'KES',
+        },
+        cashFlow: summary.cashFlow,
+      };
+    },
   });
 }
 

@@ -39,9 +39,8 @@ export function useCreateAccount() {
         body: JSON.stringify(dto),
       }),
     onSuccess: () => {
-      // Invalidate the accounts query so it refetches automatically
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      // Also invalidate the dashboard since accounts affect net worth
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
