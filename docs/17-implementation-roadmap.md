@@ -306,10 +306,13 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12c — Transactions & Categories
 
-- ☐ `[FEAT]` Transaction list page (filters, search, infinite scroll)
-- ☐ `[FEAT]` Quick-add transaction form (modal)
-- ☐ `[FEAT]` Categories management page (tree view, CRUD)
-- ☐ `[FEAT]` Transfer form (modal)
+- ☑ Transaction list page (inside Account Detail)
+- ☑ Quick-add transaction form (modal)
+- ☑ Categories management page (list and create)
+- ☑ Live Net Worth updates (Hero card fetches from accounts endpoint)
+- ☑ Tab navigation between Accounts and Categories
+- ☐ Full transaction filtering and search (Deferred to Wave 2)
+- ☐ Transfer form (Deferred to Wave 2)
 
 #### 1.12d — Recurring Rules
 
