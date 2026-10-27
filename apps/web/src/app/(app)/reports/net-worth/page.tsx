@@ -19,19 +19,6 @@ export default function NetWorthReportPage() {
     window.open(url, '_blank');
   };
 
-  const handleForceSnapshot = async () => {
-    try {
-      await fetch(`${API_BASE_URL}/api/reports/snapshots/process-daily`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // Refresh the page to fetch the new data
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const latest = trend && trend.length > 0 ? trend[trend.length - 1] : null;
 
   return (
@@ -41,20 +28,12 @@ export default function NetWorthReportPage() {
           <h1 className="text-2xl font-semibold text-fg-primary mb-1">Net Worth Statement</h1>
           <p className="text-fg-secondary text-sm">Your wealth trajectory over the last 90 days.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleForceSnapshot}
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-bg-tertiary text-fg-primary text-sm font-medium hover:bg-border-subtle transition-colors"
-          >
-            Force Snapshot (Test)
-          </button>
-          <button
-            onClick={handleDownloadPdf}
-            className="flex items-center gap-2 px-4 py-2 rounded-md border border-border-subtle text-fg-primary text-sm font-medium hover:bg-bg-tertiary transition-colors"
-          >
-            <FileDown size={16} /> Download PDF
-          </button>
-        </div>
+        <button
+          onClick={handleDownloadPdf}
+          className="flex items-center gap-2 px-4 py-2 rounded-md border border-border-subtle text-fg-primary text-sm font-medium hover:bg-bg-tertiary transition-colors"
+        >
+          <FileDown size={16} /> Download PDF
+        </button>
       </div>
 
       {isLoading ? (
