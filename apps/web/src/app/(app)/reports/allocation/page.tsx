@@ -3,9 +3,14 @@
 import { useAllocation } from '@/lib/hooks/use-reports';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/shared/empty-state';
+import { PieChart } from 'lucide-react';
 
 export default function AllocationReportPage() {
   const { data, isLoading } = useAllocation();
+
+  // Safely check if data exists AND has a breakdown
+  const hasData = data && 'breakdown' in data && data.breakdown;
 
   return (
     <div className="space-y-6">
@@ -14,8 +19,14 @@ export default function AllocationReportPage() {
         <p className="text-fg-secondary text-sm">See how your wealth is distributed.</p>
       </div>
 
-      {isLoading || !data ? (
+      {isLoading ? (
         <Skeleton className="h-64 w-full" />
+      ) : !hasData ? (
+        <EmptyState
+          icon={PieChart}
+          title="No allocation data yet"
+          description="Once you have accounts and snapshots, your wealth breakdown will appear here."
+        />
       ) : (
         <div className="bg-bg-secondary border border-border-subtle rounded-lg p-8">
           <div className="mb-8">
@@ -37,10 +48,9 @@ export default function AllocationReportPage() {
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium text-fg-primary capitalize">{label}</span>
                     <span className="text-fg-secondary font-mono">
-                      <AmountDisplay value={value} currency="KES" /> ({percent}%)
+                      <AmountDisplay value={value as string} currency="KES" /> ({percent}%)
                     </span>
                   </div>
-                  {/* Progress bar for allocation */}
                   <div className="w-full h-2 bg-bg-tertiary rounded-full overflow-hidden">
                     <div className="h-full bg-accent-primary" style={{ width: `${percent}%` }} />
                   </div>
