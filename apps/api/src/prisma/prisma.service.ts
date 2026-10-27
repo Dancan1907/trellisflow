@@ -27,10 +27,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
   /**
    * Connects to the database when the module is initialized.
-   * If the connection fails, the app will not start.
+   * Retries once after 3 seconds if the first attempt fails (e.g. Neon cold start).
    */
   async onModuleInit() {
-    await this.$connect();
+    try {
+      await this.$connect();
+      console.log('✅ Connected to database');
+    } catch (error) {
+      console.log('⚠️ Database connection failed, retrying in 3 seconds...');
+      // Wait 3 seconds and try again (Neon sleep wake-up)
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await this.$connect();
+      console.log('✅ Connected to database on second attempt');
+    }
   }
 
   /**
