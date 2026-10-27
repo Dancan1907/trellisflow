@@ -8,8 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function CashFlowReportPage() {
   // Default to current month
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  // ADDED || '' to satisfy strict TypeScript
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0] || '';
+  const lastDay =
+    new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0] || '';
 
   const [from, setFrom] = useState(firstDay);
   const [to, setTo] = useState(lastDay);
