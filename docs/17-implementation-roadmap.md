@@ -324,10 +324,11 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12e — Budgets & Goals
 
-- ☐ `[FEAT]` Budgets overview page (progress bars)
-- ☐ `[FEAT]` Create/Edit Budget form
-- ☐ `[FEAT]` Goals overview page
-- ☐ `[FEAT]` Create/Edit Goal form
+- ☑ Budgets overview page (with progress bars)
+- ☑ Create/Edit/Delete Budget functionality
+- ☑ Copy Previous Month budgets
+- ☑ Goals overview page (with progress bars)
+- ☑ Create/Edit/Delete Goal functionality
 
 #### 1.12f — Reports
 
