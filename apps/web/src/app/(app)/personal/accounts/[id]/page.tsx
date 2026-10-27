@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, ArrowDownRight, ArrowUpRight, Edit, Archive } from 'lucide-react';
+import { Plus, ArrowDownRight, ArrowUpRight, Edit, Archive, Trash2 } from 'lucide-react';
 import { useAccounts, useUpdateAccount, useArchiveAccount } from '@/lib/hooks/use-accounts';
-import { useTransactions } from '@/lib/hooks/use-transactions';
+import { useTransactions, useDeleteTransaction } from '@/lib/hooks/use-transactions';
 import { AddTransactionModal } from '@/components/features/transactions/add-transaction-modal';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,7 @@ export default function AccountDetailPage() {
   const { data: txData, isLoading: isLoadingTx } = useTransactions(id as string);
   const updateAccount = useUpdateAccount();
   const archiveAccount = useArchiveAccount();
+  const deleteTransaction = useDeleteTransaction();
 
   const [editName, setEditName] = useState('');
   const [editInstitution, setEditInstitution] = useState('');
@@ -61,6 +62,21 @@ export default function AccountDetailPage() {
       router.push('/personal');
     } catch (err) {
       showToast('error', 'Failed to archive', err instanceof Error ? err.message : 'Error');
+    }
+  };
+
+  const handleDeleteTx = async (txId: string) => {
+    if (
+      !confirm(
+        'Are you sure you want to delete this transaction? This will adjust the account balance.',
+      )
+    )
+      return;
+    try {
+      await deleteTransaction.mutateAsync(txId);
+      showToast('success', 'Transaction deleted');
+    } catch (err) {
+      showToast('error', 'Failed to delete', err instanceof Error ? err.message : 'Error');
     }
   };
 
@@ -112,11 +128,15 @@ export default function AccountDetailPage() {
             {transactions.map((tx) => (
               <div
                 key={tx.id}
-                className="flex items-center justify-between p-4 hover:bg-bg-tertiary transition-colors"
+                className="flex items-center justify-between p-4 hover:bg-bg-tertiary transition-colors group"
               >
                 <div className="flex items-center gap-4">
                   <div
-                    className={`p-2 rounded-full ${tx.type === 'EXPENSE' ? 'bg-status-negative/10 text-status-negative' : 'bg-status-positive/10 text-status-positive'}`}
+                    className={`p-2 rounded-full ${
+                      tx.type === 'EXPENSE'
+                        ? 'bg-status-negative/10 text-status-negative'
+                        : 'bg-status-positive/10 text-status-positive'
+                    }`}
                   >
                     {tx.type === 'EXPENSE' ? (
                       <ArrowDownRight size={18} />
@@ -131,13 +151,20 @@ export default function AccountDetailPage() {
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="flex items-center gap-4">
                   <AmountDisplay
                     value={tx.type === 'EXPENSE' ? `-${tx.amount}` : tx.amount}
                     currency={tx.currency}
                     colorize
                     showSign
                   />
+                  <button
+                    onClick={() => handleDeleteTx(tx.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-fg-tertiary hover:text-status-negative transition-all"
+                    title="Delete Transaction"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
