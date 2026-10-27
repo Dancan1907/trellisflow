@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Plus, Tag, Edit, Trash2 } from 'lucide-react';
+import { Tag, Edit, Trash2 } from 'lucide-react';
 import {
   useCategories,
   useCreateCategory,
@@ -109,7 +109,6 @@ export default function CategoriesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-border-subtle">
         <Link
           href="/personal"
