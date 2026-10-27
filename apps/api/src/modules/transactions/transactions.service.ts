@@ -12,6 +12,7 @@ import { CreateTransferDto } from './dto/create-transfer.dto';
 import { AuditLogService } from '../../common/services/audit.service';
 import { AuditAction } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { SnapshotsService } from '../snapshots/snapshots.service';
 
 @Injectable()
 export class TransactionsService {
@@ -19,6 +20,7 @@ export class TransactionsService {
     private prisma: PrismaService,
     private balanceService: BalanceService,
     private auditLog: AuditLogService,
+    private snapshotsService: SnapshotsService,
   ) {}
 
   /**
@@ -45,9 +47,9 @@ export class TransactionsService {
     }
 
     // 3. Execute in a database transaction
-    return this.prisma.$transaction(async (tx) => {
+    const transaction = await this.prisma.$transaction(async (tx) => {
       // a. Create the transaction row
-      const transaction = await tx.transaction.create({
+      const created = await tx.transaction.create({
         data: {
           id: randomUUID(),
           userId,
@@ -79,14 +81,19 @@ export class TransactionsService {
         tx,
         userId,
         'Transaction',
-        transaction.id,
+        created.id,
         AuditAction.CREATE,
         null, // No 'before' state
-        transaction, // The new 'after' state
+        created, // The new 'after' state
       );
 
-      return transaction;
+      return created;
     });
+
+    // After the transaction is saved, recompute the snapshot
+    await this.snapshotsService.computeAndSaveForUser(userId);
+
+    return transaction;
   }
 
   /**
