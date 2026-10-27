@@ -17,7 +17,6 @@ export default function PersonalPage() {
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const { data: containers, isLoading: isLoadingContainers } = useDashboardContainers();
 
-  // Find the Personal container to pass its ID to the modal
   const personalContainer = containers?.find((c) => c.type === 'PERSONAL');
 
   return (
@@ -61,6 +60,16 @@ export default function PersonalPage() {
           }`}
         >
           Categories
+        </Link>
+        <Link
+          href="/personal/recurring"
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            pathname === '/personal/recurring'
+              ? 'border-accent-primary text-fg-primary'
+              : 'border-transparent text-fg-secondary hover:text-fg-primary'
+          }`}
+        >
+          Recurring
         </Link>
       </div>
 
