@@ -4,13 +4,17 @@
 
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SnapshotsService } from '../snapshots/snapshots.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AccountsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private snapshotsService: SnapshotsService,
+  ) {}
 
   /**
    * List all active accounts for the user.
@@ -51,7 +55,7 @@ export class AccountsService {
     }
 
     // Create it
-    return this.prisma.account.create({
+    const account = await this.prisma.account.create({
       data: {
         id: randomUUID(),
         userId,
@@ -65,6 +69,11 @@ export class AccountsService {
         status: 'ACTIVE',
       },
     });
+
+    // Recompute snapshot so reports update instantly
+    await this.snapshotsService.computeAndSaveForUser(userId);
+
+    return account;
   }
 
   /**
@@ -74,13 +83,18 @@ export class AccountsService {
     // Verify ownership
     await this.findOne(userId, id);
 
-    return this.prisma.account.update({
+    const account = await this.prisma.account.update({
       where: { id },
       data: {
         name: dto.name,
         institution: dto.institution,
       },
     });
+
+    // Recompute snapshot so reports update instantly
+    await this.snapshotsService.computeAndSaveForUser(userId);
+
+    return account;
   }
 
   /**
@@ -98,10 +112,15 @@ export class AccountsService {
       throw new ConflictException('Cannot archive an account with transactions');
     }
 
-    return this.prisma.account.update({
+    const archived = await this.prisma.account.update({
       where: { id },
       data: { status: 'ARCHIVED', archivedAt: new Date() },
     });
+
+    // Recompute snapshot so reports update instantly
+    await this.snapshotsService.computeAndSaveForUser(userId);
+
+    return archived;
   }
 
   /**
