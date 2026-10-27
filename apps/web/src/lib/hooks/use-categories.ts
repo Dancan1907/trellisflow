@@ -29,7 +29,7 @@ export function useUpdateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) =>
-      apiFetch<Category>(`/api/categories/${id}`, {
+      apiFetch<any>(`/api/categories/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ name }),
       }),
