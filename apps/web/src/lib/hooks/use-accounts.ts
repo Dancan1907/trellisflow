@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../api/api-client';
 
-// Types matching the backend response
-interface Account {
+export interface Account {
   id: string;
   name: string;
   category: 'ASSET' | 'LIABILITY';
@@ -12,7 +11,7 @@ interface Account {
   institution: string | null;
 }
 
-interface CreateAccountDto {
+export interface CreateAccountDto {
   name: string;
   category: 'ASSET' | 'LIABILITY';
   accountType: string;
@@ -31,15 +30,33 @@ export function useAccounts() {
 
 export function useCreateAccount() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (dto: CreateAccountDto) =>
-      apiFetch<Account>('/api/accounts', {
-        method: 'POST',
-        body: JSON.stringify(dto),
-      }),
+      apiFetch<Account>('/api/accounts', { method: 'POST', body: JSON.stringify(dto) }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useUpdateAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string; name?: string; institution?: string }) =>
+      apiFetch<Account>(`/api/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useArchiveAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiFetch<void>(`/api/accounts/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },

@@ -1,21 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Plus, ArrowDownRight, ArrowUpRight } from 'lucide-react';
-import { useAccounts } from '@/lib/hooks/use-accounts';
+import { useParams, useRouter } from 'next/navigation';
+import { Plus, ArrowDownRight, ArrowUpRight, Edit, Archive } from 'lucide-react';
+import { useAccounts, useUpdateAccount, useArchiveAccount } from '@/lib/hooks/use-accounts';
 import { useTransactions } from '@/lib/hooks/use-transactions';
 import { AddTransactionModal } from '@/components/features/transactions/add-transaction-modal';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
+import { Modal } from '@/components/ui/modal';
+import { showToast } from '@/components/ui/toast';
 
 export default function AccountDetailPage() {
   const { id } = useParams();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const { data: txData, isLoading: isLoadingTx } = useTransactions(id as string);
+  const updateAccount = useUpdateAccount();
+  const archiveAccount = useArchiveAccount();
+
+  const [editName, setEditName] = useState('');
+  const [editInstitution, setEditInstitution] = useState('');
 
   const account = accounts?.find((a) => a.id === id);
   const transactions = txData?.items || [];
@@ -24,22 +33,66 @@ export default function AccountDetailPage() {
     return <Skeleton className="h-96 w-full" />;
   }
 
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateAccount.mutateAsync({
+        id: account.id,
+        name: editName,
+        institution: editInstitution,
+      });
+      showToast('success', 'Account updated');
+      setIsEditModalOpen(false);
+    } catch (err) {
+      showToast('error', 'Failed to update', err instanceof Error ? err.message : 'Error');
+    }
+  };
+
+  const handleArchive = async () => {
+    if (
+      !confirm(
+        'Are you sure you want to archive this account? It will be hidden but history preserved.',
+      )
+    )
+      return;
+    try {
+      await archiveAccount.mutateAsync(account.id);
+      showToast('success', 'Account archived');
+      router.push('/personal');
+    } catch (err) {
+      showToast('error', 'Failed to archive', err instanceof Error ? err.message : 'Error');
+    }
+  };
+
+  const openEditModal = () => {
+    setEditName(account.name);
+    setEditInstitution(account.institution || '');
+    setIsEditModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Balance */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-fg-secondary mb-1">{account.name}</p>
+          <div className="flex items-center gap-3 mb-1">
+            <p className="text-sm font-medium text-fg-secondary">{account.name}</p>
+            <button onClick={openEditModal} className="text-fg-tertiary hover:text-fg-primary">
+              <Edit size={14} />
+            </button>
+            <button onClick={handleArchive} className="text-fg-tertiary hover:text-status-negative">
+              <Archive size={14} />
+            </button>
+          </div>
           <h1 className="text-4xl font-semibold text-fg-primary">
             <AmountDisplay value={account.currentBalance} currency={account.currency} />
           </h1>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => setIsTxModalOpen(true)}
           className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-hover transition-colors"
         >
-          <Plus size={18} />
-          Add Transaction
+          <Plus size={18} /> Add Transaction
         </button>
       </div>
 
@@ -101,11 +154,55 @@ export default function AccountDetailPage() {
       </div>
 
       <AddTransactionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isTxModalOpen}
+        onClose={() => setIsTxModalOpen(false)}
         accountId={account.id}
         currency={account.currency}
       />
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Account"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-fg-primary mb-2">Account Name</label>
+            <input
+              type="text"
+              required
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-fg-primary mb-2">Institution</label>
+            <input
+              type="text"
+              value={editInstitution}
+              onChange={(e) => setEditInstitution(e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary"
+            />
+          </div>
+          <div className="pt-4 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 text-sm text-fg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-md bg-accent-primary text-white text-sm"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
