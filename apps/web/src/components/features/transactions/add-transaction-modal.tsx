@@ -33,7 +33,6 @@ export function AddTransactionModal({
       await createTx.mutateAsync({
         type,
         amount: parseFloat(amount),
-        currency,
         date,
         description,
         categoryId: categoryId || undefined,
