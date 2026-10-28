@@ -2,8 +2,20 @@
 // Auth Controller
 // ============================================================================
 
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+  UseGuards,
+  Req,
+  Delete,
+  Param,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -28,8 +40,11 @@ export class AuthController {
     status: 409,
     description: 'Email already exists.',
   })
-  async signup(@Body() dto: SignupDto) {
-    return this.authService.signup(dto);
+  async signup(@Body() dto: SignupDto, @Req() req: Request) {
+    return this.authService.signup(dto, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    });
   }
 
   @Post('login')
@@ -43,8 +58,11 @@ export class AuthController {
     status: 401,
     description: 'Invalid credentials.',
   })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Req() req: Request) {
+    return this.authService.login(dto, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    });
   }
 
   @Post('refresh')
@@ -96,6 +114,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout from all devices' })
   async logoutAll(@CurrentUser() user: any) {
     return this.authService.logoutAll(user.id);
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List active sessions for the current user' })
+  async listSessions(@CurrentUser() user: any) {
+    return this.authService.listSessions(user.id);
+  }
+
+  @Delete('sessions/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke a specific session' })
+  async revokeSession(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.authService.revokeSession(user.id, id);
   }
 
   @Post('verify-email/request')

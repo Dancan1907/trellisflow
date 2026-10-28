@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { EmailService } from '../../common/services/email.service'; // <--- ADDED
+import { EmailService } from '../../common/services/email.service';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import { SignupDto } from './dto/signup.dto';
@@ -15,10 +15,10 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private emailService: EmailService, // <--- ADDED
+    private emailService: EmailService,
   ) {}
 
-  async signup(dto: SignupDto) {
+  async signup(dto: SignupDto, meta?: { userAgent?: string; ipAddress?: string }) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -63,7 +63,7 @@ export class AuthService {
         },
       });
 
-      const tokens = await this.generateTokens(user.id, user.email);
+      const tokens = await this.generateTokens(user.id, user.email, meta);
 
       return {
         user: { id: user.id, email: user.email, name: user.name },
@@ -82,7 +82,7 @@ export class AuthService {
     }
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, meta?: { userAgent?: string; ipAddress?: string }) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -100,7 +100,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, meta);
 
     return {
       user: {
@@ -134,17 +134,22 @@ export class AuthService {
         },
       });
 
-      let sessionIsValid = false;
+      let matchedSessionId: string | null = null;
       for (const session of sessions) {
         if (await argon2.verify(session.tokenHash, refreshToken)) {
-          sessionIsValid = true;
+          matchedSessionId = session.id;
           break;
         }
       }
 
-      if (!sessionIsValid) {
+      if (!matchedSessionId) {
         throw new UnauthorizedException('Session has been revoked');
       }
+
+      await this.prisma.session.update({
+        where: { id: matchedSessionId },
+        data: { revokedAt: new Date() },
+      });
 
       return this.generateTokens(user.id, user.email);
     } catch (error) {
@@ -180,7 +185,6 @@ export class AuthService {
       },
     });
 
-    // <--- THE MISSING PIECE: Actually send the email!
     await this.emailService.sendPasswordResetEmail(user.email, rawToken);
 
     return {
@@ -255,7 +259,6 @@ export class AuthService {
       },
     });
 
-    // <--- ADDED: Actually send the email
     await this.emailService.sendVerificationEmail(user.email, rawToken);
 
     const response: { message: string; devToken?: string } = {
@@ -311,9 +314,19 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
-      await this.prisma.session.deleteMany({
-        where: { userId: payload.sub },
+      const sessions = await this.prisma.session.findMany({
+        where: { userId: payload.sub, revokedAt: null },
       });
+
+      for (const session of sessions) {
+        if (await argon2.verify(session.tokenHash, refreshToken)) {
+          await this.prisma.session.update({
+            where: { id: session.id },
+            data: { revokedAt: new Date() },
+          });
+          break;
+        }
+      }
 
       return { message: 'Logged out successfully' };
     } catch {
@@ -329,7 +342,11 @@ export class AuthService {
     return { message: 'Logged out from all devices' };
   }
 
-  private async generateTokens(userId: string, email: string) {
+  private async generateTokens(
+    userId: string,
+    email: string,
+    meta?: { userAgent?: string; ipAddress?: string },
+  ) {
     const payload = { sub: userId, email };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -344,13 +361,50 @@ export class AuthService {
         id: randomUUID(),
         userId,
         tokenHash: await argon2.hash(refreshToken),
+        userAgent: meta?.userAgent,
+        ipAddress: meta?.ipAddress,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
     });
 
-    return {
-      accessToken,
-      refreshToken,
-    };
+    return { accessToken, refreshToken };
+  }
+
+  async listSessions(userId: string) {
+    const sessions = await this.prisma.session.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { lastUsedAt: 'desc' },
+      select: {
+        id: true,
+        userAgent: true,
+        ipAddress: true,
+        createdAt: true,
+        lastUsedAt: true,
+        expiresAt: true,
+      },
+    });
+
+    return sessions;
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    const session = await this.prisma.session.findFirst({
+      where: { id: sessionId, userId, revokedAt: null },
+    });
+
+    if (!session) {
+      throw new UnauthorizedException('Session not found');
+    }
+
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { revokedAt: new Date() },
+    });
+
+    return { message: 'Session revoked' };
   }
 }

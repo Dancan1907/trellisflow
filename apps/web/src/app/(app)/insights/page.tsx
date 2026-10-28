@@ -3,7 +3,7 @@
 import { useDashboardInsights } from '@/lib/hooks/use-dashboard';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api/api-client';
-import { AlertCircle, TrendingUp, Info, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, TrendingUp, Info, CheckCircle2, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { showToast } from '@/components/ui/toast';
@@ -12,11 +12,28 @@ export default function InsightsPage() {
   const { data: insights, isLoading } = useDashboardInsights();
   const queryClient = useQueryClient();
 
+  const invalidateInsights = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'insights'] });
+  };
+
+  const dismissOne = useMutation({
+    mutationFn: (id: string) => apiFetch<void>(`/api/insights/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      invalidateInsights();
+    },
+    onError: () => {
+      showToast('error', 'Failed to dismiss insight');
+    },
+  });
+
   const dismissAll = useMutation({
     mutationFn: () => apiFetch<void>('/api/insights', { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'insights'] });
+      invalidateInsights();
       showToast('success', 'All insights dismissed');
+    },
+    onError: () => {
+      showToast('error', 'Failed to dismiss insights');
     },
   });
 
@@ -27,7 +44,7 @@ export default function InsightsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-fg-primary mb-1">Insights</h1>
@@ -47,19 +64,30 @@ export default function InsightsPage() {
       </div>
 
       {isLoading ? (
-        <Skeleton className="h-64 w-full" />
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
       ) : insights && insights.length > 0 ? (
         <div className="space-y-4">
           {insights.map((insight) => (
             <div
               key={insight.id}
-              className="bg-bg-secondary border border-border-subtle rounded-lg p-6 flex gap-4"
+              className="bg-bg-secondary border border-border-subtle rounded-lg p-6 flex gap-4 group"
             >
               <div className="shrink-0 mt-1">{getIcon(insight.severity)}</div>
-              <div>
+              <div className="flex-1 pr-8">
                 <h3 className="font-medium text-fg-primary mb-1">{insight.title}</h3>
                 <p className="text-sm text-fg-secondary">{insight.message}</p>
               </div>
+              <button
+                onClick={() => dismissOne.mutate(insight.id)}
+                disabled={dismissOne.isPending && dismissOne.variables === insight.id}
+                className="shrink-0 h-8 w-8 flex items-center justify-center rounded-md text-fg-tertiary hover:text-status-negative hover:bg-status-negative/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                title="Dismiss this insight"
+              >
+                <X size={18} />
+              </button>
             </div>
           ))}
         </div>

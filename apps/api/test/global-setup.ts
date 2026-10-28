@@ -1,11 +1,20 @@
 // apps/api/test/global-setup.ts
 /* eslint-disable no-console */
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 export default async () => {
+  const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!url) {
+    console.warn('⚠️  No TEST_DATABASE_URL or DATABASE_URL set. Skipping test DB wake-up.');
+    return;
+  }
+
   const prisma = new PrismaClient({
-    datasources: { db: { url: process.env.TEST_DATABASE_URL } },
+    datasources: { db: { url } },
   });
 
   try {

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountsService } from './accounts.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SnapshotsService } from '../snapshots/snapshots.service';
 import { ClsModule } from 'nestjs-cls';
 import { randomUUID } from 'crypto';
 
@@ -13,7 +14,11 @@ describe('Accounts (Integration)', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ClsModule.forRoot({ global: true })],
-      providers: [AccountsService, PrismaService],
+      providers: [
+        AccountsService,
+        PrismaService,
+        { provide: SnapshotsService, useValue: { computeAndSaveForUser: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get<AccountsService>(AccountsService);

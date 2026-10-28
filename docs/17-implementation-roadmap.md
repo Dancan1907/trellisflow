@@ -341,11 +341,11 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12g — Insights & Settings
 
-- ☐ `[FEAT]` Insights full page (list, dismiss all)
-- ☐ `[FEAT]` Settings: Profile & Preferences
-- ☐ `[FEAT]` Settings: Security & Sessions
+- ☑ `[FEAT]` Insights full page (list, dismiss all)
+- ☑ `[FEAT]` Settings: Profile & Preferences
+- ☑ `[FEAT]` Settings: Security & Sessions
 - ☐ `[FEAT]` Settings: Containers
-- ☐ `[FEAT]` Settings: Audit Log
+- ☑ `[FEAT]` Settings: Audit Log
 
 #### 1.12h — Shared UI Components
 

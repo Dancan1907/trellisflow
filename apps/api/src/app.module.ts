@@ -22,6 +22,7 @@ import { GoalsModule } from './modules/goals/goals.module';
 import { SnapshotsModule } from './modules/snapshots/snapshots.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     PrismaModule,
     AuthModule,
     ContainersModule,
+    UsersModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

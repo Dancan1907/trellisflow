@@ -26,7 +26,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <nav className="w-full md:w-64 flex-shrink-0 space-y-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
-            const isActive = pathname === tab.href;
+            // The Profile tab is exactly /settings. Others are sub-routes.
+            const isActive =
+              tab.href === '/settings' ? pathname === '/settings' : pathname.startsWith(tab.href);
+
             return (
               <Link
                 key={tab.name}

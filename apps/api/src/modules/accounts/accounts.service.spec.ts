@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountsService } from './accounts.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SnapshotsService } from '../snapshots/snapshots.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 
 const mockPrisma = {
@@ -23,7 +24,11 @@ describe('AccountsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AccountsService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        AccountsService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: SnapshotsService, useValue: { computeAndSaveForUser: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get<AccountsService>(AccountsService);

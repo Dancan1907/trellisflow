@@ -3,6 +3,7 @@ import { TransactionsService } from '../../modules/transactions/transactions.ser
 import { BalanceService } from '../../modules/transactions/balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from './audit.service';
+import { SnapshotsService } from '../../modules/snapshots/snapshots.service';
 import { ClsModule } from 'nestjs-cls';
 import { randomUUID } from 'crypto';
 
@@ -20,7 +21,8 @@ describe('AuditLog (Integration)', () => {
         TransactionsService,
         BalanceService,
         PrismaService,
-        AuditLogService, // <--- ADDED
+        AuditLogService,
+        { provide: SnapshotsService, useValue: { computeAndSaveForUser: jest.fn() } },
       ],
     }).compile();
 
