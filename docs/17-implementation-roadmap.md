@@ -286,9 +286,7 @@
 
 ### 1.12 — Frontend Screens (Wave 1)
 
-**Effort:** ~2–3 weeks · **Status:** ☐ pending
-
-We will build this in phases within a single `feature/screens` branch.
+**Effort:** ~2–3 weeks · **Status:** ☑ complete
 
 #### 1.12a — Dashboard (Wealth Accelerator)
 
