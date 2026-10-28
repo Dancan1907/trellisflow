@@ -3,6 +3,7 @@ import { TransactionsService } from './transactions.service';
 import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../common/services/audit.service';
+import { SnapshotsService } from '../snapshots/snapshots.service';
 import { NotFoundException } from '@nestjs/common';
 
 // Create the mock transaction client first
@@ -37,6 +38,10 @@ const mockAuditLog = {
   log: jest.fn(),
 };
 
+const mockSnapshotsService = {
+  computeAndSaveForUser: jest.fn(),
+};
+
 describe('TransactionsService', () => {
   let service: TransactionsService;
 
@@ -47,6 +52,7 @@ describe('TransactionsService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: BalanceService, useValue: mockBalanceService },
         { provide: AuditLogService, useValue: mockAuditLog },
+        { provide: SnapshotsService, useValue: mockSnapshotsService },
       ],
     }).compile();
 
