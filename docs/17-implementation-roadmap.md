@@ -349,15 +349,13 @@ We will build this in phases within a single `feature/screens` branch.
 
 #### 1.12h — Shared UI Components
 
-- ☐ `[FEAT]` Empty states (every list)
-- ☐ `[FEAT]` Loading skeletons
-- ☐ `[FEAT]` Toasts for success/error feedback
-- ☐ `[FEAT]` Modal / Dialog primitive
-- ☐ `[FEAT]` Amount formatting utility component
+- ☑ `[FEAT]` Empty states (every list)
+- ☑ `[FEAT]` Loading skeletons
+- ☑ `[FEAT]` Toasts for success/error feedback
+- ☑ `[FEAT]` Modal / Dialog primitive
+- ☑ `[FEAT]` Amount formatting utility component
 
-- ☐ `[GIT]` PR: `feat(web): complete application screens for Wave 1`
-
-**Deliverable:** ✅ A complete, navigable, beautiful UI for the entire Wave 1 feature set.
+- ☑ `[GIT]` PR: `feat(web): complete application screens for Wave 1`
 
 ### 1.13 — Testing & CI
 
