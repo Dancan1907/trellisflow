@@ -96,6 +96,65 @@ describe('Users (integration)', () => {
       .expect(400);
   });
 
+  it('POST /api/users/me/change-password rejects a wrong current password', async () => {
+    await request(app.getHttpServer())
+      .post('/api/users/me/change-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: 'definitely-wrong', newPassword: 'newpassword123' })
+      .expect(401);
+  });
+
+  it('POST /api/users/me/change-password rejects a short new password', async () => {
+    await request(app.getHttpServer())
+      .post('/api/users/me/change-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: password, newPassword: 'short' })
+      .expect(400);
+  });
+
+  it('POST /api/users/me/change-password succeeds, updates the hash, and revokes sessions', async () => {
+    // Create a second session first, so we can prove revocation works
+    const secondLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email, password })
+      .expect(200);
+    expect(secondLogin.body.accessToken).toBeTruthy();
+
+    const beforeCount = await prisma.session.count({
+      where: { userId, revokedAt: null },
+    });
+    expect(beforeCount).toBeGreaterThanOrEqual(2);
+
+    const newPassword = 'BrandNewPassword123!';
+
+    await request(app.getHttpServer())
+      .post('/api/users/me/change-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: password, newPassword })
+      .expect(201);
+
+    // Old password no longer works
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email, password })
+      .expect(401);
+
+    // New password works
+    const loginWithNew = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email, password: newPassword })
+      .expect(200);
+
+    expect(loginWithNew.body.accessToken).toBeTruthy();
+
+    // All previously-open sessions are revoked
+    const afterRevoked = await prisma.session.count({
+      where: { userId, revokedAt: null },
+    });
+    // Only the new login from the previous step should be un-revoked
+    expect(afterRevoked).toBeLessThanOrEqual(1);
+  });
+
   it('GET /api/users/me rejects unauthenticated requests', async () => {
     await request(app.getHttpServer()).get('/api/users/me').expect(401);
   });
