@@ -34,8 +34,10 @@ const navSections: { title: string; items: NavItem[] }[] = [
     title: 'Money',
     items: [
       { label: 'Personal', href: '/personal', icon: User },
-      { label: 'Investments', href: '/investments', icon: TrendingUp },
-      { label: 'Businesses', href: '/businesses', icon: Building2 },
+      // TODO: Uncomment in Wave 2
+      // { label: 'Investments', href: '/investments', icon: TrendingUp },
+      // TODO: Uncomment in Wave 3
+      // { label: 'Businesses', href: '/businesses', icon: Building2 },
     ],
   },
   {
@@ -43,7 +45,8 @@ const navSections: { title: string; items: NavItem[] }[] = [
     items: [
       { label: 'Budgets', href: '/budgets', icon: Wallet },
       { label: 'Goals', href: '/goals', icon: Target },
-      { label: 'Debt', href: '/debt', icon: CreditCard },
+      // TODO: Uncomment in Wave 5.4
+      // { label: 'Debt', href: '/debt', icon: CreditCard },
     ],
   },
   {
