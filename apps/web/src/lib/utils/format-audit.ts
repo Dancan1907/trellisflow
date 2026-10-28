@@ -10,16 +10,18 @@ export function summarizeAuditEntry(entry: AuditLogEntry): string {
   // Format the entity name (e.g., 'SavingsGoal' -> 'Savings Goal')
   const entityName = entry.entityType.replace(/([A-Z])/g, ' $1').trim();
 
-  // Try to find a good descriptive name (description, name, or title)
-  const identifier = data.description || data.name || data.title || '';
+  // Safely extract fields as strings/numbers
+  const identifier = (data.description || data.name || data.title || '') as string;
+  const rawAmount = data.amount;
+  const currency = typeof data.currency === 'string' ? data.currency : 'KES';
+  const type = typeof data.type === 'string' ? data.type.toLowerCase() : '';
 
-  // Try to find an amount
-  const amount = data.amount
+  const amount = rawAmount
     ? new Intl.NumberFormat('en-KE', {
         style: 'currency',
-        currency: data.currency || 'KES',
+        currency: currency,
         maximumFractionDigits: 0,
-      }).format(Number(data.amount))
+      }).format(Number(rawAmount))
     : '';
 
   const parts: string[] = [];
@@ -27,7 +29,7 @@ export function summarizeAuditEntry(entry: AuditLogEntry): string {
   if (entry.action === 'CREATE') {
     parts.push('Added');
     if (amount) parts.push(amount);
-    if (data.type) parts.push(data.type.toLowerCase());
+    if (type) parts.push(type);
     parts.push(entityName.toLowerCase());
   } else if (entry.action === 'DELETE') {
     parts.push('Deleted');
