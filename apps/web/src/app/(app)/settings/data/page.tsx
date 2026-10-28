@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronRight,
   Filter,
+  Code2,
 } from 'lucide-react';
 import {
   useAuditLog,
@@ -18,6 +19,7 @@ import {
   type AuditLogEntry,
   type AuditQuery,
 } from '@/lib/hooks/use-audit';
+import { summarizeAuditEntry, getFormattedChanges } from '@/lib/utils/format-audit';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 
@@ -69,7 +71,6 @@ export default function AuditDataPage() {
 
   return (
     <div className="space-y-6">
-      {/* ============================== Header ============================== */}
       <div>
         <h2 className="text-lg font-medium text-fg-primary">Data & Audit</h2>
         <p className="text-xs text-fg-secondary mt-1">
@@ -77,7 +78,6 @@ export default function AuditDataPage() {
         </p>
       </div>
 
-      {/* ============================== Filter bar ============================== */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-bg-tertiary/40 border border-border-subtle rounded-lg">
         <div className="flex items-center gap-2 text-xs text-fg-secondary">
           <Filter size={14} />
@@ -91,7 +91,7 @@ export default function AuditDataPage() {
         >
           {ENTITY_TYPES.map((t) => (
             <option key={t} value={t}>
-              {t === 'All' ? 'All entities' : t}
+              {t === 'All' ? 'All entities' : t.replace(/([A-Z])/g, ' $1').trim()}
             </option>
           ))}
         </select>
@@ -133,7 +133,6 @@ export default function AuditDataPage() {
         )}
       </div>
 
-      {/* ============================== Log ============================== */}
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -178,6 +177,9 @@ function AuditRow({
   onToggle: () => void;
   isFirst: boolean;
 }) {
+  const summary = summarizeAuditEntry(entry);
+  const changes = getFormattedChanges(entry);
+
   return (
     <div className={isFirst ? '' : 'border-t border-border-subtle'}>
       <button
@@ -191,43 +193,67 @@ function AuditRow({
         <ActionBadge action={entry.action} />
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-fg-primary">
-            <span className="font-medium">{entry.entityType}</span>
-            <span className="text-fg-tertiary font-mono text-xs ml-2">
-              {entry.entityId.slice(0, 8)}…
-            </span>
-          </p>
-          {entry.changedFields.length > 0 && (
-            <p className="text-xs text-fg-secondary mt-0.5 truncate">
-              Changed: {entry.changedFields.join(', ')}
-            </p>
-          )}
+          <p className="text-sm text-fg-primary truncate">{summary}</p>
         </div>
 
         <span className="text-xs text-fg-tertiary shrink-0">{formatRelative(entry.createdAt)}</span>
       </button>
 
       {isExpanded && (
-        <div className="px-4 pb-4 pt-1 bg-bg-primary/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div>
-              <p className="text-fg-secondary font-medium mb-2">Before</p>
-              <pre className="bg-bg-primary border border-border-subtle rounded-md p-3 overflow-auto max-h-64 text-fg-primary font-mono text-xs">
-                {entry.before ? JSON.stringify(entry.before, null, 2) : '—'}
-              </pre>
+        <div className="px-11 pb-4 pt-1 bg-bg-primary/30">
+          {/* Human-readable changes */}
+          {changes.length > 0 ? (
+            <div className="space-y-2 mb-4">
+              <h4 className="text-xs font-semibold text-fg-secondary uppercase tracking-wider">
+                Changes
+              </h4>
+              <div className="border border-border-subtle rounded-md overflow-hidden text-sm">
+                {changes.map((change, i) => (
+                  <div
+                    key={change.field}
+                    className={`flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 p-2 ${
+                      i !== 0 ? 'border-t border-border-subtle' : ''
+                    }`}
+                  >
+                    <span className="font-medium text-fg-primary w-32 shrink-0">
+                      {change.field}
+                    </span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-fg-tertiary line-through">{change.before}</span>
+                      <span className="text-fg-tertiary">→</span>
+                      <span className="text-fg-primary font-medium">{change.after}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-fg-secondary font-medium mb-2">After</p>
-              <pre className="bg-bg-primary border border-border-subtle rounded-md p-3 overflow-auto max-h-64 text-fg-primary font-mono text-xs">
-                {entry.after ? JSON.stringify(entry.after, null, 2) : '—'}
-              </pre>
-            </div>
-          </div>
-          {entry.ipAddress && (
-            <p className="text-xs text-fg-tertiary mt-3">
-              From <span className="font-mono">{entry.ipAddress}</span>
+          ) : (
+            <p className="text-sm text-fg-secondary mb-4">
+              No trackable field changes were recorded for this action.
             </p>
           )}
+
+          {/* Developer raw data (Hidden by default) */}
+          <details className="group">
+            <summary className="flex items-center gap-2 text-xs text-fg-tertiary cursor-pointer hover:text-accent-primary list-none">
+              <Code2 size={14} />
+              <span>View raw payload</span>
+            </summary>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-xs">
+              <div className="min-w-0">
+                <p className="text-fg-secondary font-medium mb-1">Before</p>
+                <pre className="bg-bg-primary border border-border-subtle rounded-md p-2 overflow-auto max-h-48 text-fg-primary font-mono text-[10px]">
+                  {entry.before ? JSON.stringify(entry.before, null, 2) : '—'}
+                </pre>
+              </div>
+              <div className="min-w-0">
+                <p className="text-fg-secondary font-medium mb-1">After</p>
+                <pre className="bg-bg-primary border border-border-subtle rounded-md p-2 overflow-auto max-h-48 text-fg-primary font-mono text-[10px]">
+                  {entry.after ? JSON.stringify(entry.after, null, 2) : '—'}
+                </pre>
+              </div>
+            </div>
+          </details>
         </div>
       )}
     </div>
