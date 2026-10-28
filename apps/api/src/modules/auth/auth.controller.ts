@@ -2,7 +2,18 @@
 // Auth Controller
 // ============================================================================
 
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+  UseGuards,
+  Req,
+  Delete,
+  Param,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
@@ -103,6 +114,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout from all devices' })
   async logoutAll(@CurrentUser() user: any) {
     return this.authService.logoutAll(user.id);
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List active sessions for the current user' })
+  async listSessions(@CurrentUser() user: any) {
+    return this.authService.listSessions(user.id);
+  }
+
+  @Delete('sessions/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke a specific session' })
+  async revokeSession(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.authService.revokeSession(user.id, id);
   }
 
   @Post('verify-email/request')
