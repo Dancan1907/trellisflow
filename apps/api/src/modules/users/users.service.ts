@@ -32,7 +32,10 @@ export class UsersService {
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: dto,
+      data: {
+        ...dto,
+        personaHint: dto.personaHint as never,
+      },
       select: {
         id: true,
         email: true,
