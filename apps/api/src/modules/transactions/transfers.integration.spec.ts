@@ -3,6 +3,7 @@ import { TransactionsService } from './transactions.service';
 import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../common/services/audit.service';
+import { SnapshotsService } from '../snapshots/snapshots.service';
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { ClsModule } from 'nestjs-cls';
@@ -18,7 +19,13 @@ describe('Transfers (Integration)', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ClsModule.forRoot({ global: true })],
-      providers: [TransactionsService, BalanceService, PrismaService, AuditLogService],
+      providers: [
+        TransactionsService,
+        BalanceService,
+        PrismaService,
+        AuditLogService,
+        { provide: SnapshotsService, useValue: { computeAndSaveForUser: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get<TransactionsService>(TransactionsService);
