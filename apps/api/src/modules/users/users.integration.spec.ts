@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { randomUUID } from 'crypto';
 import * as argon2 from 'argon2';
@@ -20,6 +20,17 @@ describe('Users (integration)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+
+    // Mirror main.ts so validation actually runs in tests
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
+
     app.setGlobalPrefix('api');
     await app.init();
 
