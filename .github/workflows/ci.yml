@@ -120,10 +120,10 @@ jobs:
         run: pnpm --filter @trellisflow/api exec prisma generate
 
       - name: Run unit tests with coverage
-        run: pnpm --filter @trellisflow/api test --coverage
-        # Note: The "test" script already enforces coverage thresholds
-        # (configured in apps/api/jest.config.js). If coverage drops below
-        # 50% lines / 50% statements, this step will fail.
+        run: pnpm --filter @trellisflow/api test:unit --coverage
+        # Note: The "test:unit" script ignores integration.spec.ts files.
+        # Coverage thresholds (configured in apps/api/jest.config.js) still apply.
+        # If coverage drops below 50% lines / 50% statements, this step will fail.
 
   # ==========================================================================
   # Integration + E2E tests — slower. Requires a real PostgreSQL database.
