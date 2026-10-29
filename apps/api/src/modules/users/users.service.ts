@@ -8,13 +8,6 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  private getArgonOptions() {
-    if (process.env.NODE_ENV === 'test') {
-      return { memoryCost: 4096, timeCost: 2, parallelism: 1 };
-    }
-    return undefined;
-  }
-
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -66,17 +59,13 @@ export class UsersService {
       throw new UnauthorizedException('User not found');
     }
 
-    const isCurrentPasswordValid = await argon2.verify(
-      user.passwordHash,
-      dto.currentPassword,
-      this.getArgonOptions(),
-    );
+    const isCurrentPasswordValid = await argon2.verify(user.passwordHash, dto.currentPassword);
 
     if (!isCurrentPasswordValid) {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    const newHash = await argon2.hash(dto.newPassword, this.getArgonOptions());
+    const newHash = await argon2.hash(dto.newPassword);
 
     await this.prisma.$transaction([
       this.prisma.user.update({
