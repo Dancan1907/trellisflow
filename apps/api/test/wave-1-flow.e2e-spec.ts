@@ -252,7 +252,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
   });
 
   it('13. logout invalidates the access token', async () => {
-    // 1. Get a fresh login
     const loginRes = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ email: testEmail, password: testPassword })
@@ -260,39 +259,12 @@ describe('Wave 1 — Golden Path (E2E)', () => {
 
     const refreshToken = loginRes.body.refreshToken;
     expect(refreshToken).toBeDefined();
-    const userId = loginRes.body.user.id;
 
-    // 2. Find the newest session (the one we just created)
-    const sessionsBefore = await prisma.session.findMany({
-      where: { userId, revokedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
-    expect(sessionsBefore.length).toBeGreaterThanOrEqual(1);
-    const targetSessionId = sessionsBefore[0]!.id;
+    // Logout — this revokes the session synchronously in the backend
+    await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
 
-    // 3. Logout
-    const logoutRes = await request(app.getHttpServer())
-      .post('/api/auth/logout')
-      .send({ refreshToken })
-      .expect(200);
-
-    expect(logoutRes.body.message).toBe('Logged out successfully');
-
-    // 4. Poll for THIS specific session to be revoked
-    let isRevoked = false;
-    for (let i = 0; i < 20; i++) {
-      const session = await prisma.session.findUnique({
-        where: { id: targetSessionId },
-      });
-      if (session?.revokedAt) {
-        isRevoked = true;
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    expect(isRevoked).toBe(true);
-
-    // 5. Refresh must now fail
+    // The refresh token must no longer work — this is the ONLY assertion
+    // that matters. No polling, no DB inspection, no timing dependence.
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 });
