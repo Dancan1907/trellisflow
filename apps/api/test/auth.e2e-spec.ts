@@ -71,30 +71,32 @@ describe('Auth (E2E)', () => {
     expect(res.body.user.email).toBe(testEmail);
   });
 
-  it('should logout and invalidate the session (200 then 401)', async () => {
-    // 1. Login to get a fresh refresh token
+  it('should logout and invalidate only that session (200 then 401)', async () => {
+    // 1. Login to get a fresh refresh token (creates a new session)
     const loginRes = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ email: testEmail, password: 'password123' })
       .expect(200);
 
     const refreshToken = loginRes.body.refreshToken;
+    const userId = loginRes.body.user.id;
 
-    // 2. Logout using that refresh token
+    // 2. Count active sessions right after this specific login
+    const activeBeforeLogout = await prisma.session.count({
+      where: { userId, revokedAt: null },
+    });
+    expect(activeBeforeLogout).toBeGreaterThanOrEqual(1);
+
+    // 3. Logout using that specific refresh token
     await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
 
-    // 3. VERIFY IN DATABASE: Check that the session is actually revoked
-    const activeSessions = await prisma.session.findMany({
-      where: {
-        userId: loginRes.body.user.id,
-        revokedAt: null,
-      },
+    // 4. VERIFY: One session was revoked, but OTHER sessions remain active
+    const activeAfterLogout = await prisma.session.count({
+      where: { userId, revokedAt: null },
     });
+    expect(activeAfterLogout).toBe(activeBeforeLogout - 1);
 
-    // The session should have been removed from the active list
-    expect(activeSessions.length).toBe(0);
-
-    // 4. Try to use the refresh token after logout (should fail with 401)
+    // 5. Try to use that specific refresh token (should fail with 401)
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 
