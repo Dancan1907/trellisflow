@@ -18,6 +18,14 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
+  private getArgonOptions() {
+    if (process.env.NODE_ENV === 'test') {
+      // Low memory cost for CI environments to prevent SIGSEGV crashes
+      return { memoryCost: 4096, timeCost: 2, parallelism: 1 };
+    }
+    return undefined; // Production/development uses argon2 defaults
+  }
+
   async signup(dto: SignupDto, meta?: { userAgent?: string; ipAddress?: string }) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
@@ -27,7 +35,7 @@ export class AuthService {
       throw new ConflictException('Email is already registered');
     }
 
-    const passwordHash = await argon2.hash(dto.password);
+    const passwordHash = await argon2.hash(dto.password, this.getArgonOptions());
 
     try {
       const user = await this.prisma.user.create({
@@ -90,11 +98,15 @@ export class AuthService {
     const dummyHash = '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$Q2xvdWR5VHJlZUZvcmV2ZXIxMjM0NTY=';
 
     if (!user || user.deletedAt) {
-      await argon2.verify(dummyHash, dto.password).catch(() => false);
+      await argon2.verify(dummyHash, dto.password, this.getArgonOptions()).catch(() => false);
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await argon2.verify(user.passwordHash, dto.password);
+    const isPasswordValid = await argon2.verify(
+      user.passwordHash,
+      dto.password,
+      this.getArgonOptions(),
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -136,7 +148,7 @@ export class AuthService {
 
       let matchedSessionId: string | null = null;
       for (const session of sessions) {
-        if (await argon2.verify(session.tokenHash, refreshToken)) {
+        if (await argon2.verify(session.tokenHash, refreshToken, this.getArgonOptions())) {
           matchedSessionId = session.id;
           break;
         }
@@ -172,7 +184,7 @@ export class AuthService {
     }
 
     const rawToken = randomUUID();
-    const tokenHash = await argon2.hash(rawToken);
+    const tokenHash = await argon2.hash(rawToken, this.getArgonOptions());
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await this.prisma.emailVerificationToken.create({
@@ -214,7 +226,7 @@ export class AuthService {
     let validToken: (typeof tokens)[number] | null = null;
 
     for (const token of tokens) {
-      if (await argon2.verify(token.tokenHash, rawToken)) {
+      if (await argon2.verify(token.tokenHash, rawToken, this.getArgonOptions())) {
         validToken = token;
         break;
       }
@@ -224,7 +236,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired reset token');
     }
 
-    const newHash = await argon2.hash(newPassword);
+    const newHash = await argon2.hash(newPassword, this.getArgonOptions());
 
     await this.prisma.$transaction([
       this.prisma.user.update({
@@ -256,7 +268,7 @@ export class AuthService {
     }
 
     const rawToken = randomUUID();
-    const tokenHash = await argon2.hash(rawToken);
+    const tokenHash = await argon2.hash(rawToken, this.getArgonOptions());
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await this.prisma.emailVerificationToken.create({
@@ -294,7 +306,7 @@ export class AuthService {
     let validToken: (typeof tokens)[number] | null = null;
 
     for (const token of tokens) {
-      if (await argon2.verify(token.tokenHash, rawToken)) {
+      if (await argon2.verify(token.tokenHash, rawToken, this.getArgonOptions())) {
         validToken = token;
         break;
       }
@@ -329,7 +341,7 @@ export class AuthService {
       });
 
       for (const session of sessions) {
-        if (await argon2.verify(session.tokenHash, refreshToken)) {
+        if (await argon2.verify(session.tokenHash, refreshToken, this.getArgonOptions())) {
           await this.prisma.session.update({
             where: { id: session.id },
             data: { revokedAt: new Date() },
@@ -370,7 +382,7 @@ export class AuthService {
       data: {
         id: randomUUID(),
         userId,
-        tokenHash: await argon2.hash(refreshToken),
+        tokenHash: await argon2.hash(refreshToken, this.getArgonOptions()),
         userAgent: meta?.userAgent,
         ipAddress: meta?.ipAddress,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
