@@ -251,9 +251,8 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(entityTypes.has('Transaction')).toBe(true);
   });
 
-  // 13: FIXED — verify DB state before asserting refresh fails
   it('13. logout invalidates the access token', async () => {
-    // 1. Get a fresh login to isolate the session under test
+    // 1. Get a fresh login
     const loginRes = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ email: testEmail, password: testPassword })
@@ -262,33 +261,38 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     const refreshToken = loginRes.body.refreshToken;
     const userId = loginRes.body.user.id;
 
-    // 2. Count active sessions before logout
-    const beforeCount = await prisma.session.count({
+    // 2. Find the EXACT session this refresh token belongs to.
+    //    The refresh endpoint hashes the token before storing, and we can't
+    //    recover that hash from the token alone — but we CAN identify it as
+    //    the newest session created for this user.
+    const sessionsBefore = await prisma.session.findMany({
       where: { userId, revokedAt: null },
+      orderBy: { createdAt: 'desc' },
     });
-    expect(beforeCount).toBeGreaterThanOrEqual(1);
+    expect(sessionsBefore.length).toBeGreaterThanOrEqual(1);
+    const targetSessionId = sessionsBefore[0].id;
 
     // 3. Logout using the refresh token
     await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
 
-    // 4. WAIT for the DB to confirm the session was revoked
-    //    (GitHub Actions runners sometimes lag behind local SSD)
+    // 4. Poll until THAT SPECIFIC session has been revoked
     let attempts = 0;
-    while (attempts < 10) {
-      const revokedCount = await prisma.session.count({
-        where: { userId, revokedAt: { not: null } },
+    let isRevoked = false;
+    while (attempts < 20) {
+      const session = await prisma.session.findUnique({
+        where: { id: targetSessionId },
       });
-      if (revokedCount > 0) break;
+      if (session?.revokedAt) {
+        isRevoked = true;
+        break;
+      }
       await new Promise((resolve) => setTimeout(resolve, 50));
       attempts++;
     }
 
-    const afterRevoked = await prisma.session.count({
-      where: { userId, revokedAt: { not: null } },
-    });
-    expect(afterRevoked).toBeGreaterThanOrEqual(1);
+    expect(isRevoked).toBe(true);
 
-    // 5. Now the refresh must fail (401)
+    // 5. Now the refresh token must fail
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 });
