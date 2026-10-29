@@ -6,8 +6,25 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  collectCoverageFrom: ['**/*.(t|j)s'],
+  collectCoverageFrom: [
+    'src/**/*.(t|j)s',
+    '!src/**/*.module.ts',
+    '!src/**/*.dto.ts',
+    '!src/**/*.controller.ts',
+    '!src/main.ts',
+    '!src/**/*.spec.ts',
+    '!src/**/*.integration.spec.ts',
+  ],
   coverageDirectory: './coverage',
+  coverageReporters: ['text', 'text-summary', 'lcov'],
+  coverageThreshold: {
+    global: {
+      lines: 50,
+      statements: 50,
+      functions: 50,
+      branches: 40,
+    },
+  },
   testEnvironment: 'node',
   transformIgnorePatterns: ['node_modules/(?!.*(@nestjs/jwt)/)'],
   // This file runs before any tests, ensuring we use the test DB.
