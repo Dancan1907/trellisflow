@@ -48,7 +48,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary px-4">
+    <div className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <Logo size="large" />
@@ -103,7 +103,7 @@ export default function SignupPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={8}
-                  autoComplete="new-password" // <--- Tells browser not to auto-fill with an old password
+                  autoComplete="new-password"
                   className="w-full h-10 pl-3 pr-10 rounded-md border border-border-subtle bg-bg-primary text-fg-primary placeholder:text-fg-tertiary focus:outline-none focus:border-accent-primary transition-colors"
                   placeholder="At least 8 characters"
                 />
