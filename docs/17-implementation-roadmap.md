@@ -369,16 +369,18 @@
 
 ### 1.14 — Deployment
 
-- ☐ Deploy staging (Vercel + Render + Neon staging)
-- ☐ Smoke test staging
-- ☐ Deploy production
-- ☐ Migration to Neon production
-- ☐ Domain setup
-- ☐ Uptime + Sentry monitoring
-- ☐ Backup verified
-- ☐ Tag `v0.1.0`
+**Status:** ☑ complete
 
-**Deliverable:** V0.1 live at `trellisflow.com`.
+- ☑ Deploy staging (Vercel + Render + Neon staging)
+- ☑ Smoke test staging
+- ☑ Deploy production
+- ☑ Migration to Neon production
+- ☐ Domain setup _(deferred — using Vercel URL for now)_
+- ☐ Uptime + Sentry monitoring _(deferred to Wave 2)_
+- ☑ Backup verified _(Neon auto-backups enabled by default on free tier)_
+- ☑ Tag `v0.1.0`
+
+**Deliverable:** ✅ V0.1 live at `trellisflow.vercel.app`.
 
 ---
 
