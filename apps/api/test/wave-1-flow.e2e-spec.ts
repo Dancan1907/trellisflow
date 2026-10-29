@@ -4,9 +4,6 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-/**
- * Wave 1 Golden Path — the single most important E2E test in the project.
- */
 describe('Wave 1 — Golden Path (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -39,16 +36,13 @@ describe('Wave 1 — Golden Path (E2E)', () => {
   });
 
   afterAll(async () => {
-    // Cascade-deletes all containers, accounts, transactions, budgets, goals, insights
     await prisma.user.deleteMany({
       where: { email: { startsWith: 'wave1-e2e-' } },
     });
     await app.close();
   });
 
-  // ============================================================================
-  // 1. Signup
-  // ============================================================================
+  // 1-12: unchanged — keep them as-is
   it('1. signs up a new user and returns tokens', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/auth/signup')
@@ -62,11 +56,7 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     accessToken = res.body.accessToken;
   });
 
-  // ============================================================================
-  // 2. Default data (categories + Personal container)
-  // ============================================================================
   it('2. auto-creates a Personal container and default categories', async () => {
-    // Categories
     const catRes = await request(app.getHttpServer())
       .get('/api/categories')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -82,7 +72,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     categoryIncomeId = income.id;
     categoryExpenseId = expense.id;
 
-    // Container
     const contRes = await request(app.getHttpServer())
       .get('/api/containers')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -93,13 +82,9 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(personal).toBeDefined();
     expect(personal.name).toBe('Personal');
 
-    // Save the container ID for the budget step!
     containerId = personal.id;
   });
 
-  // ============================================================================
-  // 3. Create a bank account
-  // ============================================================================
   it('3. creates a checking account with opening balance', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/accounts')
@@ -119,9 +104,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     accountId = res.body.id;
   });
 
-  // ============================================================================
-  // 4. Add income (2500) → balance becomes 3500
-  // ============================================================================
   it('4. records an income transaction and updates the balance', async () => {
     await request(app.getHttpServer())
       .post('/api/transactions')
@@ -144,9 +126,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(Number(accRes.body.currentBalance)).toBe(3500);
   });
 
-  // ============================================================================
-  // 5. Add expense (800) → balance becomes 2700
-  // ============================================================================
   it('5. records an expense transaction and updates the balance', async () => {
     await request(app.getHttpServer())
       .post('/api/transactions')
@@ -169,9 +148,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(Number(accRes.body.currentBalance)).toBe(2700);
   });
 
-  // ============================================================================
-  // 6. Verify net worth endpoint
-  // ============================================================================
   it('6. reports net worth = assets - liabilities', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/accounts/net-worth')
@@ -183,15 +159,12 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(Number(res.body.totalLiabilities)).toBe(0);
   });
 
-  // ============================================================================
-  // 7. Create a budget for the expense category (Now includes containerId!)
-  // ============================================================================
   it('7. creates a budget for the expense category', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/budgets')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        containerId, // <-- THE FIX: Added containerId
+        containerId,
         categoryId: categoryExpenseId,
         amount: 1000,
         currency: 'KES',
@@ -201,7 +174,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
 
     expect(res.body).toBeDefined();
 
-    // Fetch list to find the created budget's id
     const listRes = await request(app.getHttpServer())
       .get('/api/budgets')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -213,9 +185,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     budgetId = created.id;
   });
 
-  // ============================================================================
-  // 8. Budget progress reflects the 800 expense
-  // ============================================================================
   it('8. shows budget progress reflecting the recorded expense', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/budgets')
@@ -228,9 +197,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(Number(budget.remaining)).toBe(200);
   });
 
-  // ============================================================================
-  // 9. Create a savings goal
-  // ============================================================================
   it('9. creates a savings goal', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/goals')
@@ -247,9 +213,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     goalId = res.body.id;
   });
 
-  // ============================================================================
-  // 10. Generate insights
-  // ============================================================================
   it('10. generates insights without error', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/insights/generate')
@@ -264,9 +227,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
       .expect(200);
   });
 
-  // ============================================================================
-  // 11. Dashboard aggregates everything
-  // ============================================================================
   it('11. dashboard summary reflects the full user state', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/dashboard/summary')
@@ -278,9 +238,6 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(res.body.cashFlow).toBeDefined();
   });
 
-  // ============================================================================
-  // 12. Audit log contains our writes
-  // ============================================================================
   it('12. audit log records the transaction creates', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/audit?limit=50')
@@ -288,26 +245,50 @@ describe('Wave 1 — Golden Path (E2E)', () => {
       .expect(200);
 
     expect(Array.isArray(res.body)).toBe(true);
-    // We created 2 transactions, so we expect at least 2 logs
     expect(res.body.length).toBeGreaterThanOrEqual(2);
 
     const entityTypes = new Set(res.body.map((e: any) => e.entityType));
     expect(entityTypes.has('Transaction')).toBe(true);
   });
 
-  // ============================================================================
-  // 13. Logout revokes the session
-  // ============================================================================
+  // 13: FIXED — verify DB state before asserting refresh fails
   it('13. logout invalidates the access token', async () => {
+    // 1. Get a fresh login to isolate the session under test
     const loginRes = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ email: testEmail, password: testPassword })
       .expect(200);
 
     const refreshToken = loginRes.body.refreshToken;
+    const userId = loginRes.body.user.id;
 
+    // 2. Count active sessions before logout
+    const beforeCount = await prisma.session.count({
+      where: { userId, revokedAt: null },
+    });
+    expect(beforeCount).toBeGreaterThanOrEqual(1);
+
+    // 3. Logout using the refresh token
     await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
 
+    // 4. WAIT for the DB to confirm the session was revoked
+    //    (GitHub Actions runners sometimes lag behind local SSD)
+    let attempts = 0;
+    while (attempts < 10) {
+      const revokedCount = await prisma.session.count({
+        where: { userId, revokedAt: { not: null } },
+      });
+      if (revokedCount > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      attempts++;
+    }
+
+    const afterRevoked = await prisma.session.count({
+      where: { userId, revokedAt: { not: null } },
+    });
+    expect(afterRevoked).toBeGreaterThanOrEqual(1);
+
+    // 5. Now the refresh must fail (401)
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 });
