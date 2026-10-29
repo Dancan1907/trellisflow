@@ -100,6 +100,8 @@ jobs:
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -123,7 +125,7 @@ jobs:
         run: pnpm --filter @trellisflow/api test:unit --coverage
         # Note: The "test:unit" script ignores integration.spec.ts files.
         # Coverage thresholds (configured in apps/api/jest.config.js) still apply.
-        # If coverage drops below 50% lines / 50% statements, this step will fail.
+        # NODE_ENV=test ensures EmailService bypasses Resend during tests.
 
   # ==========================================================================
   # Integration + E2E tests — slower. Requires a real PostgreSQL database.
