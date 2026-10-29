@@ -78,13 +78,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border-subtle">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-fg-tertiary">
-          <span>© {new Date().getFullYear()} TrellisFlow. All rights reserved.</span>
-          <span>Built with care, for people with complex money.</span>
-        </div>
-      </footer>
+      {/* The inline <footer> block is GONE. The Layout renders MarketingFooter. */}
     </main>
   );
 }
