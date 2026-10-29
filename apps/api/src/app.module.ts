@@ -23,6 +23,7 @@ import { SnapshotsModule } from './modules/snapshots/snapshots.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UsersModule } from './modules/users/users.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -55,7 +56,7 @@ import { UsersModule } from './modules/users/users.module';
     InsightsModule,
     DashboardModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [
     AppService,
     {
