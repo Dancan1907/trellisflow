@@ -41,7 +41,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary px-4">
+    <div className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <Logo size="large" />
@@ -110,7 +110,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-fg-secondary">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="text-accent-primary hover:underline">
               Sign up
             </Link>
