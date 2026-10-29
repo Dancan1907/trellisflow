@@ -1,7 +1,7 @@
 # render.yaml
 services:
   - type: web
-    name: trellisflow-api-staging
+    name: trellisflow-api
     runtime: node
     plan: starter
     rootDir: .
