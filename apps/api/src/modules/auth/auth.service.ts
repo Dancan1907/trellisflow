@@ -191,7 +191,6 @@ export class AuthService {
       message: 'If that email exists, a reset link has been sent.',
     };
 
-    // Force devToken return during e2e tests, regardless of ConfigService
     if (
       process.env.NODE_ENV === 'test' ||
       this.configService.get<string>('NODE_ENV') !== 'production'
@@ -319,29 +318,29 @@ export class AuthService {
   }
 
   async logout(refreshToken: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync(refreshToken, {
+    const payload = await this.jwtService
+      .verifyAsync(refreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      })
+      .catch(() => {
+        throw new UnauthorizedException('Invalid refresh token');
       });
 
-      const sessions = await this.prisma.session.findMany({
-        where: { userId: payload.sub, revokedAt: null },
-      });
+    const sessions = await this.prisma.session.findMany({
+      where: { userId: payload.sub, revokedAt: null },
+    });
 
-      for (const session of sessions) {
-        if (await argon2.verify(session.tokenHash, refreshToken)) {
-          await this.prisma.session.update({
-            where: { id: session.id },
-            data: { revokedAt: new Date() },
-          });
-          break;
-        }
+    for (const session of sessions) {
+      if (await argon2.verify(session.tokenHash, refreshToken)) {
+        await this.prisma.session.update({
+          where: { id: session.id },
+          data: { revokedAt: new Date() },
+        });
+        break;
       }
-
-      return { message: 'Logged out successfully' };
-    } catch {
-      return { message: 'Logged out successfully' };
     }
+
+    return { message: 'Logged out successfully' };
   }
 
   async logoutAll(userId: string) {
@@ -377,7 +376,10 @@ export class AuthService {
       },
     });
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 
   async listSessions(userId: string) {

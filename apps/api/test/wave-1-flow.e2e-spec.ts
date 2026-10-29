@@ -259,26 +259,28 @@ describe('Wave 1 — Golden Path (E2E)', () => {
       .expect(200);
 
     const refreshToken = loginRes.body.refreshToken;
+    expect(refreshToken).toBeDefined();
     const userId = loginRes.body.user.id;
 
-    // 2. Find the EXACT session this refresh token belongs to.
-    //    The refresh endpoint hashes the token before storing, and we can't
-    //    recover that hash from the token alone — but we CAN identify it as
-    //    the newest session created for this user.
+    // 2. Find the newest session (the one we just created)
     const sessionsBefore = await prisma.session.findMany({
       where: { userId, revokedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     expect(sessionsBefore.length).toBeGreaterThanOrEqual(1);
-    const targetSessionId = sessionsBefore[0].id;
+    const targetSessionId = sessionsBefore[0]!.id;
 
-    // 3. Logout using the refresh token
-    await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
+    // 3. Logout
+    const logoutRes = await request(app.getHttpServer())
+      .post('/api/auth/logout')
+      .send({ refreshToken })
+      .expect(200);
 
-    // 4. Poll until THAT SPECIFIC session has been revoked
-    let attempts = 0;
+    expect(logoutRes.body.message).toBe('Logged out successfully');
+
+    // 4. Poll for THIS specific session to be revoked
     let isRevoked = false;
-    while (attempts < 20) {
+    for (let i = 0; i < 20; i++) {
       const session = await prisma.session.findUnique({
         where: { id: targetSessionId },
       });
@@ -286,13 +288,11 @@ describe('Wave 1 — Golden Path (E2E)', () => {
         isRevoked = true;
         break;
       }
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      attempts++;
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-
     expect(isRevoked).toBe(true);
 
-    // 5. Now the refresh token must fail
+    // 5. Refresh must now fail
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 });
