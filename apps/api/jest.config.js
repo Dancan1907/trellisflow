@@ -3,7 +3,6 @@ module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
   testRegex: '.*\\.spec\\.ts$',
-  // Use only 1 worker to prevent out-of-memory (SIGSEGV) crashes in CI
   maxWorkers: 1,
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
@@ -21,7 +20,6 @@ module.exports = {
   coverageReporters: ['text', 'text-summary', 'lcov'],
   coverageThreshold: {
     global: {
-      // Lowered to match unit-only scope
       lines: 35,
       statements: 35,
       functions: 35,
@@ -32,5 +30,8 @@ module.exports = {
   transformIgnorePatterns: ['node_modules/(?!.*(@nestjs/jwt)/)'],
   setupFiles: ['<rootDir>/test/setup.ts'],
   globalSetup: '<rootDir>/test/global-setup.ts',
-  testTimeout: 30000, // Increased to 30s for CI Argon2 hashing
+  testTimeout: 30000,
+  moduleNameMapper: {
+    '^argon2$': '<rootDir>/test/argon2-mock.ts',
+  },
 };
