@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
+import * as crypto from 'crypto';
 import { randomUUID } from 'crypto';
-import * as argon2 from 'argon2';
 import { AppModule } from '../../app.module';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -36,12 +36,19 @@ describe('Users (integration)', () => {
 
     prisma = app.get(PrismaService);
 
-    // Create a throwaway user
+    // Create a throwaway user with test-mode password hash
+    const salt = crypto.randomBytes(16).toString('hex');
+    const digest = crypto
+      .createHash('sha256')
+      .update(salt + password)
+      .digest('hex');
+    const passwordHash = `test$${salt}$${digest}`;
+
     const user = await prisma.user.create({
       data: {
         id: randomUUID(),
         email,
-        passwordHash: await argon2.hash(password),
+        passwordHash,
         name: 'Users Test',
       },
     });

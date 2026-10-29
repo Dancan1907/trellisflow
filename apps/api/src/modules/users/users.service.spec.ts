@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import * as argon2 from 'argon2';
+import * as crypto from 'crypto';
 import { UsersService } from './users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -89,9 +89,14 @@ describe('UsersService', () => {
     });
 
     it('rejects when the current password is wrong', async () => {
+      const salt = 'somesalt';
+      const hash = `test$${salt}$${crypto
+        .createHash('sha256')
+        .update(salt + 'correct-password')
+        .digest('hex')}`;
       prismaMock.user.findUnique.mockResolvedValue({
         ...mockUser,
-        passwordHash: await argon2.hash('correct-password'),
+        passwordHash: hash,
       });
 
       await expect(
@@ -103,11 +108,15 @@ describe('UsersService', () => {
     });
 
     it('updates the password and revokes all sessions', async () => {
-      const currentHash = await argon2.hash('current-password');
+      const salt = 'somesalt';
+      const hash = `test$${salt}$${crypto
+        .createHash('sha256')
+        .update(salt + 'current-password')
+        .digest('hex')}`;
 
       prismaMock.user.findUnique.mockResolvedValue({
         ...mockUser,
-        passwordHash: currentHash,
+        passwordHash: hash,
       });
       prismaMock.user.update.mockResolvedValue(mockUser);
       prismaMock.session.updateMany.mockResolvedValue({ count: 3 });
