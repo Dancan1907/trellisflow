@@ -1,12 +1,20 @@
-/**
- * Root layout for TrellisFlow.
- *
- * Every page in the app is wrapped by this layout. It defines the
- * <html> and <body> tags and provides global metadata.
- *
- * Feature-specific layouts ((public), (app), (onboarding)) nest inside this.
- */
 import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import './globals.css';
+import { QueryProvider } from '@/lib/query-client';
+import { ToastContainer } from '@/components/ui/toast';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'TrellisFlow',
@@ -20,8 +28,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
+      <body>
+        <QueryProvider>
+          {children}
+          <ToastContainer />
+        </QueryProvider>
+      </body>
     </html>
   );
 }

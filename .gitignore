@@ -88,3 +88,7 @@ temp/
 *.bak
 *.orig
 *.rej
+
+# Ignore compiled JS output in test folders
+apps/api/test/*.js
+apps/api/test/*.js.map

@@ -1,0 +1,31 @@
+# render.yaml
+services:
+  - type: web
+    name: trellisflow-api
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: |
+      pnpm install --frozen-lockfile
+      pnpm --filter @trellisflow/api exec prisma generate
+      pnpm --filter @trellisflow/api exec prisma migrate deploy
+      pnpm --filter @trellisflow/api build
+    startCommand: node apps/api/dist/main.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: 'onboarding@resend.dev'

@@ -27,6 +27,8 @@ TrellisFlow is a personal wealth platform where employees, freelancers, and busi
 | 15  | [Git Strategy](./15-git-strategy.md)                     | Branches, commits, and workflows                                |
 | 16  | [Testing Strategy](./16-testing-strategy.md)             | Testing pyramid, tooling, and coverage targets                  |
 | 17  | [Implementation Roadmap](./17-implementation-roadmap.md) | Ordered build plan, wave by wave                                |
+| 18  | [Design System](./18-design-system.md)                   | Colors, typography, spacing, and visual rules                   |
+| 19  | [Component Specs](./19-component-specs.md)               | Visual reference for every UI component                         |
 | —   | [Runbook](./runbook.md)                                  | Recovery procedures and common fixes                            |
 
 ---
@@ -36,6 +38,7 @@ TrellisFlow is a personal wealth platform where employees, freelancers, and busi
 - **New contributor:** Read chapters 01–03 for context, then 12–13 for architecture, and finally 17 to understand what to build next.
 - **Returning developer:** Review chapters 06 (Feature Waves) and 17 (Implementation Roadmap) to identify the current stage of development.
 - **Reviewing a decision:** Each chapter explains what was decided and why. If you disagree with the reasoning, propose a revision instead of silently working around the decision.
+- **Building UI:** Read chapters 18 (Design System) and 19 (Component Specs). Never invent styles outside of these documents.
 - **Before merging a feature:** Verify that the implementation matches the relevant chapter. If the documentation is incorrect or outdated, update it in the same pull request.
 
 ## What This Bible Is Not
@@ -58,6 +61,7 @@ These principles guide architectural decisions and future development.
 8. **Testing is non-negotiable for money math and tenancy.** Financial calculations and user-data isolation require rigorous automated testing.
 9. **Universal access.** Use REST APIs as the standard interface so web clients, mobile applications, external businesses, and future integrations can communicate with the platform.
 10. **Boring is good.** Prefer proven, understandable, maintainable patterns over unnecessary complexity.
+11. **Design before code.** Every screen must follow the Design System (ch. 18) and Component Specs (ch. 19). Never invent a new style without updating the docs first.
 
 ---
 
