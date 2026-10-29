@@ -259,12 +259,34 @@ describe('Wave 1 — Golden Path (E2E)', () => {
 
     const refreshToken = loginRes.body.refreshToken;
     expect(refreshToken).toBeDefined();
+    const userId = loginRes.body.user.id;
 
-    // Logout — this revokes the session synchronously in the backend
+    // Count active sessions BEFORE logout
+    const sessionsBefore = await prisma.session.findMany({
+      where: { userId, revokedAt: null },
+    });
+    console.log(`[TEST 13] Active sessions before logout: ${sessionsBefore.length}`);
+    console.log(
+      `[TEST 13] Session hashes:`,
+      sessionsBefore.map((s) => s.tokenHash.substring(0, 20)),
+    );
+
+    // Logout
     await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
 
-    // The refresh token must no longer work — this is the ONLY assertion
-    // that matters. No polling, no DB inspection, no timing dependence.
+    // Count active sessions AFTER logout
+    const sessionsAfter = await prisma.session.findMany({
+      where: { userId, revokedAt: null },
+    });
+    console.log(`[TEST 13] Active sessions after logout: ${sessionsAfter.length}`);
+    console.log(
+      `[TEST 13] Was at least one revoked? ${sessionsBefore.length > sessionsAfter.length}`,
+    );
+
+    // Assert the logout actually reduced session count
+    expect(sessionsAfter.length).toBeLessThan(sessionsBefore.length);
+
+    // Refresh must now fail
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 });
