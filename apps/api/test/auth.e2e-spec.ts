@@ -83,11 +83,18 @@ describe('Auth (E2E)', () => {
     // 2. Logout using that refresh token
     await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
 
-    // 3. Try to use the refresh token after logout (should fail with 401)
-    // Note: We're adding a small delay here just in case there's a race condition
-    // in the DB, though the code should be synchronous.
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // 3. VERIFY IN DATABASE: Check that the session is actually revoked
+    const activeSessions = await prisma.session.findMany({
+      where: {
+        userId: loginRes.body.user.id,
+        revokedAt: null,
+      },
+    });
 
+    // The session should have been removed from the active list
+    expect(activeSessions.length).toBe(0);
+
+    // 4. Try to use the refresh token after logout (should fail with 401)
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 
