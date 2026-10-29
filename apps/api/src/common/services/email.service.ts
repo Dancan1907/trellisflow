@@ -53,6 +53,12 @@ export class EmailService {
   }
 
   private async send(to: string, subject: string, html: string) {
+    // Bypass sending real emails in test environments to prevent Resend 403 errors
+    if (process.env.NODE_ENV === 'test') {
+      console.log(`[EmailService] Mocked email send to ${to}: ${subject}`);
+      return;
+    }
+
     if (!this.resend) {
       this.logger.log(`📧 [DEV EMAIL] To: ${to} | Subject: ${subject}`);
       this.logger.debug(`📧 Body: ${html}`);
