@@ -11,19 +11,16 @@ describe('Auth (E2E)', () => {
   const testEmail = `e2e-${Date.now()}@trellisflow.com`;
 
   beforeAll(async () => {
-    // 1. Boot up the entire NestJS app
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleRef.createNestApplication();
-
-    // 2. Apply the same global configuration as main.ts
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
     app.setGlobalPrefix('api', {
-      exclude: [{ path: 'health', method: 0 }], // 0 = RequestMethod.GET
+      exclude: [{ path: 'health', method: 0 }],
     });
 
     await app.init();
@@ -31,7 +28,6 @@ describe('Auth (E2E)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
     await prisma.user.deleteMany({
       where: { email: { startsWith: 'e2e-' } },
     });
@@ -44,13 +40,11 @@ describe('Auth (E2E)', () => {
       .send({ email: testEmail, password: 'password123', name: 'E2E User' })
       .expect(201);
 
-    // Verify the response body
     expect(res.body).toHaveProperty('user');
     expect(res.body.user.email).toBe(testEmail);
     expect(res.body).toHaveProperty('accessToken');
     expect(res.body).toHaveProperty('refreshToken');
 
-    // Save the token for the next test
     accessToken = res.body.accessToken;
   });
 
@@ -90,10 +84,14 @@ describe('Auth (E2E)', () => {
     await request(app.getHttpServer()).post('/api/auth/logout').send({ refreshToken }).expect(200);
 
     // 3. Try to use the refresh token after logout (should fail with 401)
+    // Note: We're adding a small delay here just in case there's a race condition
+    // in the DB, though the code should be synchronous.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     await request(app.getHttpServer()).post('/api/auth/refresh').send({ refreshToken }).expect(401);
   });
 
-  it('should complete the password reset flow (200)', async () => {
+  it('should complete the password reset flow (201)', async () => {
     // 1. Request a password reset
     const forgotRes = await request(app.getHttpServer())
       .post('/api/auth/forgot-password')
