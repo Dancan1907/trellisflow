@@ -1,6 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as crypto from 'crypto';
-import * as argon2 from 'argon2';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -16,6 +15,7 @@ async function hashPassword(pw: string): Promise<string> {
       .digest('hex');
     return `test$${salt}$${digest}`;
   }
+  const argon2 = await import('argon2');
   return argon2.hash(pw);
 }
 
@@ -29,6 +29,7 @@ async function verifyPassword(hashStr: string, pw: string): Promise<boolean> {
       .digest('hex');
     return expected === digest;
   }
+  const argon2 = await import('argon2');
   return argon2.verify(hashStr, pw);
 }
 

@@ -2,7 +2,6 @@ import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/co
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../common/services/email.service';
-import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { randomUUID } from 'crypto';
 import { SignupDto } from './dto/signup.dto';
@@ -21,6 +20,8 @@ async function hashPassword(pw: string): Promise<string> {
       .digest('hex');
     return `test$${salt}$${digest}`;
   }
+  // Dynamically load argon2 ONLY in non-test environments
+  const argon2 = await import('argon2');
   return argon2.hash(pw);
 }
 
@@ -30,10 +31,12 @@ async function verifyPassword(hashStr: string, pw: string): Promise<boolean> {
     const [, salt, digest] = hashStr.split('$');
     const expected = crypto
       .createHash('sha256')
-      .update(salt + pw)
+      .update(salt! + pw)
       .digest('hex');
     return expected === digest;
   }
+  // Dynamically load argon2 ONLY in non-test environments
+  const argon2 = await import('argon2');
   return argon2.verify(hashStr, pw);
 }
 
