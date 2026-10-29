@@ -31,7 +31,4 @@ module.exports = {
   setupFiles: ['<rootDir>/test/setup.ts'],
   globalSetup: '<rootDir>/test/global-setup.ts',
   testTimeout: 30000,
-  moduleNameMapper: {
-    '^argon2$': '<rootDir>/test/argon2-mock.ts',
-  },
 };

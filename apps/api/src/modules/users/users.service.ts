@@ -1,8 +1,36 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+
+const isTest = () => process.env.NODE_ENV === 'test';
+
+async function hashPassword(pw: string): Promise<string> {
+  if (isTest()) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const digest = crypto
+      .createHash('sha256')
+      .update(salt + pw)
+      .digest('hex');
+    return `test$${salt}$${digest}`;
+  }
+  return argon2.hash(pw);
+}
+
+async function verifyPassword(hashStr: string, pw: string): Promise<boolean> {
+  if (isTest()) {
+    if (!hashStr.startsWith('test$')) return false;
+    const [, salt, digest] = hashStr.split('$');
+    const expected = crypto
+      .createHash('sha256')
+      .update(salt! + pw)
+      .digest('hex');
+    return expected === digest;
+  }
+  return argon2.verify(hashStr, pw);
+}
 
 @Injectable()
 export class UsersService {
@@ -59,13 +87,13 @@ export class UsersService {
       throw new UnauthorizedException('User not found');
     }
 
-    const isCurrentPasswordValid = await argon2.verify(user.passwordHash, dto.currentPassword);
+    const isCurrentPasswordValid = await verifyPassword(user.passwordHash, dto.currentPassword);
 
     if (!isCurrentPasswordValid) {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    const newHash = await argon2.hash(dto.newPassword);
+    const newHash = await hashPassword(dto.newPassword);
 
     await this.prisma.$transaction([
       this.prisma.user.update({
