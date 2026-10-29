@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { MarketingFooter } from '@/components/layout/marketing-footer';
 
 export default function TermsPage() {
   return (
@@ -81,8 +80,6 @@ export default function TermsPage() {
           </section>
         </div>
       </article>
-
-      <MarketingFooter />
     </main>
   );
 }
