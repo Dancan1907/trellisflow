@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '@/lib/api/api-client';
@@ -9,7 +8,6 @@ import { useAuthStore } from '@/lib/auth/auth-store';
 import { Logo } from '@/components/shared/logo';
 
 export default function LoginPage() {
-  const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,11 +30,12 @@ export default function LoginPage() {
       });
 
       setAuth(data.accessToken, data.user);
-      router.push('/dashboard');
+
+      // Use a hard redirect to ensure middleware reads the new cookie
+      window.location.href = '/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Only stop loading on error, otherwise we redirect
     }
   };
 
