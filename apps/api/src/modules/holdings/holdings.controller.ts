@@ -1,9 +1,10 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HoldingsService } from './holdings.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { QueryHoldingsDto } from './dto/query-holdings.dto';
+import { CreateHoldingDto } from './dto/create-holding.dto';
 
 @ApiTags('holdings') // Group these endpoints under holdings in Swagger UI
 @ApiBearerAuth() // Tell swagger "this endpoint needs a JWT token" so the "Authorize" button appears
@@ -23,5 +24,11 @@ export class HoldingsController {
   @ApiOperation({ summary: 'Get aggregated summary of open holdings' })
   async getSummary(@CurrentUser() user: any, @Query() query: QueryHoldingsDto) {
     return this.holdingsService.getSummary(user.id, query);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new holding' })
+  async create(@CurrentUser() user: any, @Body() dto: CreateHoldingDto) {
+    return this.holdingsService.create(user.id, dto);
   }
 }
