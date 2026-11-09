@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HoldingsService } from './holdings.service';
@@ -30,5 +30,11 @@ export class HoldingsController {
   @ApiOperation({ summary: 'Create a new holding' })
   async create(@CurrentUser() user: any, @Body() dto: CreateHoldingDto) {
     return this.holdingsService.create(user.id, dto);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single holding by ID' })
+  async findOne(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.holdingsService.findOne(user.id, id);
   }
 }
