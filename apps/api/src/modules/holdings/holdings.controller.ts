@@ -18,4 +18,10 @@ export class HoldingsController {
   async findAll(@CurrentUser() user: any, @Query() query: QueryHoldingsDto) {
     return this.holdingsService.findAll(user.id, query);
   }
+
+  @Get('summary')
+  @ApiOperation({ summary: 'Get aggregated summary of open holdings' })
+  async getSummary(@CurrentUser() user: any, @Query() query: QueryHoldingsDto) {
+    return this.holdingsService.getSummary(user.id, query);
+  }
 }
