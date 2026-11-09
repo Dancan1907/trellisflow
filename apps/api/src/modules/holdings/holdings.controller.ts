@@ -54,4 +54,10 @@ export class HoldingsController {
   async update(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: UpdateHoldingDto) {
     return this.holdingsService.update(user.id, id, dto);
   }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft-delete a holding' })
+  async remove(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.holdingsService.remove(user.id, id);
+  }
 }
