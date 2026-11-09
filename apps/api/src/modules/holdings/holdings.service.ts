@@ -139,4 +139,19 @@ export class HoldingsService {
       },
     });
   }
+
+  // (v) Method 5. remove
+  async remove(userId: string, id: string) {
+    // 1. Verify ownership — throws NotFoundException if not owned/found
+    await this.findOne(userId, id);
+
+    // 2. Soft delete: mark as DELETED, set deletedAt timestamp
+    return this.prisma.holding.update({
+      where: { id },
+      data: {
+        status: 'DELETED',
+        deletedAt: new Date(),
+      },
+    });
+  }
 }
