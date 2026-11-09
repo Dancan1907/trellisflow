@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateHoldingDto } from './dto/create-holding.dto';
 import { randomUUID } from 'crypto';
 import { QueryHoldingsDto } from './dto/query-holdings.dto';
+import { UpdateHoldingDto } from './dto/update-holding.dto';
 
 /* 
 @nestjs/common: Brings in tools we need to throw errors ie "Not Found" & mark the class as Injectable
@@ -118,5 +119,24 @@ export class HoldingsService {
 
     // Return the holding — it definitely exists now
     return holding;
+  }
+
+  // (iv) Method 4. update (userId, id, dto)
+  async update(userId: string, id: string, dto: UpdateHoldingDto) {
+    // 1. Verify ownership — throws NotFoundException if not owned/found
+    await this.findOne(userId, id); //Call the findone method  to confirm ownership
+
+    // 2. Apply the updates
+    return this.prisma.holding.update({
+      where: { id },
+      data: {
+        // Attach the field present in the UpdateHoldingDto
+        name: dto.name,
+        costBasisTotal: dto.costBasisTotal,
+        currentValueTotal: dto.currentValueTotal,
+        acquiredDate: dto.acquiredDate ? new Date(dto.acquiredDate) : undefined,
+        notes: dto.notes,
+      },
+    });
   }
 }
