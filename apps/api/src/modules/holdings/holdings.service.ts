@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateHoldingDto } from './dto/create-holding.dto';
 import { randomUUID } from 'crypto';
+import { QueryHoldingsDto } from './dto/query-holdings.dto';
 
 /* 
 @nestjs/common: Brings in tools we need to throw errors ie "Not Found" & mark the class as Injectable
@@ -21,6 +22,7 @@ export class HoldingsService {
    give me the PrismaService and I'll call it prisma."
   */
 
+  // (i) Method 1. create(userId, dto)  Create the holdings
   async create(userId: string, dto: CreateHoldingDto) {
     // 1. Verify the container exists & belongs to this user
     const container = await this.prisma.container.findFirst({
@@ -63,6 +65,36 @@ export class HoldingsService {
         notes: dto.notes,
         status: 'OPEN', //Referred to the enum HoldingStatus in Schema
       },
+    });
+  }
+
+  //(ii) Method 2 findAll(userId, query)
+  async findAll(userId: string, query: QueryHoldingsDto) {
+    // Ask the db for many holdings that match the filters
+    return this.prisma.holding.findMany({
+      /* findMany → Returns an array (could be empty, could be 100 items)
+      return → Sends that array back to the controller, which sends it as JSON to the frontend */
+      where: {
+        userId, // Only return holdings that belong to this user
+        deletedAt: null, // Skip soft-deleted holdings
+
+        // Each of these spreads is optional — it only applies if the user sent that filter
+        ...(query.containerId ? { containerId: query.containerId } : {}),
+        ...(query.assetClass ? { assetClass: query.assetClass } : {}),
+        ...(query.status ? { status: query.status } : { status: 'OPEN' }), // Default to OPEN
+        ...(query.search
+          ? {
+              OR: [
+                { name: { contains: query.search, mode: 'insensitive' } },
+                { symbol: { contains: query.search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
+      // Include the container name so the frontend can display "Personal Investment"
+      include: { container: { select: { name: true } } },
+      // Newest holdings first
+      orderBy: { createdAt: 'desc' },
     });
   }
 }
