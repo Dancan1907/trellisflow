@@ -97,4 +97,26 @@ export class HoldingsService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  // (iii) findOne(userId, id) Get a specific one
+  async findOne(userId: string, id: string) {
+    // Ask the db for a single holding matching the id, user, and not soft-deleted
+    const holding = await this.prisma.holding.findFirst({
+      where: {
+        id,
+        userId, // Security: prevents users from reading other users' holdings
+        deletedAt: null, // Skip soft-deleted
+      },
+      // Include the container name for display
+      include: { container: { select: { name: true } } },
+    });
+
+    // If nothing came back, the holding doesn't exist (or isn't theirs)
+    if (!holding) {
+      throw new NotFoundException('Holding not found');
+    }
+
+    // Return the holding — it definitely exists now
+    return holding;
+  }
 }
