@@ -73,3 +73,113 @@ Track individual investment assets (stocks, crypto, real estate, bonds, etc.) th
 - quantity ≤ 0 → caught by DTO `@IsPositive()`
 - Any other numeric field < 0 → caught by DTO `@Min(0)`
 - Deleting an already-deleted holding → `NotFoundException`
+
+---
+
+## Service Implementation — Detailed Walkthrough
+
+_This section captures the reasoning behind each method in `holdings.service.ts`. Read this before an interview, before refactoring, or any time you need to remember why the code looks the way it does._
+
+### Method 1: `create(userId, dto)`
+
+**Purpose:** Validate the container, then create a new holding.
+
+**Flow:**
+
+1. Fetch the container by ID **and** userId — this ensures the user owns the container. If not found, throw `NotFoundException` (404). **We use 404 not 401** so we don't leak whether the container exists for someone else.
+2. Check `container.type === 'INVESTMENT'`. If not, throw `BadRequestException` (400) — this enforces the business rule that holdings only live in investment containers.
+3. Create the holding with `prisma.holding.create`. We generate the ID with `randomUUID()`. We set `status: 'OPEN'` explicitly because new holdings start as open.
+
+**Key decisions:**
+
+- `acquiredDate` — DTO sends a string; DB expects a `Date`. We convert with `new Date(dto.acquiredDate)`. If not provided, store `null`.
+- `pricingMode` — DTO might not include it; we default to `'MANUAL'` with `dto.pricingMode ?? 'MANUAL'`.
+
+### Method 2: `findAll(userId, query)`
+
+**Purpose:** Return all holdings for a user, with optional filters.
+
+**Flow:**
+
+1. Always filter `userId` (security) and `deletedAt: null` (hide soft-deleted).
+2. For each optional filter, use the spread pattern: `...(condition ? { field: value } : {})`. This means: "if the user sent this filter, add it to the where clause; if not, add nothing."
+3. `status` defaults to `'OPEN'` if not filtered.
+4. `search` uses Prisma's `OR` with `contains` and `mode: 'insensitive'` — so searching "scom" matches "SCOM" and "Safaricom".
+5. Include container name so the frontend can display "Safaricom Stock (Personal Investment)" without a second query.
+6. Order by `createdAt: 'desc'` so newest holdings appear first.
+
+**Why the spread pattern instead of just `containerId: query.containerId`?**
+If `query.containerId` is `undefined`, Prisma would interpret it as `WHERE containerId = null`, returning zero rows. The spread pattern skips the filter entirely when undefined.
+
+### Method 3: `findOne(userId, id)`
+
+**Purpose:** Return a single holding by ID, owned by the user.
+
+**Flow:**
+
+1. Use `findFirst` (not `findUnique`) because we filter by `id AND userId` — `findUnique` only allows filtering by unique fields.
+2. Include `deletedAt: null` so soft-deleted holdings aren't returned.
+3. If nothing comes back, throw `NotFoundException('Holding not found')`.
+4. Return the holding.
+
+**Why 404 not 401:**
+When User A tries to access User B's holding, `findFirst({ where: { id, userId: A } })` returns `null` because the holding belongs to B. We return 404, revealing nothing about B's holdings. If we returned 401, an attacker could probe "does this holding exist?"
+
+### Method 4: `update(userId, id, dto)`
+
+**Purpose:** Update specific fields on an owned holding.
+
+**Flow:**
+
+1. Call `findOne(userId, id)` first — this handles ownership check and throws 404 if needed.
+2. Call `prisma.holding.update` with only the fields present in `UpdateHoldingDto`.
+
+**Key decision — `undefined` vs `null`:**
+
+- In **`create`**: `acquiredDate: dto.acquiredDate ? new Date(...) : null` — if not provided, store `null` (explicit empty).
+- In **`update`**: `acquiredDate: dto.acquiredDate ? new Date(...) : undefined` — if not provided, **don't touch** the field.
+
+**If we used `null` in `update`**, updating only the `name` would accidentally erase `acquiredDate` because `dto.acquiredDate` would be `undefined` → converted to `null` → field cleared. **`undefined` tells Prisma "skip this field."**
+
+### Method 5: `remove(userId, id)`
+
+**Purpose:** Soft-delete a holding (never hard delete).
+
+**Flow:**
+
+1. Call `findOne` first — throws 404 if not found or not owned.
+2. Update the holding: set `status: 'DELETED'` and `deletedAt: new Date()`.
+
+**Why soft delete instead of hard delete:**
+Financial records must be preserved for:
+
+- Audit trail (who deleted what, when)
+- Historical reports (past net worth snapshots reference these holdings)
+- Realized gains calculations (Part 2 — selling a holding requires it to still exist)
+
+All list queries filter `deletedAt: null`, so users perceive the holding as gone. But the data lives on.
+
+### Method 6: `getSummary(userId, query)`
+
+**Purpose:** Aggregate statistics across open holdings for the dashboard card.
+
+**Flow:**
+
+1. Fetch all holdings with `status: 'OPEN'` and `deletedAt: null`, applying containerId and assetClass filters if present.
+2. Sum cost basis: `holdings.reduce((sum, h) => sum + Number(h.costBasisTotal), 0)`.
+3. Sum current value the same way.
+4. Compute `unrealizedGain = totalCurrentValue − totalCostBasis` — **derived data, not stored**.
+5. Group by asset class:
+   ```typescript
+   const byAssetClass = {};
+   for (const h of holdings) {
+     byAssetClass[h.assetClass] = (byAssetClass[h.assetClass] ?? 0) + 1;
+   }
+   ```
+6. Return { `count, totalCostBasis, totalCurrentValue, unrealizedGain, byAssetClass` }.
+
+Why Number() conversion is needed:
+Prisma returns Decimal objects (not JS numbers) for @db.Decimal fields. sum + Decimal would throw or produce garbage. Number(decimal) converts safely.
+
+Why unrealizedGain isn't stored in the DB:
+It's a derived value. If we stored it, we'd have to update it every time currentValueTotal changed. Derived = computed on demand. Same reason we store dateOfBirth but derive age.
