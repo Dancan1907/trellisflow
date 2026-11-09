@@ -154,4 +154,41 @@ export class HoldingsService {
       },
     });
   }
+
+  // (vi) Method 6. getSummary(userId, query)
+  async getSummary(userId: string, query: QueryHoldingsDto) {
+    // 1. Fetch all OPEN holdings that match the filters
+    const holdings = await this.prisma.holding.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        status: 'OPEN', // Only count holdings still held
+        ...(query.containerId ? { containerId: query.containerId } : {}),
+        ...(query.assetClass ? { assetClass: query.assetClass } : {}),
+      },
+    });
+
+    // 2. Sum cost basis and current value across all holdings
+    // We convert Prisma Decimals to JS numbers before adding
+    const totalCostBasis = holdings.reduce((sum, h) => sum + Number(h.costBasisTotal), 0);
+    const totalCurrentValue = holdings.reduce((sum, h) => sum + Number(h.currentValueTotal), 0);
+
+    // 3. Unrealized gain = current value - cost basis
+    const unrealizedGain = totalCurrentValue - totalCostBasis;
+
+    // 4. Group holdings by asset class (e.g., { STOCK: 3, CRYPTO: 1 })
+    const byAssetClass: Record<string, number> = {};
+    for (const holding of holdings) {
+      byAssetClass[holding.assetClass] = (byAssetClass[holding.assetClass] ?? 0) + 1;
+    }
+
+    // 5. Return the summary
+    return {
+      count: holdings.length,
+      totalCostBasis,
+      totalCurrentValue,
+      unrealizedGain,
+      byAssetClass,
+    };
+  }
 }
