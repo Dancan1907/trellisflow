@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HoldingsService } from './holdings.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { QueryHoldingsDto } from './dto/query-holdings.dto';
 import { CreateHoldingDto } from './dto/create-holding.dto';
+import { UpdateHoldingDto } from './dto/update-holding.dto';
 
 @ApiTags('holdings') // Group these endpoints under holdings in Swagger UI
 @ApiBearerAuth() // Tell swagger "this endpoint needs a JWT token" so the "Authorize" button appears
@@ -36,5 +47,11 @@ export class HoldingsController {
   @ApiOperation({ summary: 'Get a single holding by ID' })
   async findOne(@CurrentUser() user: any, @Param('id') id: string) {
     return this.holdingsService.findOne(user.id, id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a holding' })
+  async update(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: UpdateHoldingDto) {
+    return this.holdingsService.update(user.id, id, dto);
   }
 }
