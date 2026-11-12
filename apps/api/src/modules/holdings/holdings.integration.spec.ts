@@ -172,7 +172,7 @@ describe('Holdings (Integration)', () => {
     // 2. Find all — should appear
     const before = await service.findAll(testUserId, {});
     expect(before.length).toBe(1);
-    expect(before[0].id).toBe(holding.id);
+    expect(before[0]!.id).toBe(holding.id);
 
     // 3. Soft-delete
     await service.remove(testUserId, holding.id);
