@@ -42,6 +42,13 @@ export class HoldingsController {
     return this.holdingsService.getAllocation(user.id, query);
   }
 
+  @Get('performance')
+  @ApiOperation({ summary: 'Get net worth performance over time' })
+  async getPerformance(@CurrentUser() user: any, @Query('days') days?: string) {
+    const daysNum = days ? parseInt(days, 10) : 30;
+    return this.holdingsService.getPerformance(user.id, daysNum);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new holding' })
   async create(@CurrentUser() user: any, @Body() dto: CreateHoldingDto) {
