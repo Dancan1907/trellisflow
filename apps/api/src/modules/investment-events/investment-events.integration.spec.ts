@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ClsModule } from 'nestjs-cls';
 import { randomUUID } from 'crypto';
 import { InvestmentEventsService } from './investment-events.service';
@@ -23,7 +23,6 @@ describe('InvestmentEvents (Integration)', () => {
     prisma = module.get<PrismaService>(PrismaService);
 
     testUserId = randomUUID();
-
     await prisma.user.create({
       data: {
         id: testUserId,
@@ -34,7 +33,6 @@ describe('InvestmentEvents (Integration)', () => {
     });
 
     containerId = randomUUID();
-
     await prisma.container.create({
       data: {
         id: containerId,
@@ -45,9 +43,7 @@ describe('InvestmentEvents (Integration)', () => {
       },
     });
 
-    // Create the linked investment account
     accountId = randomUUID();
-
     await prisma.account.create({
       data: {
         id: accountId,
@@ -60,9 +56,7 @@ describe('InvestmentEvents (Integration)', () => {
       },
     });
 
-    // Create the test holding
     holdingId = randomUUID();
-
     await prisma.holding.create({
       data: {
         id: holdingId,
@@ -82,10 +76,7 @@ describe('InvestmentEvents (Integration)', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({
-      where: { id: testUserId },
-    });
-
+    await prisma.user.deleteMany({ where: { id: testUserId } });
     await prisma.$disconnect();
   });
 
@@ -103,10 +94,7 @@ describe('InvestmentEvents (Integration)', () => {
     expect(event.eventType).toBe('BUY');
     expect(event.realizedGain).toBeNull();
 
-    const updatedHolding = await prisma.holding.findUnique({
-      where: { id: holdingId },
-    });
-
+    const updatedHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
     expect(Number(updatedHolding?.quantity)).toBe(150);
     expect(Number(updatedHolding?.costBasisTotal)).toBe(25000);
   });
@@ -124,10 +112,7 @@ describe('InvestmentEvents (Integration)', () => {
 
     expect(Number(event.realizedGain)).toBeCloseTo(3666.67, 1);
 
-    const updatedHolding = await prisma.holding.findUnique({
-      where: { id: holdingId },
-    });
-
+    const updatedHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
     expect(Number(updatedHolding?.quantity)).toBe(100);
     expect(Number(updatedHolding?.costBasisTotal)).toBeCloseTo(16666.67, 1);
   });
@@ -160,43 +145,11 @@ describe('InvestmentEvents (Integration)', () => {
     expect(Number(event.realizedGain)).toBe(500);
   });
 
-  it('should reverse a SELL event when deleted', async () => {
-    const dividendEvent = await prisma.investmentEvent.findFirst({
-      where: {
-        userId: testUserId,
-        eventType: 'DIVIDEND',
-      },
-    });
-
-    await service.remove(testUserId, dividendEvent!.id);
-
-    const sellEvent = await prisma.investmentEvent.findFirst({
-      where: {
-        userId: testUserId,
-        eventType: 'SELL',
-      },
-    });
-
-    expect(sellEvent).toBeDefined();
-
-    await service.remove(testUserId, sellEvent!.id);
-
-    const restoredHolding = await prisma.holding.findUnique({
-      where: { id: holdingId },
-    });
-
-    expect(Number(restoredHolding?.quantity)).toBe(150);
-  });
-
+  // NEW TEST
   it('should create a linked transaction for a BUY event', async () => {
     // Clean slate
-    await prisma.investmentEvent.deleteMany({
-      where: { userId: testUserId },
-    });
-
-    await prisma.transaction.deleteMany({
-      where: { userId: testUserId },
-    });
+    await prisma.investmentEvent.deleteMany({ where: { userId: testUserId } });
+    await prisma.transaction.deleteMany({ where: { userId: testUserId } });
 
     const beforeTxCount = await prisma.transaction.count({
       where: { userId: testUserId },
@@ -230,7 +183,23 @@ describe('InvestmentEvents (Integration)', () => {
     const afterTxCount = await prisma.transaction.count({
       where: { userId: testUserId },
     });
-
     expect(afterTxCount).toBe(beforeTxCount + 1);
+  });
+
+  it('should reverse a SELL event when deleted', async () => {
+    const dividendEvent = await prisma.investmentEvent.findFirst({
+      where: { userId: testUserId, eventType: 'DIVIDEND' },
+    });
+    await service.remove(testUserId, dividendEvent!.id);
+
+    const sellEvent = await prisma.investmentEvent.findFirst({
+      where: { userId: testUserId, eventType: 'SELL' },
+    });
+
+    expect(sellEvent).toBeDefined();
+    await service.remove(testUserId, sellEvent!.id);
+
+    const restoredHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
+    expect(Number(restoredHolding?.quantity)).toBe(150);
   });
 });
