@@ -21,7 +21,6 @@ describe('InvestmentEvents (Integration)', () => {
     service = module.get<InvestmentEventsService>(InvestmentEventsService);
     prisma = module.get<PrismaService>(PrismaService);
 
-    // Create a real user
     testUserId = randomUUID();
     await prisma.user.create({
       data: {
@@ -32,7 +31,6 @@ describe('InvestmentEvents (Integration)', () => {
       },
     });
 
-    // Create a real INVESTMENT container
     containerId = randomUUID();
     await prisma.container.create({
       data: {
@@ -44,7 +42,6 @@ describe('InvestmentEvents (Integration)', () => {
       },
     });
 
-    // Create a real holding with 100 units
     holdingId = randomUUID();
     await prisma.holding.create({
       data: {
@@ -76,12 +73,10 @@ describe('InvestmentEvents (Integration)', () => {
       quantity: 50,
       totalAmount: 10000,
       currency: 'KES',
-      date: new Date().toISOString().split('T')[0],
+      date: '2026-11-01', // Fixed date, earliest
     });
 
     expect(event.eventType).toBe('BUY');
-
-    // FIXED: Realized gain should be null, not converted to Number(0)
     expect(event.realizedGain).toBeNull();
 
     const updatedHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
@@ -97,9 +92,12 @@ describe('InvestmentEvents (Integration)', () => {
       quantity: 50,
       totalAmount: 12000,
       currency: 'KES',
-      date: new Date(Date.now() + 1000).toISOString().split('T')[0],
+      date: '2026-11-02', // Fixed date, day after BUY
     });
 
+    // Average cost per share: 25,000 / 150 = 166.67
+    // Cost basis removed: 50 * 166.67 = 8,333.50
+    // Realized gain: 12,000 - 8,333.50 = 3,666.50
     expect(Number(event.realizedGain)).toBeCloseTo(3666.67, 1);
 
     const updatedHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
@@ -116,7 +114,7 @@ describe('InvestmentEvents (Integration)', () => {
         quantity: 200,
         totalAmount: 50000,
         currency: 'KES',
-        date: new Date(Date.now() + 2000).toISOString().split('T')[0],
+        date: '2026-11-03', // Fixed date
       }),
     ).rejects.toThrow(BadRequestException);
   });
@@ -128,7 +126,7 @@ describe('InvestmentEvents (Integration)', () => {
       eventType: 'DIVIDEND',
       totalAmount: 500,
       currency: 'KES',
-      date: new Date(Date.now() + 3000).toISOString().split('T')[0],
+      date: '2026-11-04', // Fixed date, after SELL
     });
 
     expect(event.eventType).toBe('DIVIDEND');
@@ -136,24 +134,22 @@ describe('InvestmentEvents (Integration)', () => {
   });
 
   it('should reverse a SELL event when deleted', async () => {
-    // FIXED: Delete the DIVIDEND first, because it is the most recent event.
+    // Delete the DIVIDEND first (it's the newest)
     const dividendEvent = await prisma.investmentEvent.findFirst({
       where: { userId: testUserId, eventType: 'DIVIDEND' },
     });
     await service.remove(testUserId, dividendEvent!.id);
 
-    // Now we can delete the SELL event
+    // Now the SELL is the newest
     const sellEvent = await prisma.investmentEvent.findFirst({
       where: { userId: testUserId, eventType: 'SELL' },
     });
 
     expect(sellEvent).toBeDefined();
-
     await service.remove(testUserId, sellEvent!.id);
 
-    // Verify the holding is restored
+    // Verify the holding is restored to the post-BUY state
     const restoredHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
-
     expect(Number(restoredHolding?.quantity)).toBe(150);
   });
 });
