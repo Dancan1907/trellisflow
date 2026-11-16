@@ -396,12 +396,12 @@
 - ☑ Unrealized gain (derived)
 - ☑ Tests: gains math, partial sells, buy/sell flow (28 tests passing)
 
-### Backend — Extensions (☐ Pending)
+### Backend — Extensions (☑ Complete)
 
-- ☐ Link events to transactions (Auto-create transactions for BUY/SELL events)
-- ☐ Allocation report
-- ☐ Performance over time
-- ☐ E2E: add holding → buy → sell → realized gain
+- ☑ Link events to transactions (Auto-create transactions for BUY/SELL events)
+- ☑ Allocation report
+- ☑ Performance over time
+- ☑ E2E: add holding → buy → sell → realized gain
 
 ### Frontend (☐ Pending)
 
