@@ -216,4 +216,54 @@ export class HoldingsService {
       byAssetClass,
     };
   }
+
+  // (vii) Method 7. getAllocation(userId, query)
+  async getAllocation(userId: string, query: QueryHoldingsDto) {
+    // 1. Fetch all OPEN holdings matching filters
+    const holdings = await this.prisma.holding.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        status: 'OPEN',
+        ...(query.containerId ? { containerId: query.containerId } : {}),
+      },
+    });
+
+    // 2. Group by asset class
+    const groups = new Map<string, { value: number; count: number }>();
+
+    for (const holding of holdings) {
+      const current = groups.get(holding.assetClass) ?? {
+        value: 0,
+        count: 0,
+      };
+
+      current.value += Number(holding.currentValueTotal);
+      current.count += 1;
+
+      groups.set(holding.assetClass, current);
+    }
+
+    // 3. Total across all holdings
+    const totalValue = Array.from(groups.values()).reduce((sum, group) => sum + group.value, 0);
+
+    // 4. Build the breakdown array sorted by value descending
+    const breakdown = Array.from(groups.entries())
+      .map(([assetClass, data]) => ({
+        assetClass,
+        value: data.value,
+        percentage: totalValue === 0 ? 0 : Math.round((data.value / totalValue) * 1000) / 10,
+        count: data.count,
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // 5. Currency — use the first holding's currency, or default to KES
+    const currency = holdings[0]?.currency ?? 'KES';
+
+    return {
+      totalValue,
+      currency,
+      breakdown,
+    };
+  }
 }
