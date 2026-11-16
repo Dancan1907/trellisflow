@@ -180,6 +180,15 @@ export class InvestmentEventsService {
           });
 
           transactionId = transaction.id;
+
+          // Update the account balance
+          const balanceChange =
+            transactionMeta.type === 'INCOME' ? dto.totalAmount : -dto.totalAmount;
+
+          await tx.account.update({
+            where: { id: holding.accountId },
+            data: { currentBalance: { increment: balanceChange } },
+          });
         }
       }
 
@@ -376,7 +385,7 @@ export class InvestmentEventsService {
             },
           });
 
-          // Delete the linked transaction if it exists
+          // Delete the linked transaction if it exists + reverse the balance
           if (event.relatedTransactionId) {
             await tx.transaction
               .delete({
@@ -385,6 +394,19 @@ export class InvestmentEventsService {
               .catch(() => {
                 // Ignore if already deleted (e.g., user manually removed it)
               });
+
+            // Reverse the balance change based on the original event type
+            // BUY / WITHDRAWAL were EXPENSE → balance decreased → we increase it back
+            // SELL / DIVIDEND / CONTRIBUTION were INCOME → balance increased → we decrease it back
+            const wasExpense = ['BUY', 'WITHDRAWAL'].includes(event.eventType);
+            const balanceReversal = wasExpense
+              ? Number(event.totalAmount)
+              : -Number(event.totalAmount);
+
+            await tx.account.update({
+              where: { id: holding.accountId },
+              data: { currentBalance: { increment: balanceReversal } },
+            });
           }
 
           return tx.investmentEvent.delete({
