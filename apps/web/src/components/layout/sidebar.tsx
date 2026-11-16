@@ -34,8 +34,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
     title: 'Money',
     items: [
       { label: 'Personal', href: '/personal', icon: User },
-      // TODO: Uncomment in Wave 2
-      // { label: 'Investments', href: '/investments', icon: TrendingUp },
+      { label: 'Investments', href: '/investments', icon: TrendingUp },
       // TODO: Uncomment in Wave 3
       // { label: 'Businesses', href: '/businesses', icon: Building2 },
     ],
