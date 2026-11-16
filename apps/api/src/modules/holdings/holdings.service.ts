@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 import { QueryHoldingsDto } from './dto/query-holdings.dto';
 import { UpdateHoldingDto } from './dto/update-holding.dto';
 
-/* 
+/*
 @nestjs/common: Brings in tools we need to throw errors ie "Not Found" & mark the class as Injectable
 PrismaService: This is your connection to the database.
 CreateHoldingDto: The shape of the data coming from the frontend when they create a holding.
@@ -13,46 +13,57 @@ QueryHoldingsDto: The shape of the filters for when they list holdings.
 randomUUID: A tool to generate unique IDs for new database rows.
 */
 
-//Class setup OR The container
-@Injectable() //Tells NestJs "this class can have things injected into it eg the Prisma Connection"
+// Class setup OR The container
+@Injectable()
 export class HoldingsService {
-  // Define the class & export it so the Controller can use it .
   constructor(private prisma: PrismaService) {}
-  /* 
-   This is Dependency Injection. It says "Hey NestJS, whenever I need to talk to the database, 
-   give me the PrismaService and I'll call it prisma."
-  */
 
-  // (i) Method 1. create(userId, dto)  Create the holdings
+  // (i) Method 1. create(userId, dto) - Create the holdings
   async create(userId: string, dto: CreateHoldingDto) {
-    // 1. Verify the container exists & belongs to this user
+    // ============================================================
+    // 1. Verify the container belongs to the user
+    // ============================================================
     const container = await this.prisma.container.findFirst({
-      /* We look for the container. We pass userId to ensure it's their container (security). */
-      where: {
-        id: dto.containerId,
-        userId,
-      },
+      where: { id: dto.containerId, userId },
     });
 
-    //If no container is found, we stop immediately and send a 404.
     if (!container) {
       throw new NotFoundException('Container not found');
     }
 
-    // 2. Check if the container is an INVESTMENT container
+    // ============================================================
+    // 2. Verify it's an INVESTMENT container
+    // ============================================================
     if (container.type !== 'INVESTMENT') {
       throw new BadRequestException('Holdings can only be created in INVESTMENT containers');
     }
 
-    // 3. Create the holding in the database
-    // We tell Prisma to save the new holding. We manually provide the id using randomUUID().
+    // ============================================================
+    // 3. Verify the account exists, belongs to the user,
+    // and is in the same container
+    // ============================================================
+    const account = await this.prisma.account.findFirst({
+      where: {
+        id: dto.accountId,
+        userId,
+        containerId: dto.containerId,
+        deletedAt: null,
+      },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found in this container');
+    }
+
+    // ============================================================
+    // 4. Create the holding
+    // ============================================================
     return this.prisma.holding.create({
       data: {
-        // Attach the random generated holding id & the users id..
         id: randomUUID(),
         userId,
-        //All these fields should match the fields outlined in the CreateHoldingDto except status field
         containerId: dto.containerId,
+        accountId: dto.accountId,
         name: dto.name,
         assetClass: dto.assetClass,
         symbol: dto.symbol,
@@ -61,76 +72,89 @@ export class HoldingsService {
         currentValueTotal: dto.currentValueTotal,
         currency: dto.currency,
         acquiredDate: dto.acquiredDate ? new Date(dto.acquiredDate) : null,
-        // If the user provided a date, convert it from a string to a real Date object. If not, store null.
-        pricingMode: dto.pricingMode ?? 'MANUAL', // Referred to enum PricingMode in Schema
+        pricingMode: dto.pricingMode ?? 'MANUAL',
         notes: dto.notes,
-        status: 'OPEN', //Referred to the enum HoldingStatus in Schema
+        status: 'OPEN',
       },
     });
   }
 
-  //(ii) Method 2 findAll(userId, query)
+  // (ii) Method 2. findAll(userId, query)
   async findAll(userId: string, query: QueryHoldingsDto) {
-    // Ask the db for many holdings that match the filters
     return this.prisma.holding.findMany({
-      /* findMany → Returns an array (could be empty, could be 100 items)
-      return → Sends that array back to the controller, which sends it as JSON to the frontend */
       where: {
-        userId, // Only return holdings that belong to this user
-        deletedAt: null, // Skip soft-deleted holdings
+        userId,
+        deletedAt: null,
 
-        // Each of these spreads is optional — it only applies if the user sent that filter
         ...(query.containerId ? { containerId: query.containerId } : {}),
         ...(query.assetClass ? { assetClass: query.assetClass } : {}),
-        ...(query.status ? { status: query.status } : { status: 'OPEN' }), // Default to OPEN
+        ...(query.status ? { status: query.status } : { status: 'OPEN' }),
+
         ...(query.search
           ? {
               OR: [
-                { name: { contains: query.search, mode: 'insensitive' } },
-                { symbol: { contains: query.search, mode: 'insensitive' } },
+                {
+                  name: {
+                    contains: query.search,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  symbol: {
+                    contains: query.search,
+                    mode: 'insensitive',
+                  },
+                },
               ],
             }
           : {}),
       },
-      // Include the container name so the frontend can display "Personal Investment"
-      include: { container: { select: { name: true } } },
+
+      // Include the container name for frontend display
+      include: {
+        container: {
+          select: { name: true },
+        },
+      },
+
       // Newest holdings first
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  // (iii) findOne(userId, id) Get a specific one
+  // (iii) Method 3. findOne(userId, id)
   async findOne(userId: string, id: string) {
-    // Ask the db for a single holding matching the id, user, and not soft-deleted
     const holding = await this.prisma.holding.findFirst({
       where: {
         id,
-        userId, // Security: prevents users from reading other users' holdings
-        deletedAt: null, // Skip soft-deleted
+        userId,
+        deletedAt: null,
       },
+
       // Include the container name for display
-      include: { container: { select: { name: true } } },
+      include: {
+        container: {
+          select: { name: true },
+        },
+      },
     });
 
-    // If nothing came back, the holding doesn't exist (or isn't theirs)
     if (!holding) {
       throw new NotFoundException('Holding not found');
     }
 
-    // Return the holding — it definitely exists now
     return holding;
   }
 
-  // (iv) Method 4. update (userId, id, dto)
+  // (iv) Method 4. update(userId, id, dto)
   async update(userId: string, id: string, dto: UpdateHoldingDto) {
-    // 1. Verify ownership — throws NotFoundException if not owned/found
-    await this.findOne(userId, id); //Call the findone method  to confirm ownership
+    // 1. Verify ownership
+    await this.findOne(userId, id);
 
     // 2. Apply the updates
     return this.prisma.holding.update({
       where: { id },
       data: {
-        // Attach the field present in the UpdateHoldingDto
         name: dto.name,
         costBasisTotal: dto.costBasisTotal,
         currentValueTotal: dto.currentValueTotal,
@@ -140,12 +164,12 @@ export class HoldingsService {
     });
   }
 
-  // (v) Method 5. remove
+  // (v) Method 5. remove(userId, id)
   async remove(userId: string, id: string) {
-    // 1. Verify ownership — throws NotFoundException if not owned/found
+    // 1. Verify ownership
     await this.findOne(userId, id);
 
-    // 2. Soft delete: mark as DELETED, set deletedAt timestamp
+    // 2. Soft delete
     return this.prisma.holding.update({
       where: { id },
       data: {
@@ -162,22 +186,23 @@ export class HoldingsService {
       where: {
         userId,
         deletedAt: null,
-        status: 'OPEN', // Only count holdings still held
+        status: 'OPEN',
         ...(query.containerId ? { containerId: query.containerId } : {}),
         ...(query.assetClass ? { assetClass: query.assetClass } : {}),
       },
     });
 
     // 2. Sum cost basis and current value across all holdings
-    // We convert Prisma Decimals to JS numbers before adding
     const totalCostBasis = holdings.reduce((sum, h) => sum + Number(h.costBasisTotal), 0);
+
     const totalCurrentValue = holdings.reduce((sum, h) => sum + Number(h.currentValueTotal), 0);
 
     // 3. Unrealized gain = current value - cost basis
     const unrealizedGain = totalCurrentValue - totalCostBasis;
 
-    // 4. Group holdings by asset class (e.g., { STOCK: 3, CRYPTO: 1 })
+    // 4. Group holdings by asset class
     const byAssetClass: Record<string, number> = {};
+
     for (const holding of holdings) {
       byAssetClass[holding.assetClass] = (byAssetClass[holding.assetClass] ?? 0) + 1;
     }
@@ -190,5 +215,93 @@ export class HoldingsService {
       unrealizedGain,
       byAssetClass,
     };
+  }
+
+  // (vii) Method 7. getAllocation(userId, query)
+  async getAllocation(userId: string, query: QueryHoldingsDto) {
+    // 1. Fetch all OPEN holdings matching filters
+    const holdings = await this.prisma.holding.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        status: 'OPEN',
+        ...(query.containerId ? { containerId: query.containerId } : {}),
+      },
+    });
+
+    // 2. Group by asset class
+    const groups = new Map<string, { value: number; count: number }>();
+
+    for (const holding of holdings) {
+      const current = groups.get(holding.assetClass) ?? {
+        value: 0,
+        count: 0,
+      };
+
+      current.value += Number(holding.currentValueTotal);
+      current.count += 1;
+
+      groups.set(holding.assetClass, current);
+    }
+
+    // 3. Total across all holdings
+    const totalValue = Array.from(groups.values()).reduce((sum, group) => sum + group.value, 0);
+
+    // 4. Build the breakdown array sorted by value descending
+    const breakdown = Array.from(groups.entries())
+      .map(([assetClass, data]) => ({
+        assetClass,
+        value: data.value,
+        percentage: totalValue === 0 ? 0 : Math.round((data.value / totalValue) * 1000) / 10,
+        count: data.count,
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // 5. Currency — use the first holding's currency, or default to KES
+    const currency = holdings[0]?.currency ?? 'KES';
+
+    return {
+      totalValue,
+      currency,
+      breakdown,
+    };
+  }
+
+  // (viii) Method 8. getPerformance(userId, days)
+  async getPerformance(userId: string, days: number = 30) {
+    // 1. Validate days — must be between 1 and 365
+    if (days < 1 || days > 365) {
+      throw new BadRequestException('Days must be between 1 and 365');
+    }
+
+    // 2. Calculate the start date (N days ago from today)
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // 3. Fetch historical net-worth snapshots
+    const snapshots = await this.prisma.netWorthSnapshot.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startDate,
+        },
+      },
+      orderBy: {
+        date: 'asc',
+      },
+      select: {
+        date: true,
+        investmentsNetWorth: true,
+        totalNetWorth: true,
+      },
+    });
+
+    // 4. Map snapshots to a cleaner shape for the frontend
+    return snapshots.map((snapshot) => ({
+      date: snapshot.date.toISOString().split('T')[0],
+      investmentsValue: Number(snapshot.investmentsNetWorth),
+      totalValue: Number(snapshot.totalNetWorth),
+    }));
   }
 }

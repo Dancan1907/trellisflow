@@ -324,6 +324,7 @@ model Category {
   @@map("categories")
 }
 
+
 model Account {
   id             String          @id @db.Uuid
   userId         String          @map("user_id") @db.Uuid
@@ -342,17 +343,21 @@ model Account {
   updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  container    Container     @relation(fields: [containerId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  recurringRules RecurringRule[]
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container       Container       @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  transactions    Transaction[]
+  recurringRules  RecurringRule[]
   debtPayoffPlan  DebtPayoffPlan?
+  holdings        Holding[]
 
+  // Indexes
   @@index([userId, status])
   @@index([containerId, status])
   @@index([userId, category])
+
   @@map("accounts")
 }
+
 
 model Transaction {
   id               String            @id @db.Uuid
@@ -466,10 +471,12 @@ enum InvestmentEventType {
   TRANSFER_OUT
 }
 
+
 model Holding {
   id                String        @id @db.Uuid
   userId            String        @map("user_id") @db.Uuid
   containerId       String        @map("container_id") @db.Uuid
+  accountId         String        @map("account_id") @db.Uuid
   name              String
   assetClass        AssetClass    @map("asset_class")
   symbol            String?
@@ -490,16 +497,21 @@ model Holding {
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  container Container       @relation(fields: [containerId], references: [id], onDelete: Cascade)
-  events InvestmentEvent[]
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container         @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  account   Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  events    InvestmentEvent[]
 
+  // Indexes
   @@index([userId, status])
   @@index([containerId, status])
   @@index([userId, assetClass])
   @@index([pricingMode, lastPricedAt])
+  @@index([userId, accountId])
+
   @@map("holdings")
 }
+
 
 model InvestmentEvent {
   id                   String              @id @db.Uuid

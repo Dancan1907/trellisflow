@@ -20,6 +20,13 @@ export class CreateHoldingDto {
   containerId!: string;
 
   @ApiProperty({
+    description: 'The account this holding is held in',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsUUID()
+  accountId!: string;
+
+  @ApiProperty({
     example: 'Safaricom Stock',
     description: 'The name of the holding',
   })

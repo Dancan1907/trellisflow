@@ -10,12 +10,13 @@ describe('HoldingsService', () => {
     id: 'holding-1',
     userId: 'user-1',
     containerId: 'container-1',
+    accountId: 'account-1',
     name: 'Safaricom Stock',
     assetClass: 'STOCK',
     symbol: 'SCOM',
     quantity: '100',
     costBasisTotal: '15000',
-    currentValueTotal: '18000',
+    currentValueTotal: '15000',
     currency: 'KES',
     pricingMode: 'MANUAL',
     status: 'OPEN',
@@ -26,11 +27,17 @@ describe('HoldingsService', () => {
     container: {
       findFirst: jest.fn(),
     },
+    account: {
+      findFirst: jest.fn(),
+    },
     holding: {
       create: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+    },
+    netWorthSnapshot: {
+      findMany: jest.fn(),
     },
   };
 
@@ -44,18 +51,14 @@ describe('HoldingsService', () => {
     service = module.get<HoldingsService>(HoldingsService);
   });
 
-  // ============================================================
-  // CREATE
-  // ============================================================
   describe('create', () => {
     it('should throw NotFoundException if container does not exist', async () => {
-      // 1. Mock Prisma to return null (no container found)
       prismaMock.container.findFirst.mockResolvedValue(null);
 
-      // 2. Call service.create — expect it to throw
       await expect(
         service.create('user-1', {
           containerId: 'missing-container',
+          accountId: 'account-1',
           name: 'Test Holding',
           assetClass: 'STOCK',
           quantity: 100,
@@ -67,13 +70,18 @@ describe('HoldingsService', () => {
     });
 
     it('should throw BadRequestException if container is not INVESTMENT type', async () => {
-      // 1. Mock Prisma to return container (of type: 'PERSONAL')
-      prismaMock.container.findFirst.mockResolvedValue({ type: 'PERSONAL' });
+      prismaMock.container.findFirst.mockResolvedValue({
+        type: 'PERSONAL',
+      });
 
-      // 2. Expect create to throw BadRequestException
+      prismaMock.account.findFirst.mockResolvedValue({
+        id: 'account-1',
+      });
+
       await expect(
         service.create('user-1', {
           containerId: 'personal-container',
+          accountId: 'account-1',
           name: 'Test Holding',
           assetClass: 'STOCK',
           quantity: 100,
@@ -85,19 +93,23 @@ describe('HoldingsService', () => {
     });
 
     it('should create a holding successfully', async () => {
-      // 1. Mock container exists and is INVESTMENT
       prismaMock.container.findFirst.mockResolvedValue({
         id: 'container-1',
         type: 'INVESTMENT',
         currency: 'KES',
       });
 
-      // 2. Mock the created holding
+      prismaMock.account.findFirst.mockResolvedValue({
+        id: 'account-1',
+        containerId: 'container-1',
+        userId: 'user-1',
+      });
+
       prismaMock.holding.create.mockResolvedValue(mockHolding);
 
-      // 3. Call the service
       const result = await service.create('user-1', {
         containerId: 'container-1',
+        accountId: 'account-1',
         name: 'Test Holding',
         assetClass: 'STOCK',
         quantity: 100,
@@ -106,24 +118,19 @@ describe('HoldingsService', () => {
         currency: 'KES',
       });
 
-      // 4. Assert the result matches the mocked holding
       expect(result).toEqual(mockHolding);
 
-      // 5. Verify the service actually tried to save the holding with the right data
       expect(prismaMock.holding.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             userId: 'user-1',
-            status: 'OPEN', // Business rule: new holdings start as OPEN
+            status: 'OPEN',
           }),
         }),
       );
     });
   });
 
-  // ============================================================
-  // FIND ONE
-  // ============================================================
   describe('findOne', () => {
     it('should return a holding when found', async () => {
       prismaMock.holding.findFirst.mockResolvedValue(mockHolding);
@@ -132,7 +139,6 @@ describe('HoldingsService', () => {
 
       expect(result).toEqual(mockHolding);
 
-      // Verify security: the query MUST include userId to prevent cross-user access
       expect(prismaMock.holding.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -150,12 +156,10 @@ describe('HoldingsService', () => {
     });
   });
 
-  // ============================================================
-  // UPDATE
-  // ============================================================
   describe('update', () => {
     it('should update a holding after verifying ownership', async () => {
       prismaMock.holding.findFirst.mockResolvedValue(mockHolding);
+
       prismaMock.holding.update.mockResolvedValue({
         ...mockHolding,
         name: 'Updated',
@@ -166,18 +170,14 @@ describe('HoldingsService', () => {
       });
 
       expect(result.name).toBe('Updated');
-
-      // Verify the ownership check happened first
       expect(prismaMock.holding.findFirst).toHaveBeenCalled();
     });
   });
 
-  // ============================================================
-  // REMOVE
-  // ============================================================
   describe('remove', () => {
     it('should soft-delete a holding', async () => {
       prismaMock.holding.findFirst.mockResolvedValue(mockHolding);
+
       prismaMock.holding.update.mockResolvedValue({
         ...mockHolding,
         status: 'DELETED',
@@ -187,7 +187,6 @@ describe('HoldingsService', () => {
 
       expect(result.status).toBe('DELETED');
 
-      // Verify the service actually set the correct fields for soft delete
       expect(prismaMock.holding.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -199,14 +198,19 @@ describe('HoldingsService', () => {
     });
   });
 
-  // ============================================================
-  // GET SUMMARY
-  // ============================================================
   describe('getSummary', () => {
     it('should compute correct totals across holdings', async () => {
       prismaMock.holding.findMany.mockResolvedValue([
-        { costBasisTotal: '10000', currentValueTotal: '12000', assetClass: 'STOCK' },
-        { costBasisTotal: '5000', currentValueTotal: '6000', assetClass: 'CRYPTO' },
+        {
+          costBasisTotal: '10000',
+          currentValueTotal: '12000',
+          assetClass: 'STOCK',
+        },
+        {
+          costBasisTotal: '5000',
+          currentValueTotal: '6000',
+          assetClass: 'CRYPTO',
+        },
       ]);
 
       const result = await service.getSummary('user-1', {});
@@ -216,8 +220,112 @@ describe('HoldingsService', () => {
         totalCostBasis: 15000,
         totalCurrentValue: 18000,
         unrealizedGain: 3000,
-        byAssetClass: { STOCK: 1, CRYPTO: 1 },
+        byAssetClass: {
+          STOCK: 1,
+          CRYPTO: 1,
+        },
       });
+    });
+  });
+
+  describe('getAllocation', () => {
+    it('should compute correct allocation breakdown', async () => {
+      prismaMock.holding.findMany.mockResolvedValue([
+        {
+          currentValueTotal: '12000',
+          assetClass: 'STOCK',
+          currency: 'KES',
+        },
+        {
+          currentValueTotal: '6000',
+          assetClass: 'CRYPTO',
+          currency: 'KES',
+        },
+        {
+          currentValueTotal: '55000',
+          assetClass: 'REAL_ESTATE',
+          currency: 'KES',
+        },
+      ]);
+
+      const result = await service.getAllocation('user-1', {});
+
+      expect(result.totalValue).toBe(73000);
+      expect(result.currency).toBe('KES');
+      expect(result.breakdown).toHaveLength(3);
+
+      expect(result.breakdown[0]).toEqual({
+        assetClass: 'REAL_ESTATE',
+        value: 55000,
+        percentage: 75.3,
+        count: 1,
+      });
+
+      expect(result.breakdown[1]).toEqual({
+        assetClass: 'STOCK',
+        value: 12000,
+        percentage: 16.4,
+        count: 1,
+      });
+
+      expect(result.breakdown[2]).toEqual({
+        assetClass: 'CRYPTO',
+        value: 6000,
+        percentage: 8.2,
+        count: 1,
+      });
+    });
+
+    it('should handle empty portfolio', async () => {
+      prismaMock.holding.findMany.mockResolvedValue([]);
+
+      const result = await service.getAllocation('user-1', {});
+
+      expect(result.totalValue).toBe(0);
+      expect(result.breakdown).toEqual([]);
+    });
+  });
+
+  describe('getPerformance', () => {
+    it('should return performance snapshots mapped to the right shape', async () => {
+      prismaMock.netWorthSnapshot.findMany.mockResolvedValue([
+        {
+          date: new Date('2026-10-01'),
+          investmentsNetWorth: '50000',
+          totalNetWorth: '100000',
+        },
+        {
+          date: new Date('2026-10-02'),
+          investmentsNetWorth: '52000',
+          totalNetWorth: '102000',
+        },
+      ]);
+
+      const result = await service.getPerformance('user-1', 30);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        date: '2026-10-01',
+        investmentsValue: 50000,
+        totalValue: 100000,
+      });
+      expect(result[1]).toEqual({
+        date: '2026-10-02',
+        investmentsValue: 52000,
+        totalValue: 102000,
+      });
+    });
+
+    it('should reject days outside the 1-365 range', async () => {
+      await expect(service.getPerformance('user-1', 0)).rejects.toThrow(BadRequestException);
+      await expect(service.getPerformance('user-1', 400)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return an empty array when no snapshots exist', async () => {
+      prismaMock.netWorthSnapshot.findMany.mockResolvedValue([]);
+
+      const result = await service.getPerformance('user-1', 30);
+      expect(result).toEqual([]);
     });
   });
 });
