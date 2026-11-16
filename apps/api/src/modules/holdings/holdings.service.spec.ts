@@ -10,6 +10,7 @@ describe('HoldingsService', () => {
     id: 'holding-1',
     userId: 'user-1',
     containerId: 'container-1',
+    accountId: 'account-1',
     name: 'Safaricom Stock',
     assetClass: 'STOCK',
     symbol: 'SCOM',
@@ -24,6 +25,9 @@ describe('HoldingsService', () => {
 
   const prismaMock = {
     container: {
+      findFirst: jest.fn(),
+    },
+    account: {
       findFirst: jest.fn(),
     },
     holding: {
@@ -56,6 +60,7 @@ describe('HoldingsService', () => {
       await expect(
         service.create('user-1', {
           containerId: 'missing-container',
+          accountId: 'account-1',
           name: 'Test Holding',
           assetClass: 'STOCK',
           quantity: 100,
@@ -74,6 +79,7 @@ describe('HoldingsService', () => {
       await expect(
         service.create('user-1', {
           containerId: 'personal-container',
+          accountId: 'account-1',
           name: 'Test Holding',
           assetClass: 'STOCK',
           quantity: 100,
@@ -92,12 +98,20 @@ describe('HoldingsService', () => {
         currency: 'KES',
       });
 
-      // 2. Mock the created holding
+      // 2. Mock account exists and belongs to the user and container
+      prismaMock.account.findFirst.mockResolvedValue({
+        id: 'account-1',
+        containerId: 'container-1',
+        userId: 'user-1',
+      });
+
+      // 3. Mock the created holding
       prismaMock.holding.create.mockResolvedValue(mockHolding);
 
-      // 3. Call the service
+      // 4. Call the service
       const result = await service.create('user-1', {
         containerId: 'container-1',
+        accountId: 'account-1',
         name: 'Test Holding',
         assetClass: 'STOCK',
         quantity: 100,
@@ -106,15 +120,16 @@ describe('HoldingsService', () => {
         currency: 'KES',
       });
 
-      // 4. Assert the result matches the mocked holding
+      // 5. Assert the result matches the mocked holding
       expect(result).toEqual(mockHolding);
 
-      // 5. Verify the service actually tried to save the holding with the right data
+      // 6. Verify the service actually tried to save the holding with the right data
       expect(prismaMock.holding.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             userId: 'user-1',
-            status: 'OPEN', // Business rule: new holdings start as OPEN
+            accountId: 'account-1',
+            status: 'OPEN',
           }),
         }),
       );
@@ -205,8 +220,16 @@ describe('HoldingsService', () => {
   describe('getSummary', () => {
     it('should compute correct totals across holdings', async () => {
       prismaMock.holding.findMany.mockResolvedValue([
-        { costBasisTotal: '10000', currentValueTotal: '12000', assetClass: 'STOCK' },
-        { costBasisTotal: '5000', currentValueTotal: '6000', assetClass: 'CRYPTO' },
+        {
+          costBasisTotal: '10000',
+          currentValueTotal: '12000',
+          assetClass: 'STOCK',
+        },
+        {
+          costBasisTotal: '5000',
+          currentValueTotal: '6000',
+          assetClass: 'CRYPTO',
+        },
       ]);
 
       const result = await service.getSummary('user-1', {});
