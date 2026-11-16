@@ -145,9 +145,7 @@ describe('InvestmentEvents (Integration)', () => {
     expect(Number(event.realizedGain)).toBe(500);
   });
 
-  // NEW TEST
   it('should create a linked transaction for a BUY event', async () => {
-    // Clean slate
     await prisma.investmentEvent.deleteMany({ where: { userId: testUserId } });
     await prisma.transaction.deleteMany({ where: { userId: testUserId } });
 
@@ -165,10 +163,8 @@ describe('InvestmentEvents (Integration)', () => {
       date: '2026-11-05',
     });
 
-    // Verify the event has a linked transaction
     expect(event.relatedTransactionId).not.toBeNull();
 
-    // Verify the transaction exists with the right shape
     const tx = await prisma.transaction.findUnique({
       where: { id: event.relatedTransactionId! },
     });
@@ -179,7 +175,6 @@ describe('InvestmentEvents (Integration)', () => {
     expect(tx!.accountId).toBe(accountId);
     expect(tx!.source).toBe('SYNCED');
 
-    // Verify count increased by 1
     const afterTxCount = await prisma.transaction.count({
       where: { userId: testUserId },
     });
@@ -187,19 +182,40 @@ describe('InvestmentEvents (Integration)', () => {
   });
 
   it('should reverse a SELL event when deleted', async () => {
-    const dividendEvent = await prisma.investmentEvent.findFirst({
-      where: { userId: testUserId, eventType: 'DIVIDEND' },
+    // FIX: Create a fresh DIVIDEND and SELL for this test since the previous test cleaned the slate
+    await service.create(testUserId, {
+      containerId,
+      holdingId,
+      eventType: 'SELL',
+      quantity: 10,
+      totalAmount: 3000,
+      currency: 'KES',
+      date: '2026-11-06',
     });
-    await service.remove(testUserId, dividendEvent!.id);
 
+    const dividendEvent = await service.create(testUserId, {
+      containerId,
+      holdingId,
+      eventType: 'DIVIDEND',
+      totalAmount: 500,
+      currency: 'KES',
+      date: '2026-11-07',
+    });
+
+    // Delete the DIVIDEND first (it's the newest)
+    await service.remove(testUserId, dividendEvent.id);
+
+    // Now the SELL is the newest
     const sellEvent = await prisma.investmentEvent.findFirst({
       where: { userId: testUserId, eventType: 'SELL' },
+      orderBy: { date: 'desc' },
     });
 
     expect(sellEvent).toBeDefined();
     await service.remove(testUserId, sellEvent!.id);
 
+    // Verify the holding is restored to the post-BUY state
     const restoredHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
-    expect(Number(restoredHolding?.quantity)).toBe(150);
+    expect(Number(restoredHolding?.quantity)).toBe(110); // 100 initial + 10 from the isolated BUY test
   });
 });
