@@ -80,7 +80,9 @@ describe('InvestmentEvents (Integration)', () => {
     });
 
     expect(event.eventType).toBe('BUY');
-    expect(Number(event.realizedGain)).toBeNull();
+
+    // FIXED: Realized gain should be null, not converted to Number(0)
+    expect(event.realizedGain).toBeNull();
 
     const updatedHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
     expect(Number(updatedHolding?.quantity)).toBe(150);
@@ -95,12 +97,9 @@ describe('InvestmentEvents (Integration)', () => {
       quantity: 50,
       totalAmount: 12000,
       currency: 'KES',
-      date: new Date(Date.now() + 1000).toISOString().split('T')[0], // Tomorrow
+      date: new Date(Date.now() + 1000).toISOString().split('T')[0],
     });
 
-    // Average cost per share: 25,000 / 150 = 166.67
-    // Cost basis removed: 50 * 166.67 = 8,333.50
-    // Realized gain: 12,000 - 8,333.50 = 3,666.50
     expect(Number(event.realizedGain)).toBeCloseTo(3666.67, 1);
 
     const updatedHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
@@ -137,21 +136,24 @@ describe('InvestmentEvents (Integration)', () => {
   });
 
   it('should reverse a SELL event when deleted', async () => {
-    // 1. Fetch the SELL event from the previous test
+    // FIXED: Delete the DIVIDEND first, because it is the most recent event.
+    const dividendEvent = await prisma.investmentEvent.findFirst({
+      where: { userId: testUserId, eventType: 'DIVIDEND' },
+    });
+    await service.remove(testUserId, dividendEvent!.id);
+
+    // Now we can delete the SELL event
     const sellEvent = await prisma.investmentEvent.findFirst({
       where: { userId: testUserId, eventType: 'SELL' },
     });
 
     expect(sellEvent).toBeDefined();
 
-    // 2. Delete it
     await service.remove(testUserId, sellEvent!.id);
 
-    // 3. Verify the holding is restored
+    // Verify the holding is restored
     const restoredHolding = await prisma.holding.findUnique({ where: { id: holdingId } });
 
-    // Before delete: quantity was 100.
-    // The SELL was for 50. After reverse, it should be 150.
     expect(Number(restoredHolding?.quantity)).toBe(150);
   });
 });
