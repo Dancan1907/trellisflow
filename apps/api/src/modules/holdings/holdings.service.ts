@@ -25,34 +25,42 @@ export class HoldingsService {
 
   // (i) Method 1. create(userId, dto)  Create the holdings
   async create(userId: string, dto: CreateHoldingDto) {
-    // 1. Verify the container exists & belongs to this user
+    // ============================================================
+    // 1. Verify the container belongs to the user
+    // ============================================================
     const container = await this.prisma.container.findFirst({
-      /* We look for the container. We pass userId to ensure it's their container (security). */
-      where: {
-        id: dto.containerId,
-        userId,
-      },
+      where: { id: dto.containerId, userId },
     });
 
-    //If no container is found, we stop immediately and send a 404.
     if (!container) {
       throw new NotFoundException('Container not found');
     }
 
-    // 2. Check if the container is an INVESTMENT container
-    if (container.type !== 'INVESTMENT') {
-      throw new BadRequestException('Holdings can only be created in INVESTMENT containers');
+    // ============================================================
+    // 2. Verify the account exists, belongs to the user, and is in the same container
+    // ============================================================
+    const account = await this.prisma.account.findFirst({
+      where: {
+        id: dto.accountId,
+        userId,
+        containerId: dto.containerId,
+        deletedAt: null,
+      },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found in this container');
     }
 
-    // 3. Create the holding in the database
-    // We tell Prisma to save the new holding. We manually provide the id using randomUUID().
+    // ============================================================
+    // 3. Create the holding
+    // ============================================================
     return this.prisma.holding.create({
       data: {
-        // Attach the random generated holding id & the users id..
         id: randomUUID(),
         userId,
-        //All these fields should match the fields outlined in the CreateHoldingDto except status field
         containerId: dto.containerId,
+        accountId: dto.accountId, // ← ADD THIS
         name: dto.name,
         assetClass: dto.assetClass,
         symbol: dto.symbol,
@@ -61,10 +69,9 @@ export class HoldingsService {
         currentValueTotal: dto.currentValueTotal,
         currency: dto.currency,
         acquiredDate: dto.acquiredDate ? new Date(dto.acquiredDate) : null,
-        // If the user provided a date, convert it from a string to a real Date object. If not, store null.
-        pricingMode: dto.pricingMode ?? 'MANUAL', // Referred to enum PricingMode in Schema
+        pricingMode: dto.pricingMode ?? 'MANUAL',
         notes: dto.notes,
-        status: 'OPEN', //Referred to the enum HoldingStatus in Schema
+        status: 'OPEN',
       },
     });
   }
