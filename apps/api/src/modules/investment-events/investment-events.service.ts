@@ -30,6 +30,7 @@ export class InvestmentEventsService {
     }
 
     let holding = null;
+
     if (needsHolding && dto.holdingId) {
       holding = await this.prisma.holding.findFirst({
         where: {
@@ -56,6 +57,7 @@ export class InvestmentEventsService {
       // For SELL, ensure the holding has enough quantity
       if (dto.eventType === 'SELL') {
         const currentQuantity = Number(holding.quantity);
+
         if (dto.quantity! > currentQuantity) {
           throw new BadRequestException(
             `Cannot sell ${dto.quantity} units. Only ${currentQuantity} available.`,
@@ -115,6 +117,7 @@ export class InvestmentEventsService {
         if (newQuantity === 0) {
           closingHolding = true;
         }
+
         break;
       }
 
@@ -135,10 +138,10 @@ export class InvestmentEventsService {
     }
 
     // ============================================================
-    // 6. Execute atomically: update holding + create event
+    // 6. Execute atomically: update holding + create transaction + create event
     // ============================================================
     return this.prisma.$transaction(async (tx) => {
-      // 6a. If this event affected a holding, update it
+      // 6a. Update holding if affected
       if (holding) {
         await tx.holding.update({
           where: { id: holding.id },
@@ -151,7 +154,36 @@ export class InvestmentEventsService {
         });
       }
 
-      // 6b. Create the event row
+      // 6b. Create the linked transaction (for money-moving events)
+      let transactionId: string | null = null;
+
+      if (holding) {
+        // Determine transaction type + description based on event
+        const transactionMeta = this.getTransactionMeta(dto.eventType, dto, holding);
+
+        if (transactionMeta) {
+          const transaction = await tx.transaction.create({
+            data: {
+              id: randomUUID(),
+              userId,
+              containerId: dto.containerId,
+              accountId: holding.accountId,
+              type: transactionMeta.type,
+              amount: dto.totalAmount,
+              currency: dto.currency,
+              date: eventDate,
+              description: transactionMeta.description,
+              notes: dto.notes ?? null,
+              source: 'SYNCED',
+              status: 'POSTED',
+            },
+          });
+
+          transactionId = transaction.id;
+        }
+      }
+
+      // 6c. Create the event
       return tx.investmentEvent.create({
         data: {
           id: randomUUID(),
@@ -165,10 +197,55 @@ export class InvestmentEventsService {
           currency: dto.currency,
           date: eventDate,
           realizedGain,
+          relatedTransactionId: transactionId,
           notes: dto.notes,
         },
       });
     });
+  }
+
+  // ============================================================
+  // 7. Map investment event types to transaction metadata
+  // ============================================================
+  private getTransactionMeta(
+    eventType: string,
+    dto: CreateInvestmentEventDto,
+    holding: { name: string; quantity: unknown },
+  ): { type: 'INCOME' | 'EXPENSE'; description: string } | null {
+    switch (eventType) {
+      case 'BUY':
+        return {
+          type: 'EXPENSE',
+          description: `Bought ${dto.quantity} ${holding.name}`,
+        };
+
+      case 'SELL':
+        return {
+          type: 'INCOME',
+          description: `Sold ${dto.quantity} ${holding.name}`,
+        };
+
+      case 'DIVIDEND':
+        return {
+          type: 'INCOME',
+          description: `Dividend from ${holding.name}`,
+        };
+
+      case 'CONTRIBUTION':
+        return {
+          type: 'INCOME',
+          description: `Contribution to ${holding.name}`,
+        };
+
+      case 'WITHDRAWAL':
+        return {
+          type: 'EXPENSE',
+          description: `Withdrawal from ${holding.name}`,
+        };
+
+      default:
+        return null;
+    }
   }
 
   async findAll(userId: string, query: QueryInvestmentEventsDto) {
@@ -263,6 +340,7 @@ export class InvestmentEventsService {
             // Reverse: add back the shares and the cost basis that was removed
             const reverseQuantity = Number(event.quantity ?? 0);
             const realizedGainAtEvent = Number(event.realizedGain ?? 0);
+
             // Cost basis that was removed = proceeds - realizedGain
             const costBasisToRestore = Number(event.totalAmount) - realizedGainAtEvent;
 
@@ -274,6 +352,7 @@ export class InvestmentEventsService {
             if (holding.status === 'CLOSED') {
               reopen = true;
             }
+
             break;
           }
 
@@ -285,7 +364,7 @@ export class InvestmentEventsService {
           }
         }
 
-        // 4. Update the holding + delete the event atomically
+        // 4. Update holding + delete linked transaction + delete event atomically
         return this.prisma.$transaction(async (tx) => {
           await tx.holding.update({
             where: { id: holding.id },
@@ -296,6 +375,17 @@ export class InvestmentEventsService {
               ...(reopen ? { status: 'OPEN', closedAt: null } : {}),
             },
           });
+
+          // Delete the linked transaction if it exists
+          if (event.relatedTransactionId) {
+            await tx.transaction
+              .delete({
+                where: { id: event.relatedTransactionId },
+              })
+              .catch(() => {
+                // Ignore if already deleted (e.g., user manually removed it)
+              });
+          }
 
           return tx.investmentEvent.delete({
             where: { id },
