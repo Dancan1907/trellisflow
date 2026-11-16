@@ -32,6 +32,9 @@ describe('InvestmentEventsService', () => {
       create: jest.fn(),
       delete: jest.fn(),
     },
+    account: {
+      update: jest.fn(),
+    },
     investmentEvent: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
