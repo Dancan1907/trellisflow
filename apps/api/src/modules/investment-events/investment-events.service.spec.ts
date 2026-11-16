@@ -22,7 +22,7 @@ describe('InvestmentEventsService', () => {
   const prismaMock = {
     container: { findFirst: jest.fn() },
     holding: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
-    transaction: { create: jest.fn() }, // NEW: Mock the transaction creation
+    transaction: { create: jest.fn() },
     investmentEvent: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
@@ -35,6 +35,9 @@ describe('InvestmentEventsService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     prismaMock.$transaction.mockImplementation((fn) => fn(prismaMock));
+
+    // FIX: Mock the transaction creation to return an ID
+    prismaMock.transaction.create.mockResolvedValue({ id: 'tx-1' });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [InvestmentEventsService, { provide: PrismaService, useValue: prismaMock }],
@@ -73,7 +76,6 @@ describe('InvestmentEventsService', () => {
         currentValueTotal: 25000,
       },
     });
-    // NEW: Verify transaction was created
     expect(prismaMock.transaction.create).toHaveBeenCalled();
     expect(prismaMock.investmentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -112,7 +114,6 @@ describe('InvestmentEventsService', () => {
         currentValueTotal: 7000,
       },
     });
-    // NEW: Verify transaction was created
     expect(prismaMock.transaction.create).toHaveBeenCalled();
     expect(prismaMock.investmentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -189,7 +190,6 @@ describe('InvestmentEventsService', () => {
         }),
       }),
     );
-    // NEW: Verify transaction was created
     expect(prismaMock.transaction.create).toHaveBeenCalled();
     expect(prismaMock.investmentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -260,6 +260,7 @@ describe('InvestmentEventsService', () => {
         eventType: 'BUY',
         quantity: '100',
         totalAmount: '15000',
+        relatedTransactionId: 'tx-1',
         date: new Date('2026-11-14'),
       })
       .mockResolvedValueOnce({ id: 'event-1' });
@@ -294,6 +295,7 @@ describe('InvestmentEventsService', () => {
         quantity: '40',
         totalAmount: '8000',
         realizedGain: '2000',
+        relatedTransactionId: 'tx-1',
         date: new Date('2026-11-14'),
       })
       .mockResolvedValueOnce({ id: 'event-1' });
