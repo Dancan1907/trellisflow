@@ -389,7 +389,7 @@
 **Effort:** 1.5–2 weeks
 
 - ☑ Holding module (CRUD)
-- ☐ InvestmentEvent module (buy, sell, dividend, contribution, withdrawal)
+- ☑ InvestmentEvent module (buy, sell, dividend, contribution, withdrawal)
 - ☐ Realized gain (average cost)
 - ☐ Unrealized gain (derived)
 - ☐ Link events to transactions
