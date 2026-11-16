@@ -17,16 +17,15 @@ import { QueryHoldingsDto } from './dto/query-holdings.dto';
 import { CreateHoldingDto } from './dto/create-holding.dto';
 import { UpdateHoldingDto } from './dto/update-holding.dto';
 
-@ApiTags('holdings') // Group these endpoints under holdings in Swagger UI
-@ApiBearerAuth() // Tell swagger "this endpoint needs a JWT token" so the "Authorize" button appears
-@UseGuards(JwtAuthGuard) // Means every method requires a valid JWT
-@Controller('holdings') // Set the base path
+@ApiTags('holdings')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('holdings')
 export class HoldingsController {
-  // Inject the Service
   constructor(private readonly holdingsService: HoldingsService) {}
 
-  @Get() // Register this as GET /api/holdings
-  @ApiOperation({ summary: 'List all holdings' }) // Adds a description to Swagger
+  @Get()
+  @ApiOperation({ summary: 'List all holdings' })
   async findAll(@CurrentUser() user: any, @Query() query: QueryHoldingsDto) {
     return this.holdingsService.findAll(user.id, query);
   }
@@ -35,6 +34,12 @@ export class HoldingsController {
   @ApiOperation({ summary: 'Get aggregated summary of open holdings' })
   async getSummary(@CurrentUser() user: any, @Query() query: QueryHoldingsDto) {
     return this.holdingsService.getSummary(user.id, query);
+  }
+
+  @Get('allocation')
+  @ApiOperation({ summary: 'Get portfolio allocation by asset class' })
+  async getAllocation(@CurrentUser() user: any, @Query() query: QueryHoldingsDto) {
+    return this.holdingsService.getAllocation(user.id, query);
   }
 
   @Post()
