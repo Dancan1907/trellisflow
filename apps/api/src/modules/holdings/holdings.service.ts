@@ -266,4 +266,42 @@ export class HoldingsService {
       breakdown,
     };
   }
+
+  // (viii) Method 8. getPerformance(userId, days)
+  async getPerformance(userId: string, days: number = 30) {
+    // 1. Validate days — must be between 1 and 365
+    if (days < 1 || days > 365) {
+      throw new BadRequestException('Days must be between 1 and 365');
+    }
+
+    // 2. Calculate the start date (N days ago from today)
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // 3. Fetch historical net-worth snapshots
+    const snapshots = await this.prisma.netWorthSnapshot.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startDate,
+        },
+      },
+      orderBy: {
+        date: 'asc',
+      },
+      select: {
+        date: true,
+        investmentsNetWorth: true,
+        totalNetWorth: true,
+      },
+    });
+
+    // 4. Map snapshots to a cleaner shape for the frontend
+    return snapshots.map((snapshot) => ({
+      date: snapshot.date.toISOString().split('T')[0],
+      investmentsValue: Number(snapshot.investmentsNetWorth),
+      totalValue: Number(snapshot.totalNetWorth),
+    }));
+  }
 }
