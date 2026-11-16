@@ -36,6 +36,9 @@ describe('HoldingsService', () => {
       findFirst: jest.fn(),
       update: jest.fn(),
     },
+    netWorthSnapshot: {
+      findMany: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -280,6 +283,49 @@ describe('HoldingsService', () => {
 
       expect(result.totalValue).toBe(0);
       expect(result.breakdown).toEqual([]);
+    });
+  });
+
+  describe('getPerformance', () => {
+    it('should return performance snapshots mapped to the right shape', async () => {
+      prismaMock.netWorthSnapshot.findMany.mockResolvedValue([
+        {
+          date: new Date('2026-10-01'),
+          investmentsNetWorth: '50000',
+          totalNetWorth: '100000',
+        },
+        {
+          date: new Date('2026-10-02'),
+          investmentsNetWorth: '52000',
+          totalNetWorth: '102000',
+        },
+      ]);
+
+      const result = await service.getPerformance('user-1', 30);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        date: '2026-10-01',
+        investmentsValue: 50000,
+        totalValue: 100000,
+      });
+      expect(result[1]).toEqual({
+        date: '2026-10-02',
+        investmentsValue: 52000,
+        totalValue: 102000,
+      });
+    });
+
+    it('should reject days outside the 1-365 range', async () => {
+      await expect(service.getPerformance('user-1', 0)).rejects.toThrow(BadRequestException);
+      await expect(service.getPerformance('user-1', 400)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return an empty array when no snapshots exist', async () => {
+      prismaMock.netWorthSnapshot.findMany.mockResolvedValue([]);
+
+      const result = await service.getPerformance('user-1', 30);
+      expect(result).toEqual([]);
     });
   });
 });
