@@ -10,6 +10,7 @@ describe('Holdings (Integration)', () => {
   let prisma: PrismaService;
   let testUserId: string;
   let containerId: string;
+  let accountId: string;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -42,10 +43,24 @@ describe('Holdings (Integration)', () => {
         currency: 'KES',
       },
     });
+
+    // Create a real investment account inside the container
+    accountId = randomUUID();
+    await prisma.account.create({
+      data: {
+        id: accountId,
+        userId: testUserId,
+        containerId,
+        name: 'Test Brokerage',
+        category: 'ASSET',
+        accountType: 'INVESTMENT_ACCOUNT',
+        currency: 'KES',
+      },
+    });
   });
 
   afterAll(async () => {
-    // Delete the user — cascades to containers, holdings, everything
+    // Delete the user — cascades to containers, accounts, holdings, everything
     await prisma.user.deleteMany({ where: { id: testUserId } });
     await prisma.$disconnect();
   });
@@ -54,6 +69,7 @@ describe('Holdings (Integration)', () => {
     // 1. Create a holding via the service
     const created = await service.create(testUserId, {
       containerId,
+      accountId,
       name: 'Safaricom Stock',
       assetClass: 'STOCK',
       symbol: 'SCOM',
@@ -71,6 +87,7 @@ describe('Holdings (Integration)', () => {
     expect(fetched.name).toBe('Safaricom Stock');
     expect(fetched.symbol).toBe('SCOM');
     expect(fetched.assetClass).toBe('STOCK');
+    expect(fetched.accountId).toBe(accountId);
     expect(Number(fetched.quantity)).toBe(100);
   });
 
@@ -91,6 +108,7 @@ describe('Holdings (Integration)', () => {
     await expect(
       service.create(testUserId, {
         containerId: personalContainerId,
+        accountId,
         name: 'Should Fail',
         assetClass: 'STOCK',
         quantity: 10,
@@ -111,6 +129,7 @@ describe('Holdings (Integration)', () => {
     // 1. Create 3 holdings with different asset classes
     await service.create(testUserId, {
       containerId,
+      accountId,
       name: 'Safaricom Stock',
       assetClass: 'STOCK',
       quantity: 100,
@@ -121,6 +140,7 @@ describe('Holdings (Integration)', () => {
 
     await service.create(testUserId, {
       containerId,
+      accountId,
       name: 'Bitcoin',
       assetClass: 'CRYPTO',
       quantity: 0.5,
@@ -131,6 +151,7 @@ describe('Holdings (Integration)', () => {
 
     await service.create(testUserId, {
       containerId,
+      accountId,
       name: 'Kitengela Plot',
       assetClass: 'REAL_ESTATE',
       quantity: 1,
@@ -161,6 +182,7 @@ describe('Holdings (Integration)', () => {
     // 1. Create a holding
     const holding = await service.create(testUserId, {
       containerId,
+      accountId,
       name: 'To Be Deleted',
       assetClass: 'STOCK',
       quantity: 10,
@@ -182,7 +204,10 @@ describe('Holdings (Integration)', () => {
     expect(after.length).toBe(0);
 
     // 5. Verify in DB directly — row exists, but deletedAt is set
-    const dbRow = await prisma.holding.findUnique({ where: { id: holding.id } });
+    const dbRow = await prisma.holding.findUnique({
+      where: { id: holding.id },
+    });
+
     expect(dbRow).not.toBeNull();
     expect(dbRow?.deletedAt).not.toBeNull();
     expect(dbRow?.status).toBe('DELETED');
@@ -195,6 +220,7 @@ describe('Holdings (Integration)', () => {
     // 1. Create a holding owned by testUserId
     const holding = await service.create(testUserId, {
       containerId,
+      accountId,
       name: 'Personal Secret',
       assetClass: 'STOCK',
       quantity: 1,
