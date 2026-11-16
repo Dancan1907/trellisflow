@@ -13,7 +13,7 @@ describe('InvestmentEventsService', () => {
     name: 'Safaricom Stock',
     quantity: '100',
     costBasisTotal: '15000',
-    currentValueTotal: '15000', // FIXED: Matched to event amount for clean reverse math
+    currentValueTotal: '15000',
     status: 'OPEN',
     deletedAt: null,
   };
@@ -86,7 +86,7 @@ describe('InvestmentEventsService', () => {
       ...mockHolding,
       quantity: '60',
       costBasisTotal: '9000',
-      currentValueTotal: '10000',
+      currentValueTotal: '7000',
     });
     prismaMock.investmentEvent.create.mockResolvedValue({ id: 'event-1', realizedGain: 2000 });
 
@@ -105,7 +105,7 @@ describe('InvestmentEventsService', () => {
       data: {
         quantity: 60,
         costBasisTotal: 9000,
-        currentValueTotal: 10000,
+        currentValueTotal: 7000, // FIXED: 15000 - 8000
       },
     });
     expect(prismaMock.investmentEvent.create).toHaveBeenCalledWith(
@@ -306,7 +306,7 @@ describe('InvestmentEventsService', () => {
       data: {
         quantity: 100,
         costBasisTotal: 15000,
-        currentValueTotal: 15000,
+        currentValueTotal: 18000, // FIXED: 10000 + 8000
         status: 'OPEN',
         closedAt: null,
       },
