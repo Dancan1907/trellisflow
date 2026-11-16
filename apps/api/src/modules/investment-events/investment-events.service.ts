@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInvestmentEventDto } from './dto/create-investment-event.dto';
 import { randomUUID } from 'crypto';
+import { QueryInvestmentEventsDto } from './dto/query-investment-events.dto';
 
 @Injectable()
 export class InvestmentEventsService {
@@ -167,6 +168,145 @@ export class InvestmentEventsService {
           notes: dto.notes,
         },
       });
+    });
+  }
+
+  async findAll(userId: string, query: QueryInvestmentEventsDto) {
+    return this.prisma.investmentEvent.findMany({
+      where: {
+        userId,
+        ...(query.containerId ? { containerId: query.containerId } : {}),
+        ...(query.holdingId ? { holdingId: query.holdingId } : {}),
+        ...(query.eventType ? { eventType: query.eventType } : {}),
+        ...(query.search ? { notes: { contains: query.search, mode: 'insensitive' } } : {}),
+      },
+      include: {
+        holding: { select: { name: true, symbol: true } },
+        container: { select: { name: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+  }
+
+  async findOne(userId: string, id: string) {
+    const event = await this.prisma.investmentEvent.findFirst({
+      where: { id, userId },
+      include: {
+        holding: { select: { name: true, symbol: true, currency: true } },
+        container: { select: { name: true } },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Investment event not found');
+    }
+
+    return event;
+  }
+
+  async findByHolding(userId: string, holdingId: string) {
+    // First verify the holding belongs to the user
+    const holding = await this.prisma.holding.findFirst({
+      where: { id: holdingId, userId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!holding) {
+      throw new NotFoundException('Holding not found');
+    }
+
+    // Then return all events for it
+    return this.prisma.investmentEvent.findMany({
+      where: { userId, holdingId },
+      orderBy: { date: 'desc' },
+    });
+  }
+
+  async remove(userId: string, id: string) {
+    // 1. Fetch the event
+    const event = await this.findOne(userId, id);
+
+    // 2. If it's the last event for the holding, reverse the math
+    if (event.holdingId) {
+      // Verify this is the most recent event for the holding
+      const mostRecentEvent = await this.prisma.investmentEvent.findFirst({
+        where: { userId, holdingId: event.holdingId },
+        orderBy: { date: 'desc' },
+      });
+
+      if (mostRecentEvent && mostRecentEvent.id !== event.id) {
+        throw new BadRequestException(
+          'Can only delete the most recent event for this holding. Delete later events first.',
+        );
+      }
+
+      // 3. Reverse the math
+      const holding = await this.prisma.holding.findUnique({
+        where: { id: event.holdingId },
+      });
+
+      if (holding) {
+        let newQuantity = Number(holding.quantity);
+        let newCostBasisTotal = Number(holding.costBasisTotal);
+        let newCurrentValueTotal = Number(holding.currentValueTotal);
+        let reopen = false;
+
+        switch (event.eventType) {
+          case 'BUY': {
+            newQuantity -= Number(event.quantity ?? 0);
+            newCostBasisTotal -= Number(event.totalAmount);
+            newCurrentValueTotal -= Number(event.totalAmount);
+            break;
+          }
+
+          case 'SELL': {
+            // Reverse: add back the shares and the cost basis that was removed
+            const reverseQuantity = Number(event.quantity ?? 0);
+            const realizedGainAtEvent = Number(event.realizedGain ?? 0);
+            // Cost basis that was removed = proceeds - realizedGain
+            const costBasisToRestore = Number(event.totalAmount) - realizedGainAtEvent;
+
+            newQuantity += reverseQuantity;
+            newCostBasisTotal += costBasisToRestore;
+            newCurrentValueTotal += Number(event.totalAmount);
+
+            // If the holding was closed by this sale, reopen it
+            if (holding.status === 'CLOSED') {
+              reopen = true;
+            }
+            break;
+          }
+
+          case 'DIVIDEND':
+          case 'CONTRIBUTION':
+          case 'WITHDRAWAL': {
+            // No math to reverse
+            break;
+          }
+        }
+
+        // 4. Update the holding + delete the event atomically
+        return this.prisma.$transaction(async (tx) => {
+          await tx.holding.update({
+            where: { id: holding.id },
+            data: {
+              quantity: newQuantity,
+              costBasisTotal: newCostBasisTotal,
+              currentValueTotal: newCurrentValueTotal,
+              ...(reopen ? { status: 'OPEN', closedAt: null } : {}),
+            },
+          });
+
+          return tx.investmentEvent.delete({
+            where: { id },
+          });
+        });
+      }
+    }
+
+    // If no holding (CONTRIBUTION/WITHDRAWAL), just delete
+    return this.prisma.investmentEvent.delete({
+      where: { id },
     });
   }
 }
