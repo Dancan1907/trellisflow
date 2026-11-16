@@ -10,6 +10,7 @@ describe('InvestmentEventsService', () => {
     id: 'holding-1',
     userId: 'user-1',
     containerId: 'container-1',
+    accountId: 'account-1',
     name: 'Safaricom Stock',
     quantity: '100',
     costBasisTotal: '15000',
@@ -21,6 +22,7 @@ describe('InvestmentEventsService', () => {
   const prismaMock = {
     container: { findFirst: jest.fn() },
     holding: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+    transaction: { create: jest.fn() }, // NEW: Mock the transaction creation
     investmentEvent: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
@@ -71,6 +73,8 @@ describe('InvestmentEventsService', () => {
         currentValueTotal: 25000,
       },
     });
+    // NEW: Verify transaction was created
+    expect(prismaMock.transaction.create).toHaveBeenCalled();
     expect(prismaMock.investmentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ realizedGain: null }),
@@ -105,9 +109,11 @@ describe('InvestmentEventsService', () => {
       data: {
         quantity: 60,
         costBasisTotal: 9000,
-        currentValueTotal: 7000, // FIXED: 15000 - 8000
+        currentValueTotal: 7000,
       },
     });
+    // NEW: Verify transaction was created
+    expect(prismaMock.transaction.create).toHaveBeenCalled();
     expect(prismaMock.investmentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ realizedGain: 2000 }),
@@ -183,6 +189,8 @@ describe('InvestmentEventsService', () => {
         }),
       }),
     );
+    // NEW: Verify transaction was created
+    expect(prismaMock.transaction.create).toHaveBeenCalled();
     expect(prismaMock.investmentEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ realizedGain: 500 }),
@@ -306,7 +314,7 @@ describe('InvestmentEventsService', () => {
       data: {
         quantity: 100,
         costBasisTotal: 15000,
-        currentValueTotal: 18000, // FIXED: 10000 + 8000
+        currentValueTotal: 18000,
         status: 'OPEN',
         closedAt: null,
       },
