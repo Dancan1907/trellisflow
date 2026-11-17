@@ -412,7 +412,7 @@
 
 ### Release (☐ Pending)
 
-- ☐ Deploy + tag `v0.2.0`
+- ☑ Deploy + tag `v0.2.0`
 
 ---
 
