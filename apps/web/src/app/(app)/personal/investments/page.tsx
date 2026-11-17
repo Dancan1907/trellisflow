@@ -30,7 +30,7 @@ interface Account {
 export default function InvestmentsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const { data: holdings, isLoading: holdingsLoading } = useHoldings({});
+  const { data: holdings, isLoading: holdingsLoading } = useHoldings();
   const { data: allocation, isLoading: allocationLoading } = useAllocation();
   const { data: containers } = useQuery({
     queryKey: ['containers'],
@@ -79,7 +79,7 @@ export default function InvestmentsPage() {
           <SummaryCard
             label="Number of Holdings"
             value={holdings?.length ?? 0}
-            currency="" // Not currency
+            currency=""
             icon={TrendingUp}
             isCount
           />
