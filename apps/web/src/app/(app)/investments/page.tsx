@@ -9,6 +9,7 @@ import { useHoldings } from '@/lib/hooks/use-holdings';
 import { useAllocation } from '@/lib/hooks/use-allocation';
 import { safeNumber } from '@/lib/utils/format-numbers';
 import { CreateHoldingModal } from '@/components/features/investments/create-holding-modal';
+import { AllocationChart } from '@/components/features/investments/allocation-chart';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -34,10 +35,12 @@ export default function InvestmentsPage() {
 
   const { data: holdings, isLoading: holdingsLoading } = useHoldings();
   const { data: allocation, isLoading: allocationLoading } = useAllocation();
+
   const { data: containers, isLoading: containersLoading } = useQuery({
     queryKey: ['containers'],
     queryFn: () => apiFetch<Container[]>('/api/containers'),
   });
+
   const { data: accounts, isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => apiFetch<Account[]>('/api/accounts'),
@@ -54,7 +57,11 @@ export default function InvestmentsPage() {
       // 1. Create Container
       const container = await apiFetch<Container>('/api/containers', {
         method: 'POST',
-        body: JSON.stringify({ type: 'INVESTMENT', name: 'My Portfolio', currency: 'KES' }),
+        body: JSON.stringify({
+          type: 'INVESTMENT',
+          name: 'My Portfolio',
+          currency: 'KES',
+        }),
       });
 
       // 2. Create Account inside it
@@ -71,11 +78,14 @@ export default function InvestmentsPage() {
 
       return container;
     },
+
     onSuccess: () => {
       showToast('success', 'Setup complete', 'Investment portfolio is ready.');
+
       queryClient.invalidateQueries({ queryKey: ['containers'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
     },
+
     onError: (err) => {
       showToast('error', 'Setup failed', err instanceof Error ? err.message : 'Error');
     },
@@ -91,6 +101,7 @@ export default function InvestmentsPage() {
             Track your portfolio across all asset classes.
           </p>
         </div>
+
         {hasInvestmentContainer && (
           <button
             onClick={() => setIsCreateOpen(true)}
@@ -134,6 +145,7 @@ export default function InvestmentsPage() {
                 currency={allocation?.currency ?? 'KES'}
                 icon={Wallet}
               />
+
               <SummaryCard
                 label="Number of Holdings"
                 value={holdings?.length ?? 0}
@@ -141,6 +153,7 @@ export default function InvestmentsPage() {
                 icon={TrendingUp}
                 isCount
               />
+
               <SummaryCard
                 label="Allocation Classes"
                 value={allocation?.breakdown.length ?? 0}
@@ -150,6 +163,9 @@ export default function InvestmentsPage() {
               />
             </div>
           )}
+
+          {/* Allocation Chart */}
+          {!isLoading && holdings && holdings.length > 0 && <AllocationChart />}
 
           {/* Holdings list */}
           <div>
@@ -177,25 +193,30 @@ export default function InvestmentsPage() {
                       <div className="w-12 h-12 rounded-md bg-accent-subtle flex items-center justify-center shrink-0">
                         <TrendingUp size={20} className="text-accent-primary" />
                       </div>
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-fg-primary truncate">
                             {holding.name}
                           </p>
+
                           {holding.symbol && (
                             <span className="text-xs text-fg-tertiary font-mono">
                               {holding.symbol}
                             </span>
                           )}
                         </div>
+
                         <p className="text-xs text-fg-secondary mt-0.5">
                           {holding.assetClass.replace(/_/g, ' ')} · {holding.quantity} units
                         </p>
                       </div>
+
                       <div className="text-right shrink-0">
                         <p className="text-sm font-medium text-fg-primary font-mono">
                           <AmountDisplay value={current} currency={holding.currency} />
                         </p>
+
                         <p
                           className={`text-xs font-medium ${
                             gain >= 0 ? 'text-status-positive' : 'text-status-negative'
@@ -205,6 +226,7 @@ export default function InvestmentsPage() {
                           {gain.toFixed(2)} ({gainPct.toFixed(1)}%)
                         </p>
                       </div>
+
                       <ArrowRight
                         size={16}
                         className="text-fg-tertiary group-hover:text-fg-primary shrink-0"
@@ -262,8 +284,10 @@ function SummaryCard({
         <div className="w-8 h-8 rounded-md bg-accent-subtle flex items-center justify-center">
           <Icon size={16} className="text-accent-primary" />
         </div>
+
         <p className="text-xs font-medium text-fg-secondary uppercase tracking-wider">{label}</p>
       </div>
+
       <p className="text-2xl font-semibold text-fg-primary font-mono">
         {isCount ? value : <AmountDisplay value={value} currency={currency} />}
       </p>
