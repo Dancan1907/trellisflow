@@ -403,9 +403,12 @@
 - ☑ Performance over time
 - ☑ E2E: add holding → buy → sell → realized gain
 
-### Frontend (☐ Pending)
+### Frontend (☑ Complete)
 
-- ☐ Frontend: investment accounts, holdings, events, allocation chart
+- ☑ Frontend: investment list page (holdings)
+- ☑ Frontend: holding detail page (events timeline)
+- ☑ Frontend: create holding & create event modals
+- ☑ Frontend: allocation pie chart
 
 ### Release (☐ Pending)
 
