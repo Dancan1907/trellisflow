@@ -129,6 +129,11 @@ export function CreateHoldingModal({
             className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary"
           >
             <option value="">Select container</option>
+            {investmentContainers.length === 0 && (
+              <option value="" disabled>
+                No investment containers found
+              </option>
+            )}
             {investmentContainers.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -146,6 +151,11 @@ export function CreateHoldingModal({
             className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary"
           >
             <option value="">Select account</option>
+            {availableAccounts.length === 0 && (
+              <option value="" disabled>
+                No accounts in this container
+              </option>
+            )}
             {availableAccounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
