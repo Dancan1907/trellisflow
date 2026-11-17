@@ -61,20 +61,21 @@ export function AllocationChart() {
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1e293b', // bg-bg-tertiary (approx)
-                borderColor: '#334155', // border-border-subtle
+                backgroundColor: '#1e293b',
+                borderColor: '#334155',
                 borderRadius: '6px',
-                color: '#f8fafc', // text-fg-primary
+                color: '#f8fafc',
                 fontSize: '12px',
               }}
               itemStyle={{ color: '#f8fafc' }}
-              formatter={(value: number, name: string, props: any) => {
+              formatter={(value, name) => {
+                const numeric = typeof value === 'number' ? value : Number(value);
                 const formatted = new Intl.NumberFormat('en-KE', {
                   style: 'currency',
                   currency: data.currency,
                   maximumFractionDigits: 0,
-                }).format(value);
-                return [formatted, name];
+                }).format(Number.isFinite(numeric) ? numeric : 0);
+                return [formatted, String(name)];
               }}
             />
             <Legend
