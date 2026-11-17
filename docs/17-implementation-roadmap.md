@@ -386,19 +386,33 @@
 
 ## Wave 2 — Investments
 
-**Effort:** 1.5–2 weeks
+**Effort:** 1.5–2 weeks · **Status:** In Progress (Backend Complete)
 
-- ☐ Holding module (CRUD)
-- ☐ InvestmentEvent module (buy, sell, dividend, contribution, withdrawal)
-- ☐ Realized gain (average cost)
-- ☐ Unrealized gain (derived)
-- ☐ Link events to transactions
-- ☐ Allocation report
-- ☐ Performance over time
-- ☐ Frontend: investment accounts, holdings, events, allocation chart
-- ☐ Tests: gains math, partial sells, buy/sell flow
-- ☐ E2E: add holding → buy → sell → realized gain
-- ☐ Deploy + tag `v0.2.0`
+### Backend — Core (☑ Complete)
+
+- ☑ Holding module (CRUD)
+- ☑ InvestmentEvent module (buy, sell, dividend, contribution, withdrawal)
+- ☑ Realized gain (average cost)
+- ☑ Unrealized gain (derived)
+- ☑ Tests: gains math, partial sells, buy/sell flow (28 tests passing)
+
+### Backend — Extensions (☑ Complete)
+
+- ☑ Link events to transactions (Auto-create transactions for BUY/SELL events)
+- ☑ Allocation report
+- ☑ Performance over time
+- ☑ E2E: add holding → buy → sell → realized gain
+
+### Frontend (☑ Complete)
+
+- ☑ Frontend: investment list page (holdings)
+- ☑ Frontend: holding detail page (events timeline)
+- ☑ Frontend: create holding & create event modals
+- ☑ Frontend: allocation pie chart
+
+### Release (☐ Pending)
+
+- ☑ Deploy + tag `v0.2.0`
 
 ---
 

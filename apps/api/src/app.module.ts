@@ -25,6 +25,9 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UsersModule } from './modules/users/users.module';
 import { HealthController } from './health.controller';
 
+import { HoldingsModule } from './modules/holdings/holdings.module';
+import { InvestmentEventsModule } from './modules/investment-events/investment-events.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -55,6 +58,8 @@ import { HealthController } from './health.controller';
     SnapshotsModule,
     InsightsModule,
     DashboardModule,
+    HoldingsModule,
+    InvestmentEventsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
