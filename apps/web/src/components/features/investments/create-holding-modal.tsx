@@ -50,11 +50,11 @@ export function CreateHoldingModal({
   // Auto-select the first investment container + its first account
   useEffect(() => {
     if (isOpen && investmentContainers.length > 0 && !containerId) {
-      const firstContainer = investmentContainers[0];
+      const firstContainer = investmentContainers[0]!;
       setContainerId(firstContainer.id);
       const containerAccounts = accounts.filter((a) => a.containerId === firstContainer.id);
       if (containerAccounts.length > 0) {
-        setAccountId(containerAccounts[0].id);
+        setAccountId(containerAccounts[0]!.id);
       }
     }
   }, [isOpen, investmentContainers, accounts, containerId]);
