@@ -100,7 +100,17 @@ export class TransactionsService {
    * List transactions with filters and pagination.
    */
   async findAllForUser(userId: string, query: QueryTransactionsDto) {
-    const { limit = 50, cursor, type, accountId, categoryId, dateFrom, dateTo, search } = query;
+    const {
+      limit = 50,
+      cursor,
+      type,
+      accountId,
+      containerId,
+      categoryId,
+      dateFrom,
+      dateTo,
+      search,
+    } = query;
 
     // Build the Prisma filter
     const where: any = {
@@ -110,6 +120,7 @@ export class TransactionsService {
 
     if (type) where.type = type;
     if (accountId) where.accountId = accountId;
+    if (containerId) where.containerId = containerId;
     if (categoryId) where.categoryId = categoryId;
 
     if (dateFrom || dateTo) {
