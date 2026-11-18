@@ -51,6 +51,9 @@ function container(overrides: Record<string, unknown> = {}) {
     createdAt,
     updatedAt: createdAt,
     businessProfile: profile,
+    externalSource: null,
+    summaries: [],
+    _count: { summaries: 0 },
     accounts: [account(), account({ id: 'acc-2', category: 'LIABILITY', currentBalance: '500' })],
     ...overrides,
   };
@@ -120,7 +123,7 @@ describe('BusinessesService (Unit)', () => {
           where: expect.objectContaining({
             id: 'biz-1',
             userId: 'user-1',
-            type: 'INTERNAL_BUSINESS',
+            type: { in: ['INTERNAL_BUSINESS', 'EXTERNAL_BUSINESS'] },
             status: 'ACTIVE',
           }),
         }),
