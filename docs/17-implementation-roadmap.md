@@ -418,21 +418,21 @@
 
 ## Wave 3 — Internal Businesses
 
-**Effort:** ~2 weeks
+**Effort:** ~2 weeks · **Status:** In Progress (feature complete; deployment pending)
 
-- ☐ Business creation flow
-- ☐ Business-specific categories
-- ☐ Business accounts + transactions
-- ☐ Owner's draw vs. salary
-- ☐ P&L computation + endpoint
-- ☐ Business net worth
-- ☐ Cash runway
-- ☐ Business budgets
-- ☐ Business reports
-- ☐ Frontend: business detail, accounts, transactions, P&L
-- ☐ Business dashboard card
-- ☐ Tests
-- ☐ E2E: create business → add transaction → P&L
+- ☑ Business creation flow
+- ☑ Business-specific categories (`GET /api/categories?containerId=`)
+- ☑ Business accounts + transactions (`GET /api/transactions?containerId=`)
+- ☐ Owner's draw vs. salary _(deferred — needs an explicit ledger convention)_
+- ☑ P&L computation + endpoint
+- ☑ Business net worth
+- ☑ Cash runway
+- ☐ Business budgets _(deferred to Wave 5.2)_
+- ☑ Business reports (P&L, net worth, runway)
+- ☑ Frontend: business list, create modal, detail (accounts, transactions, P&L, runway)
+- ☑ Business dashboard card (links to business detail)
+- ☑ Tests: unit (12), integration (9), E2E (12)
+- ☑ E2E: create business → add transaction → P&L
 - ☐ Deploy + tag `v0.3.0`
 
 ---
