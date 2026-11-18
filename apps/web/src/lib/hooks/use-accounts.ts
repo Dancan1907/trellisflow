@@ -35,6 +35,7 @@ export function useCreateAccount() {
       apiFetch<Account>('/api/accounts', { method: 'POST', body: JSON.stringify(dto) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
