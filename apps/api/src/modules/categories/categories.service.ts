@@ -18,15 +18,21 @@ export class CategoriesService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * List all categories for a user, optionally filtered by type (INCOME/EXPENSE).
-   * Returns a tree structure if `flat` is false.
+   * List all categories for a user, optionally filtered by type (INCOME/EXPENSE)
+   * and container. Returns a tree structure if `flat` is false.
    */
-  async findAllForUser(userId: string, type?: 'INCOME' | 'EXPENSE', flat: boolean = false) {
+  async findAllForUser(
+    userId: string,
+    type?: 'INCOME' | 'EXPENSE',
+    flat: boolean = false,
+    containerId?: string,
+  ) {
     const categories = await this.prisma.category.findMany({
       where: {
         userId,
         status: 'ACTIVE',
         ...(type ? { type } : {}),
+        ...(containerId ? { containerId } : {}),
       },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });

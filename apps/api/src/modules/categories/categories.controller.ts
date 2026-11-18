@@ -32,12 +32,18 @@ export class CategoriesController {
     type: Boolean,
     description: 'Return flat list instead of tree',
   })
+  @ApiQuery({
+    name: 'containerId',
+    required: false,
+    description: 'Only return categories belonging to this container (e.g. a business)',
+  })
   async findAll(
     @CurrentUser() user: any,
     @Query('type') type?: 'INCOME' | 'EXPENSE',
     @Query('flat') flat?: string,
+    @Query('containerId') containerId?: string,
   ) {
-    return this.categoriesService.findAllForUser(user.id, type, flat === 'true');
+    return this.categoriesService.findAllForUser(user.id, type, flat === 'true', containerId);
   }
 
   @Get(':id')

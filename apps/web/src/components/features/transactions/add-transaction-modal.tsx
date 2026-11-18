@@ -11,6 +11,7 @@ interface AddTransactionModalProps {
   onClose: () => void;
   accountId: string;
   currency: string;
+  containerId?: string;
 }
 
 export function AddTransactionModal({
@@ -18,9 +19,10 @@ export function AddTransactionModal({
   onClose,
   accountId,
   currency,
+  containerId,
 }: AddTransactionModalProps) {
   const createTx = useCreateTransaction();
-  const { data: categories } = useCategories();
+  const { data: categories } = useCategories(containerId);
   const [type, setType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');

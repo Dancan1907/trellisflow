@@ -36,6 +36,7 @@ Both are REST. Both are served by the same NestJS backend. Both use JSON.
 | Transactions    | `/api/transactions`    | Money events                                                       |
 | Recurring Rules | `/api/recurring-rules` | Scheduled transactions                                             |
 | Investments     | `/api/investments`     | Holdings and events                                                |
+| Businesses      | `/api/businesses`      | Internal business CRUD, P&L, net worth, and cash runway            |
 | Summaries       | `/api/summaries`       | External business summaries                                        |
 | API Tokens      | `/api/api-tokens`      | External integration tokens                                        |
 | Budgets         | `/api/budgets`         | Budget targets and progress                                        |

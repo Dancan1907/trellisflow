@@ -36,6 +36,11 @@ export class QueryTransactionsDto {
   @IsOptional()
   accountId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by container ID (e.g. a business)' })
+  @IsUUID()
+  @IsOptional()
+  containerId?: string;
+
   @ApiPropertyOptional({ description: 'Filter by category ID' })
   @IsUUID()
   @IsOptional()
