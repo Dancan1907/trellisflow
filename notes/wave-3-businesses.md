@@ -23,6 +23,13 @@ From `BusinessType` enum: `RETAIL`, `SERVICE`, `FARMING`, `FREELANCE`, `MANUFACT
 7. **GET /api/businesses/:id/net-worth** — Assets − Liabilities for this container.
 8. **GET /api/businesses/:id/runway** — Cash runway in months (see formula below).
 
+## Implementation Status
+
+- **Backend:** `POST/GET/PATCH/DELETE /api/businesses`, `GET /:id/net-worth`, `GET /:id/pnl`, `GET /:id/runway` are implemented. Categories and transactions accept a `containerId` filter.
+- **Frontend:** `/businesses` (list + create modal) and `/businesses/:id` (net worth, runway, P&L, accounts, transactions, archive). Dashboard business cards link to the detail page.
+- **Tests:** unit (`businesses.service.spec.ts`), integration (`businesses.integration.spec.ts`), and E2E (`test/wave-3-businesses.e2e-spec.ts`).
+- **Deferred:** owner's draw vs. salary, business budgets, external business summaries (Wave 4).
+
 ## P&L Structure
 
 Request: `GET /api/businesses/:id/pnl?from=2026-01-01&to=2026-01-31`
