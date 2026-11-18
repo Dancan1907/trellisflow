@@ -8,10 +8,16 @@ import { showToast } from '@/components/ui/toast';
 interface CreateAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
-  containerId: string; // The ID of the Personal container
+  containerId: string; // The ID of the container (Personal or Business)
+  currency?: string;
 }
 
-export function CreateAccountModal({ isOpen, onClose, containerId }: CreateAccountModalProps) {
+export function CreateAccountModal({
+  isOpen,
+  onClose,
+  containerId,
+  currency = 'KES',
+}: CreateAccountModalProps) {
   const createAccount = useCreateAccount();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<'ASSET' | 'LIABILITY'>('ASSET');
@@ -25,7 +31,7 @@ export function CreateAccountModal({ isOpen, onClose, containerId }: CreateAccou
         name,
         category,
         accountType,
-        currency: 'KES',
+        currency,
         initialBalance: parseFloat(balance),
         containerId,
       });
@@ -91,7 +97,7 @@ export function CreateAccountModal({ isOpen, onClose, containerId }: CreateAccou
 
         <div>
           <label className="block text-sm font-medium text-fg-primary mb-2">
-            Starting Balance (KES)
+            Starting Balance ({currency})
           </label>
           <input
             type="number"
