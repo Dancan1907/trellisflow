@@ -7,12 +7,14 @@ export interface Category {
   type: 'INCOME' | 'EXPENSE';
   icon: string | null;
   parentId: string | null;
+  containerId?: string | null;
 }
 
-export function useCategories() {
+export function useCategories(containerId?: string) {
+  const query = containerId ? `?flat=true&containerId=${containerId}` : '';
   return useQuery({
-    queryKey: ['categories'],
-    queryFn: () => apiFetch<Category[]>('/api/categories'),
+    queryKey: ['categories', containerId ?? 'all'],
+    queryFn: () => apiFetch<Category[]>(`/api/categories${query}`),
   });
 }
 

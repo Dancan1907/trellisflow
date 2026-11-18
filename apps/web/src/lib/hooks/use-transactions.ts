@@ -10,6 +10,8 @@ export interface Transaction {
   description: string;
   categoryId: string | null;
   accountId: string;
+  category?: { name: string; icon: string | null } | null;
+  account?: { name: string; currency: string } | null;
 }
 
 export function useTransactions(accountId?: string) {
@@ -17,6 +19,15 @@ export function useTransactions(accountId?: string) {
   return useQuery({
     queryKey: ['transactions', accountId],
     queryFn: () => apiFetch<{ items: Transaction[] }>(`/api/transactions${query}`),
+  });
+}
+
+export function useTransactionsByContainer(containerId?: string) {
+  return useQuery({
+    queryKey: ['transactions', 'container', containerId],
+    queryFn: () =>
+      apiFetch<{ items: Transaction[] }>(`/api/transactions?containerId=${containerId}&limit=200`),
+    enabled: !!containerId,
   });
 }
 
@@ -31,6 +42,7 @@ export function useCreateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

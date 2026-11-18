@@ -24,6 +24,8 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/personal') ||
+    pathname.startsWith('/investments') ||
+    pathname.startsWith('/businesses') ||
     pathname.startsWith('/budgets') ||
     pathname.startsWith('/goals') ||
     pathname.startsWith('/reports') ||
@@ -45,6 +47,8 @@ export const config = {
     '/signup',
     '/dashboard/:path*',
     '/personal/:path*',
+    '/investments/:path*',
+    '/businesses/:path*',
     '/budgets/:path*',
     '/goals/:path*',
     '/reports/:path*',

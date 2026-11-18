@@ -38,9 +38,9 @@ export function ContainerCards({ isLoading, containers }: ContainerCardsProps) {
     return User;
   };
 
-  const getHref = (type: string) => {
+  const getHref = (type: string, id: string) => {
     if (type === 'INVESTMENT') return '/investments';
-    if (type === 'INTERNAL_BUSINESS' || type === 'EXTERNAL_BUSINESS') return '/businesses';
+    if (type === 'INTERNAL_BUSINESS' || type === 'EXTERNAL_BUSINESS') return `/businesses/${id}`;
     return '/personal';
   };
 
@@ -51,7 +51,7 @@ export function ContainerCards({ isLoading, containers }: ContainerCardsProps) {
         return (
           <Link
             key={c.id}
-            href={getHref(c.type)}
+            href={getHref(c.type, c.id)}
             className="group bg-bg-secondary border border-border-subtle rounded-lg p-6 hover:border-border-strong hover:bg-bg-tertiary transition-all"
           >
             <div className="flex items-center gap-2 mb-4">
