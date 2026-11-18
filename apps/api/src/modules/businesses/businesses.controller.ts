@@ -1,11 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BusinessesService } from './businesses.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
+import { QueryPnlDto } from './dto/query-pnl.dto';
 
 @ApiTags('businesses')
 @ApiBearerAuth()
@@ -18,6 +29,24 @@ export class BusinessesController {
   @ApiOperation({ summary: 'List all internal businesses for the current user' })
   async findAll(@CurrentUser() user: any) {
     return this.businessesService.findAll(user.id);
+  }
+
+  @Get(':id/net-worth')
+  @ApiOperation({ summary: 'Get assets, liabilities, and net worth for a business' })
+  async getNetWorth(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.businessesService.getNetWorth(user.id, id);
+  }
+
+  @Get(':id/pnl')
+  @ApiOperation({ summary: 'Get profit & loss for a business over a date range' })
+  async getPnl(@CurrentUser() user: any, @Param('id') id: string, @Query() query: QueryPnlDto) {
+    return this.businessesService.getPnl(user.id, id, query);
+  }
+
+  @Get(':id/runway')
+  @ApiOperation({ summary: 'Get cash runway in months for a business' })
+  async getRunway(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.businessesService.getRunway(user.id, id);
   }
 
   @Get(':id')
