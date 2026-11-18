@@ -207,10 +207,38 @@ describe('BusinessesService (Unit)', () => {
     it('totals income and expenses and groups them by category', async () => {
       mockPrisma.container.findFirst.mockResolvedValue(container());
       mockPrisma.transaction.findMany.mockResolvedValue([
-        { type: 'INCOME', amount: '5000', category: { id: 'cat-1', name: 'Sales' } },
-        { type: 'INCOME', amount: '1000', category: { id: 'cat-1', name: 'Sales' } },
-        { type: 'EXPENSE', amount: '2000', category: { id: 'cat-2', name: 'Rent' } },
-        { type: 'EXPENSE', amount: '500', category: null },
+        {
+          type: 'INCOME',
+          amount: '5000',
+          date: new Date('2026-11-05'),
+          category: { id: 'cat-1', name: 'Sales' },
+        },
+        {
+          type: 'INCOME',
+          amount: '1000',
+          date: new Date('2026-11-15'),
+          category: { id: 'cat-1', name: 'Sales' },
+        },
+        {
+          type: 'EXPENSE',
+          amount: '2000',
+          date: new Date('2026-11-20'),
+          category: { id: 'cat-2', name: 'Rent' },
+        },
+        { type: 'EXPENSE', amount: '500', date: new Date('2026-11-30'), category: null },
+        // Rows inside the widened SQL window but outside the requested range.
+        {
+          type: 'INCOME',
+          amount: '9999',
+          date: new Date('2026-10-31'),
+          category: { id: 'cat-1', name: 'Sales' },
+        },
+        {
+          type: 'EXPENSE',
+          amount: '9999',
+          date: new Date('2026-12-01'),
+          category: { id: 'cat-2', name: 'Rent' },
+        },
       ]);
 
       const result = await service.getPnl('user-1', 'biz-1', {
@@ -260,7 +288,7 @@ describe('BusinessesService (Unit)', () => {
 
     it('divides liquid cash by the average monthly burn', async () => {
       mockPrisma.container.findFirst.mockResolvedValue(runwayContainer());
-      mockPrisma.transaction.findMany.mockResolvedValue([{ amount: '6000' }]);
+      mockPrisma.transaction.findMany.mockResolvedValue([{ amount: '6000', date: new Date() }]);
 
       const result = await service.getRunway('user-1', 'biz-1');
 

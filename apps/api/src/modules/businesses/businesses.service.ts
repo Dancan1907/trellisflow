@@ -230,13 +230,21 @@ export class BusinessesService {
       throw new BadRequestException('`from` must be on or before `to`');
     }
 
+    const fromKey = this.formatDate(from);
+    const toKey = this.formatDate(to);
+
+    // `date` is a PostgreSQL DATE column, but Prisma binds Date parameters as
+    // timestamps. PostgreSQL promotes the DATE column to a timestamp using the
+    // database session timezone (Africa/Nairobi here), which can push the first
+    // or last day of the range outside the comparison. Widen the SQL window by
+    // one day and filter precisely on the date-only value below.
     const transactions = await this.prisma.transaction.findMany({
       where: {
         userId,
         containerId: container.id,
         type: { in: ['INCOME', 'EXPENSE'] },
         deletedAt: null,
-        date: { gte: from, lte: to },
+        date: { gte: this.addDays(from, -1), lte: this.addDays(to, 1) },
       },
       include: {
         category: { select: { id: true, name: true } },
@@ -257,6 +265,9 @@ export class BusinessesService {
     >();
 
     for (const transaction of transactions) {
+      const transactionDate = this.formatDate(transaction.date);
+      if (transactionDate < fromKey || transactionDate > toKey) continue;
+
       const amount = Number(transaction.amount);
       const type = transaction.type as 'INCOME' | 'EXPENSE';
 
@@ -317,6 +328,8 @@ export class BusinessesService {
     const windowDays = 90;
     const to = this.startOfUtcDay(new Date());
     const from = this.addDays(to, -(windowDays - 1));
+    const fromKey = this.formatDate(from);
+    const toKey = this.formatDate(to);
 
     const expenses = await this.prisma.transaction.findMany({
       where: {
@@ -324,15 +337,18 @@ export class BusinessesService {
         containerId: container.id,
         type: 'EXPENSE',
         deletedAt: null,
-        date: { gte: from, lte: to },
+        // Same DATE/timezone caveat as getPnl: widen, then filter by date-only.
+        date: { gte: this.addDays(from, -1), lte: this.addDays(to, 1) },
       },
-      select: { amount: true },
+      select: { amount: true, date: true },
     });
 
-    const totalExpenses = expenses.reduce(
-      (sum, transaction) => sum + Number(transaction.amount),
-      0,
-    );
+    const totalExpenses = expenses
+      .filter((transaction) => {
+        const transactionDate = this.formatDate(transaction.date);
+        return transactionDate >= fromKey && transactionDate <= toKey;
+      })
+      .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
     const monthlyBurn = totalExpenses / (windowDays / 30);
     const runwayMonths = monthlyBurn > 0 ? cashBalance / monthlyBurn : null;
 
