@@ -5,13 +5,44 @@ import { UpdateBusinessDto } from './dto/update-business.dto';
 import { QueryPnlDto } from './dto/query-pnl.dto';
 import { randomUUID } from 'crypto';
 import { DEFAULT_BUSINESS_CATEGORIES } from '../../common/constants/default-business-categories';
-import { Account, BusinessProfile, BusinessType, Container } from '@prisma/client';
-
-type BusinessWithProfile = Container & { businessProfile: BusinessProfile | null };
-type BusinessWithDetails = BusinessWithProfile & { accounts: Account[] };
+import {
+  Account,
+  BusinessProfile,
+  BusinessType,
+  Container,
+  ExternalBusinessSource,
+  Prisma,
+  Summary,
+} from '@prisma/client';
+import { serializeSummary } from '../summaries/summary.util';
 
 /** Account types that count as liquid cash for runway purposes. */
 const CASH_ACCOUNT_TYPES = ['CHECKING', 'SAVINGS', 'CASH', 'MOBILE_MONEY', 'PREPAID_CARD'];
+
+/** Shared include used by both the list and detail reads. */
+const businessInclude = {
+  businessProfile: true,
+  externalSource: true,
+  accounts: { where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' } },
+  summaries: {
+    where: { deletedAt: null },
+    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    take: 1,
+  },
+  _count: { select: { summaries: true } },
+} satisfies Prisma.ContainerInclude;
+
+type BusinessWithDetails = Prisma.ContainerGetPayload<{ include: typeof businessInclude }>;
+
+type BusinessNetWorth = {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+};
+
+type BusinessWithProfile = Container & {
+  businessProfile: BusinessProfile | null;
+};
 
 @Injectable()
 export class BusinessesService {
@@ -31,6 +62,8 @@ export class BusinessesService {
       throw new BadRequestException('Currency must be a 3-letter ISO code');
     }
 
+    const type = dto.type ?? 'INTERNAL_BUSINESS';
+
     try {
       return await this.prisma.$transaction(
         async (tx) => {
@@ -42,14 +75,14 @@ export class BusinessesService {
             data: {
               id: containerId,
               userId,
-              type: 'INTERNAL_BUSINESS',
+              type,
               name: dto.name,
               currency: dto.currency.toUpperCase(),
               status: 'ACTIVE',
             },
           });
 
-          // 2. Create the business profile
+          // 2. Create the business profile (both internal and external)
           const profile = await tx.businessProfile.create({
             data: {
               id: profileId,
@@ -61,19 +94,34 @@ export class BusinessesService {
             },
           });
 
-          // 3. Create ALL categories in ONE query (fixes the 500 timeout error)
-          await tx.category.createMany({
-            data: DEFAULT_BUSINESS_CATEGORIES.map((cat) => ({
-              id: randomUUID(),
-              userId,
-              containerId,
-              name: cat.name,
-              type: cat.type,
-              icon: cat.icon,
-              isSystem: true,
-              status: 'ACTIVE',
-            })),
-          });
+          // 3. Internal businesses get categories; external ones get a source
+          let categoriesCreated = 0;
+          let source: ExternalBusinessSource | null = null;
+
+          if (type === 'INTERNAL_BUSINESS') {
+            await tx.category.createMany({
+              data: DEFAULT_BUSINESS_CATEGORIES.map((cat) => ({
+                id: randomUUID(),
+                userId,
+                containerId,
+                name: cat.name,
+                type: cat.type,
+                icon: cat.icon,
+                isSystem: true,
+                status: 'ACTIVE',
+              })),
+            });
+            categoriesCreated = DEFAULT_BUSINESS_CATEGORIES.length;
+          } else {
+            source = await tx.externalBusinessSource.create({
+              data: {
+                id: randomUUID(),
+                containerId,
+                sourceType: 'MANUAL',
+                syncInterval: 'MANUAL',
+              },
+            });
+          }
 
           // 4. Return the assembled response
           return {
@@ -90,7 +138,15 @@ export class BusinessesService {
               notes: profile.notes,
               logoUrl: profile.logoUrl,
             },
-            categoriesCreated: DEFAULT_BUSINESS_CATEGORIES.length,
+            externalSource: source
+              ? {
+                  sourceType: source.sourceType,
+                  syncInterval: source.syncInterval,
+                  lastSummaryAt: source.lastSummaryAt,
+                  lastSummaryDate: source.lastSummaryDate,
+                }
+              : null,
+            categoriesCreated,
           };
         },
         { timeout: 15000 }, // 15s timeout instead of default 5s
@@ -107,11 +163,12 @@ export class BusinessesService {
 
   async findAll(userId: string) {
     const containers = await this.prisma.container.findMany({
-      where: { userId, type: 'INTERNAL_BUSINESS', status: 'ACTIVE' },
-      include: {
-        businessProfile: true,
-        accounts: { where: { status: 'ACTIVE' } },
+      where: {
+        userId,
+        type: { in: ['INTERNAL_BUSINESS', 'EXTERNAL_BUSINESS'] },
+        status: 'ACTIVE',
       },
+      include: businessInclude,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -119,20 +176,25 @@ export class BusinessesService {
   }
 
   async findOne(userId: string, id: string) {
-    const container = await this.getBusinessWithAccounts(userId, id);
+    const container = await this.getBusinessWithDetails(userId, id);
+
+    const accounts =
+      container.type === 'INTERNAL_BUSINESS'
+        ? container.accounts.map((account) => ({
+            id: account.id,
+            name: account.name,
+            category: account.category,
+            accountType: account.accountType,
+            currency: account.currency,
+            currentBalance: this.money(Number(account.currentBalance)),
+            institution: account.institution,
+            status: account.status,
+          }))
+        : [];
 
     return {
       ...this.toSummary(container),
-      accounts: container.accounts.map((account) => ({
-        id: account.id,
-        name: account.name,
-        category: account.category,
-        accountType: account.accountType,
-        currency: account.currency,
-        currentBalance: this.money(Number(account.currentBalance)),
-        institution: account.institution,
-        status: account.status,
-      })),
+      accounts,
     };
   }
 
@@ -206,12 +268,17 @@ export class BusinessesService {
   // ==========================================================================
 
   async getNetWorth(userId: string, id: string) {
-    const container = await this.getBusinessWithAccounts(userId, id);
+    const container = await this.getBusinessWithDetails(userId, id);
+
+    const netWorth =
+      container.type === 'EXTERNAL_BUSINESS'
+        ? this.netWorthFromSummary(container.summaries[0] ?? null)
+        : this.calculateNetWorth(container.accounts);
 
     return {
       businessId: container.id,
       currency: container.currency,
-      ...this.calculateNetWorth(container.accounts),
+      ...netWorth,
     };
   }
 
@@ -222,6 +289,7 @@ export class BusinessesService {
    */
   async getPnl(userId: string, id: string, query: QueryPnlDto = {}) {
     const container = await this.getOwnedBusiness(userId, id);
+    this.assertInternal(container, 'P&L');
 
     const to = query.to ? this.parseDateOnly(query.to) : this.startOfUtcDay(new Date());
     const from = query.from ? this.parseDateOnly(query.from) : this.addDays(to, -29);
@@ -315,7 +383,8 @@ export class BusinessesService {
    * with zero burn never runs out, so a number would be misleading).
    */
   async getRunway(userId: string, id: string) {
-    const container = await this.getBusinessWithAccounts(userId, id);
+    const container = await this.getBusinessWithDetails(userId, id);
+    this.assertInternal(container, 'Runway');
 
     const cashBalance = container.accounts
       .filter(
@@ -369,7 +438,12 @@ export class BusinessesService {
 
   private async getOwnedBusiness(userId: string, id: string): Promise<BusinessWithProfile> {
     const container = await this.prisma.container.findFirst({
-      where: { id, userId, type: 'INTERNAL_BUSINESS', status: 'ACTIVE' },
+      where: {
+        id,
+        userId,
+        type: { in: ['INTERNAL_BUSINESS', 'EXTERNAL_BUSINESS'] },
+        status: 'ACTIVE',
+      },
       include: { businessProfile: true },
     });
 
@@ -380,13 +454,15 @@ export class BusinessesService {
     return container;
   }
 
-  private async getBusinessWithAccounts(userId: string, id: string): Promise<BusinessWithDetails> {
+  private async getBusinessWithDetails(userId: string, id: string): Promise<BusinessWithDetails> {
     const container = await this.prisma.container.findFirst({
-      where: { id, userId, type: 'INTERNAL_BUSINESS', status: 'ACTIVE' },
-      include: {
-        businessProfile: true,
-        accounts: { where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' } },
+      where: {
+        id,
+        userId,
+        type: { in: ['INTERNAL_BUSINESS', 'EXTERNAL_BUSINESS'] },
+        status: 'ACTIVE',
       },
+      include: businessInclude,
     });
 
     if (!container) {
@@ -396,7 +472,20 @@ export class BusinessesService {
     return container;
   }
 
-  private toSummary(container: BusinessWithProfile & { accounts: Account[] }) {
+  private assertInternal(container: BusinessWithProfile, feature: string) {
+    if (container.type !== 'INTERNAL_BUSINESS') {
+      throw new BadRequestException(`${feature} is only available for internal businesses`);
+    }
+  }
+
+  private toSummary(container: BusinessWithDetails) {
+    const isExternal = container.type === 'EXTERNAL_BUSINESS';
+    const latestSummary: Summary | null = container.summaries[0] ?? null;
+
+    const netWorth = isExternal
+      ? this.netWorthFromSummary(latestSummary)
+      : this.calculateNetWorth(container.accounts);
+
     return {
       id: container.id,
       name: container.name,
@@ -406,15 +495,18 @@ export class BusinessesService {
       createdAt: container.createdAt,
       updatedAt: container.updatedAt,
       businessProfile: container.businessProfile,
-      accountCount: container.accounts.length,
+      externalSource: container.externalSource,
+      accountCount: isExternal ? 0 : container.accounts.length,
+      summaryCount: container._count.summaries,
+      latestSummary: latestSummary ? serializeSummary(latestSummary) : null,
       netWorth: {
-        ...this.calculateNetWorth(container.accounts),
+        ...netWorth,
         currency: container.currency,
       },
     };
   }
 
-  private calculateNetWorth(accounts: Account[]) {
+  private calculateNetWorth(accounts: Account[]): BusinessNetWorth {
     let totalAssets = 0;
     let totalLiabilities = 0;
 
@@ -423,6 +515,21 @@ export class BusinessesService {
       if (account.category === 'ASSET') totalAssets += balance;
       else if (account.category === 'LIABILITY') totalLiabilities += balance;
     }
+
+    return {
+      totalAssets: this.money(totalAssets),
+      totalLiabilities: this.money(totalLiabilities),
+      netWorth: this.money(totalAssets - totalLiabilities),
+    };
+  }
+
+  private netWorthFromSummary(summary: Summary | null): BusinessNetWorth {
+    if (!summary) {
+      return { totalAssets: 0, totalLiabilities: 0, netWorth: 0 };
+    }
+
+    const totalAssets = Number(summary.assetsValue);
+    const totalLiabilities = Number(summary.liabilitiesValue);
 
     return {
       totalAssets: this.money(totalAssets),
