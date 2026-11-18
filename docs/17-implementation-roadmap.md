@@ -433,7 +433,7 @@
 - ☑ Business dashboard card (links to business detail)
 - ☑ Tests: unit (12), integration (9), E2E (12)
 - ☑ E2E: create business → add transaction → P&L
-- ☐ Deploy + tag `v0.3.0`
+- ☑ Deploy + tag `v0.3.0`
 
 ---
 
