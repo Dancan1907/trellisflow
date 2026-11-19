@@ -55,6 +55,7 @@ export function CorrectSummaryModal({
         income: Number(income),
         expenses: Number(expenses),
       });
+
       showToast('success', 'Summary corrected', 'The previous values have been saved in history.');
       onClose();
     } catch (error) {
@@ -229,12 +230,15 @@ export function CorrectSummaryModal({
                       {new Date(v.editedAt).toLocaleString()}
                     </span>
                   </div>
+
                   <p className="text-sm text-fg-primary mb-1">
                     <span className="text-fg-secondary">Reason:</span> {v.reason}
                   </p>
+
                   <p className="text-xs text-fg-secondary mb-2">
                     Edited by {v.editor.name || v.editor.email}
                   </p>
+
                   {/* Optionally render a diff of v.snapshot vs current here */}
                   <div className="text-xs text-fg-tertiary font-mono bg-bg-primary p-2 rounded">
                     Prev Net Worth: {summary.currency}{' '}
