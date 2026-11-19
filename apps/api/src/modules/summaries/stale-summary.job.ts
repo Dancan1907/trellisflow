@@ -1,10 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SummariesService } from './summaries.service';
 
 @Injectable()
-export class StaleSummaryJob {
+export class StaleSummaryJob implements OnModuleInit {
   private readonly logger = new Logger(StaleSummaryJob.name);
 
   constructor(
@@ -12,23 +11,29 @@ export class StaleSummaryJob {
     private readonly summariesService: SummariesService,
   ) {}
 
-  // Runs every day at midnight
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  onModuleInit() {
+    this.logger.log('Stale Summary background job initialized (Runs every 24h).');
+
+    // Run the job every 24 hours (86,400,000 ms)
+    setInterval(
+      () => {
+        this.handleStaleSummaries();
+      },
+      24 * 60 * 60 * 1000,
+    );
+  }
+
   async handleStaleSummaries() {
     this.logger.log('Starting daily stale-summary detection job...');
 
     try {
-      // Find all unique users who have at least one active external business
       const users = await this.prisma.container.findMany({
         where: { type: 'EXTERNAL_BUSINESS', status: 'ACTIVE' },
         select: { userId: true },
         distinct: ['userId'],
       });
 
-      if (users.length === 0) {
-        this.logger.log('No active external businesses found. Skipping job.');
-        return;
-      }
+      if (users.length === 0) return;
 
       let totalCreated = 0;
 
