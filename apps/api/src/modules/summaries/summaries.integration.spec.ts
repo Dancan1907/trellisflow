@@ -169,7 +169,7 @@ describe('Summaries (Integration)', () => {
   });
 
   it('does not expose summaries to another user', async () => {
-    const created = await summaries.create(userId, businessId, summaryInput({ unit: null }));
+    const created = await summaries.create(userId, businessId, summaryInput({ unit: undefined }));
 
     await expect(summaries.correct(randomUUID(), created.id, { income: 1 })).rejects.toThrow(
       NotFoundException,
@@ -185,7 +185,7 @@ describe('Summaries (Integration)', () => {
 
     try {
       await expect(
-        summaries.create(userId, internal.id, summaryInput({ unit: null })),
+        summaries.create(userId, internal.id, summaryInput({ unit: undefined })),
       ).rejects.toThrow(NotFoundException);
     } finally {
       await prisma.container.delete({ where: { id: internal.id } });
@@ -230,7 +230,12 @@ describe('Summaries (Integration)', () => {
     expect(firstRun.created).toBe(1);
 
     const insight = await prisma.insight.findFirst({
-      where: { userId, type: 'STALE_SUMMARY', relatedEntityId: businessId, status: 'ACTIVE' },
+      where: {
+        userId,
+        type: 'STALE_SUMMARY',
+        relatedEntityId: businessId,
+        status: 'ACTIVE',
+      },
     });
     expect(insight).not.toBeNull();
 
