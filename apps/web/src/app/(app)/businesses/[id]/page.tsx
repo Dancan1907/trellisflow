@@ -21,10 +21,11 @@ import {
   type BusinessAccount,
 } from '@/lib/hooks/use-businesses';
 import { useTransactionsByContainer } from '@/lib/hooks/use-transactions';
-import { useSummaries } from '@/lib/hooks/use-summaries';
+import { useSummaries, type SerializedSummary } from '@/lib/hooks/use-summaries';
 import { CreateAccountModal } from '@/components/features/personal/create-account-modal';
 import { AddTransactionModal } from '@/components/features/transactions/add-transaction-modal';
 import { AddSummaryModal } from '@/components/features/businesses/add-summary-modal';
+import { CorrectSummaryModal } from '@/components/features/businesses/correct-summary-modal';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,6 +70,7 @@ export default function BusinessDetailPage() {
 
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [editingSummary, setEditingSummary] = useState<SerializedSummary | null>(null);
   const [transactionAccount, setTransactionAccount] = useState<BusinessAccount | null>(null);
 
   const isExternal = business?.type === 'EXTERNAL_BUSINESS';
@@ -285,7 +287,7 @@ export default function BusinessDetailPage() {
                       <td className="px-4 py-3 text-right">
                         <button
                           className="text-accent-primary hover:text-accent-hover text-xs font-medium"
-                          onClick={() => alert('Correction modal coming in next step!')}
+                          onClick={() => setEditingSummary(summary)}
                         >
                           Correct
                         </button>
@@ -502,6 +504,7 @@ export default function BusinessDetailPage() {
         </section>
       )}
 
+      {/* Modals */}
       <CreateAccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
@@ -515,6 +518,15 @@ export default function BusinessDetailPage() {
         businessId={business.id}
         currency={business.currency}
       />
+
+      {editingSummary && (
+        <CorrectSummaryModal
+          isOpen={!!editingSummary}
+          onClose={() => setEditingSummary(null)}
+          businessId={business.id}
+          summary={editingSummary}
+        />
+      )}
 
       {transactionAccount && (
         <AddTransactionModal
