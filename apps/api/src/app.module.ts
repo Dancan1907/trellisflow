@@ -28,6 +28,7 @@ import { HealthController } from './health.controller';
 import { HoldingsModule } from './modules/holdings/holdings.module';
 import { InvestmentEventsModule } from './modules/investment-events/investment-events.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
+import { SummariesModule } from './modules/summaries/summaries.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { BusinessesModule } from './modules/businesses/businesses.module';
     HoldingsModule,
     InvestmentEventsModule,
     BusinessesModule,
+    SummariesModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

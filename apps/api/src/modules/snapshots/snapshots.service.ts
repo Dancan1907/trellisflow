@@ -26,7 +26,8 @@ export class SnapshotsService {
       include: {
         accounts: { where: { status: 'ACTIVE' } },
         summaries: {
-          orderBy: { date: 'desc' },
+          where: { deletedAt: null },
+          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
           take: 1, // Get the latest summary for external businesses
         },
       },

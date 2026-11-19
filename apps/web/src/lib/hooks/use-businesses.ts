@@ -24,7 +24,7 @@ export interface BusinessNetWorth {
 export interface BusinessSummary {
   id: string;
   name: string;
-  type: string;
+  type: 'INTERNAL_BUSINESS' | 'EXTERNAL_BUSINESS';
   currency: string;
   status: string;
   createdAt: string;
@@ -32,6 +32,8 @@ export interface BusinessSummary {
   businessProfile: BusinessProfile | null;
   accountCount: number;
   netWorth: BusinessNetWorth;
+  summaryCount?: number;
+  latestSummary?: any;
 }
 
 export interface BusinessAccount {
@@ -81,6 +83,7 @@ export interface CreateBusinessInput {
   name: string;
   businessType: BusinessType;
   currency: string;
+  type?: 'INTERNAL_BUSINESS' | 'EXTERNAL_BUSINESS';
   startDate?: string;
   notes?: string;
 }

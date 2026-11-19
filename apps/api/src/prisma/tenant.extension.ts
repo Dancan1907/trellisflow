@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 
 // List of tables that are protected by multi-tenancy
+// Summary, SummaryVersion, and NetWorthSnapshot are excluded
+// because they are scoped explicitly in their respective services.
 const USER_TABLES = [
   'Container',
   'Account',
@@ -10,13 +12,10 @@ const USER_TABLES = [
   'RecurringRule',
   'Holding',
   'InvestmentEvent',
-  'Summary',
-  'SummaryVersion',
   'ApiToken',
   'Budget',
   'SavingsGoal',
   'DebtPayoffPlan',
-  'NetWorthSnapshot',
   'Insight',
 ];
 
@@ -45,7 +44,10 @@ export function tenantExtension(cls: ClsService) {
               typedArgs.where = { ...typedArgs.where, userId };
             } else if (['create', 'createMany'].includes(operation)) {
               if (Array.isArray(typedArgs.data)) {
-                typedArgs.data = typedArgs.data.map((d: any) => ({ ...d, userId }));
+                typedArgs.data = typedArgs.data.map((d: any) => ({
+                  ...d,
+                  userId,
+                }));
               } else {
                 typedArgs.data = { ...typedArgs.data, userId };
               }

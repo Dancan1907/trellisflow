@@ -437,22 +437,23 @@
 
 ---
 
-## Wave 4 — External Businesses (Manual)
+# Wave 4 — External Businesses (Manual)
 
 **Effort:** ~1.5 weeks
+**Status:** ✅ COMPLETE (Tagged v0.4.0)
 
-- ☐ External business creation
-- ☐ Summary module (manual)
-- ☐ Summary history (append-only)
-- ☐ Summary correction with versioning
-- ☐ Unit label support
-- ☐ Stale-summary detection job
-- ☐ Roll-up includes external businesses
-- ☐ Frontend: detail, summaries, add summary form
-- ☐ External dashboard card
-- ☐ Tests
-- ☐ E2E: create external → add summary → net worth
-- ☐ Deploy + tag `v0.4.0`
+- ☑ External business creation
+- ☑ Summary module (manual)
+- ☑ Summary history (append-only)
+- ☑ Summary correction with versioning
+- ☑ Unit label support
+- ☑ Stale-summary detection job (setInterval worker)
+- ☑ Roll-up includes external businesses
+- ☑ Frontend: detail, summaries, add summary form
+- ☑ External dashboard card
+- ☑ Tests (Unit, Integration, E2E)
+- ☑ E2E: create external → add summary → net worth
+- ☑ Deploy + tag `v0.4.0`
 
 ---
 
