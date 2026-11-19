@@ -9,6 +9,7 @@ describe('Wave 4 - External Businesses (e2e)', () => {
   let prisma: PrismaService;
   let authToken: string;
   let businessId: string;
+  const testEmail = `wave4-e2e-${Date.now()}@trellisflow.test`;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -20,17 +21,14 @@ describe('Wave 4 - External Businesses (e2e)', () => {
     await app.init();
 
     // 1. Create a user and get a token
-    const email = `wave4-e2e-${Date.now()}@trellisflow.test`;
     const signupRes = await request(app.getHttpServer())
       .post('/auth/signup')
-      .send({ email, password: 'Password123!', name: 'Wave 4 Tester' });
+      .send({ email: testEmail, password: 'Password123!', name: 'Wave 4 Tester' });
     authToken = signupRes.body.accessToken;
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({
-      where: { email: { startsWith: 'wave4-e2e-' } },
-    });
+    await prisma.user.deleteMany({ where: { email: testEmail } });
     await app.close();
   });
 
@@ -55,7 +53,7 @@ describe('Wave 4 - External Businesses (e2e)', () => {
       .post(`/businesses/${businessId}/summaries`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().slice(0, 10),
         currency: 'KES',
         cashBalance: 12500,
         assetsValue: 50000,
@@ -69,8 +67,9 @@ describe('Wave 4 - External Businesses (e2e)', () => {
     expect(summaryRes.body.netWorth).toBe(45000); // 50000 - 5000
 
     // 4. Verify Net Worth Snapshot was updated
+    const user = await prisma.user.findUnique({ where: { email: testEmail } });
     const snapshot = await prisma.netWorthSnapshot.findFirst({
-      where: { userId: createRes.body.userId || undefined }, // Prisma requires userId, let's just check the latest
+      where: { userId: user!.id },
       orderBy: { createdAt: 'desc' },
     });
 
