@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
@@ -21,9 +21,11 @@ describe('Wave 4 - External Businesses (e2e)', () => {
     await app.init();
 
     // 1. Create a user and get a token
-    const signupRes = await request(app.getHttpServer())
-      .post('/auth/signup')
-      .send({ email: testEmail, password: 'Password123!', name: 'Wave 4 Tester' });
+    const signupRes = await request(app.getHttpServer()).post('/auth/signup').send({
+      email: testEmail,
+      password: 'Password123!',
+      name: 'Wave 4 Tester',
+    });
     authToken = signupRes.body.accessToken;
   });
 
