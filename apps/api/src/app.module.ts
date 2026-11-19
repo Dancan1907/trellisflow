@@ -29,6 +29,7 @@ import { HoldingsModule } from './modules/holdings/holdings.module';
 import { InvestmentEventsModule } from './modules/investment-events/investment-events.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { SummariesModule } from './modules/summaries/summaries.module';
+import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { SummariesModule } from './modules/summaries/summaries.module';
     InvestmentEventsModule,
     BusinessesModule,
     SummariesModule,
+    ApiTokensModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
