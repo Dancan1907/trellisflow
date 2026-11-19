@@ -17,7 +17,7 @@ const inputClass =
 
 export function AddSummaryModal({ isOpen, onClose, businessId, currency }: AddSummaryModalProps) {
   const createSummary = useCreateSummary(businessId);
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().slice(0, 10);
 
   const [date, setDate] = useState(today);
   const [unit, setUnit] = useState('');
