@@ -1,10 +1,11 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SummariesService } from './summaries.service';
 
 @Injectable()
-export class StaleSummaryJob implements OnModuleInit {
+export class StaleSummaryJob implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(StaleSummaryJob.name);
+  private timer: NodeJS.Timeout;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -14,13 +15,20 @@ export class StaleSummaryJob implements OnModuleInit {
   onModuleInit() {
     this.logger.log('Stale Summary background job initialized (Runs every 24h).');
 
-    // Run the job every 24 hours (86,400,000 ms)
-    setInterval(
+    // Save the timer so we can clear it later
+    this.timer = setInterval(
       () => {
         this.handleStaleSummaries();
       },
       24 * 60 * 60 * 1000,
     );
+  }
+
+  onModuleDestroy() {
+    // Clear the timer when the application shuts down
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
   }
 
   async handleStaleSummaries() {
