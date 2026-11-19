@@ -73,7 +73,7 @@ export class DashboardService {
           take: 1,
         },
         _count: {
-          select: { accounts: true },
+          select: { accounts: true, summaries: true },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -101,7 +101,9 @@ export class DashboardService {
         type: c.type,
         currency: c.currency,
         accountCount: c._count.accounts,
+        summaryCount: c._count.summaries,
         netWorth,
+        lastSummaryAt: c.type === 'EXTERNAL_BUSINESS' ? (c.summaries[0]?.createdAt ?? null) : null,
         lastUpdatedAt:
           c.type === 'EXTERNAL_BUSINESS' && c.summaries[0] ? c.summaries[0].date : c.updatedAt,
       };

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, Length, IsDateString } from 'class-validator';
+import { IsString, IsEnum, IsOptional, Length, IsDateString, IsIn } from 'class-validator';
 import { BusinessType } from '@prisma/client';
 
 export class CreateBusinessDto {
@@ -7,6 +7,15 @@ export class CreateBusinessDto {
   @IsString()
   @Length(1, 100)
   name!: string;
+
+  @ApiPropertyOptional({
+    enum: ['INTERNAL_BUSINESS', 'EXTERNAL_BUSINESS'],
+    default: 'INTERNAL_BUSINESS',
+    description: 'Internal businesses track accounts/transactions; external ones track summaries',
+  })
+  @IsOptional()
+  @IsIn(['INTERNAL_BUSINESS', 'EXTERNAL_BUSINESS'])
+  type?: 'INTERNAL_BUSINESS' | 'EXTERNAL_BUSINESS';
 
   @ApiProperty({ enum: BusinessType, example: 'RETAIL' })
   @IsEnum(BusinessType)

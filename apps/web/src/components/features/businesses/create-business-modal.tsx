@@ -28,6 +28,9 @@ const inputClass =
 
 export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProps) {
   const createBusiness = useCreateBusiness();
+  const [businessContainerType, setBusinessContainerType] = useState<
+    'INTERNAL_BUSINESS' | 'EXTERNAL_BUSINESS'
+  >('INTERNAL_BUSINESS');
   const [name, setName] = useState('');
   const [businessType, setBusinessType] = useState<BusinessType>('RETAIL');
   const [currency, setCurrency] = useState('KES');
@@ -35,6 +38,7 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
   const [notes, setNotes] = useState('');
 
   const reset = () => {
+    setBusinessContainerType('INTERNAL_BUSINESS');
     setName('');
     setBusinessType('RETAIL');
     setCurrency('KES');
@@ -54,6 +58,7 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
       name: name.trim(),
       businessType,
       currency,
+      type: businessContainerType,
       ...(startDate ? { startDate } : {}),
       ...(notes.trim() ? { notes: notes.trim() } : {}),
     };
@@ -74,6 +79,31 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Create a Business">
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex p-1 bg-bg-tertiary rounded-lg mb-4">
+          <button
+            type="button"
+            onClick={() => setBusinessContainerType('INTERNAL_BUSINESS')}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+              businessContainerType === 'INTERNAL_BUSINESS'
+                ? 'bg-bg-secondary text-fg-primary shadow-sm'
+                : 'text-fg-secondary hover:text-fg-primary'
+            }`}
+          >
+            Internal Business
+          </button>
+          <button
+            type="button"
+            onClick={() => setBusinessContainerType('EXTERNAL_BUSINESS')}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+              businessContainerType === 'EXTERNAL_BUSINESS'
+                ? 'bg-bg-secondary text-fg-primary shadow-sm'
+                : 'text-fg-secondary hover:text-fg-primary'
+            }`}
+          >
+            External Business
+          </button>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-fg-primary mb-1">Business Name</label>
           <input
