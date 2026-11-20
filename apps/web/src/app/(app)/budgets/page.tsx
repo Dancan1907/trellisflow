@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus, Wallet, Copy, Edit, Trash2 } from 'lucide-react';
 import {
   useBudgets,
+  useUnbudgetedSpending,
   useUpdateBudget,
   useDeleteBudget,
   useCopyPreviousBudgets,
@@ -18,11 +19,13 @@ import { Modal } from '@/components/ui/modal';
 import { showToast } from '@/components/ui/toast';
 
 export default function BudgetsPage() {
+  const [activeTab, setActiveTab] = useState<'budgets' | 'unbudgeted'>('budgets');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<any>(null);
   const [editAmount, setEditAmount] = useState('');
 
   const { data: budgets, isLoading } = useBudgets();
+  const { data: unbudgeted, isLoading: unbudgetedLoading } = useUnbudgetedSpending();
   const { data: categories } = useCategories();
   const updateBudget = useUpdateBudget();
   const deleteBudget = useDeleteBudget();
@@ -84,88 +87,142 @@ export default function BudgetsPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </div>
-      ) : budgets && budgets.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {budgets.map((budget) => (
-            <div
-              key={budget.id}
-              className="bg-bg-secondary border border-border-subtle rounded-lg p-6 group"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-fg-primary">
-                      {getCategoryName(budget.categoryId)}
-                    </h3>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => {
-                          setEditingBudget(budget);
-                          setEditAmount(budget.amount);
-                        }}
-                        className="text-fg-tertiary hover:text-accent-primary"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(budget.id)}
-                        className="text-fg-tertiary hover:text-status-negative"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-fg-secondary">{budget.container.name}</p>
-                </div>
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded ${budget.percentage >= 100 ? 'bg-status-negative/10 text-status-negative' : 'bg-bg-tertiary text-fg-secondary'}`}
-                >
-                  {budget.percentage}%
-                </span>
-              </div>
+      <div className="flex gap-4 border-b border-border-subtle mb-6">
+        <button
+          onClick={() => setActiveTab('budgets')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'budgets'
+              ? 'border-accent-primary text-accent-primary'
+              : 'border-transparent text-fg-secondary hover:text-fg-primary'
+          }`}
+        >
+          Active Budgets
+        </button>
+        <button
+          onClick={() => setActiveTab('unbudgeted')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'unbudgeted'
+              ? 'border-accent-primary text-accent-primary'
+              : 'border-transparent text-fg-secondary hover:text-fg-primary'
+          }`}
+        >
+          Unbudgeted Spending
+        </button>
+      </div>
 
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-fg-secondary">Spent</span>
-                  <span className="text-fg-primary font-mono">
-                    <AmountDisplay value={budget.spent} currency={budget.currency} />
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-fg-secondary">Remaining</span>
-                  <span
-                    className={`font-mono ${budget.remaining < 0 ? 'text-status-negative' : 'text-status-positive'}`}
-                  >
-                    <AmountDisplay value={budget.remaining} currency={budget.currency} />
-                  </span>
-                </div>
-                <ProgressBar percentage={budget.percentage} />
-                <p className="text-xs text-fg-secondary text-right mt-2">
-                  Target: <AmountDisplay value={budget.amount} currency={budget.currency} />
-                </p>
-              </div>
+      {activeTab === 'budgets' && (
+        <>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-40 w-full" />
             </div>
-          ))}
+          ) : budgets && budgets.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {budgets.map((budget) => (
+                <div
+                  key={budget.id}
+                  className="bg-bg-secondary border border-border-subtle rounded-lg p-6 group"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-fg-primary">
+                          {getCategoryName(budget.categoryId)}
+                        </h3>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setEditingBudget(budget);
+                              setEditAmount(budget.amount);
+                            }}
+                            className="text-fg-tertiary hover:text-accent-primary"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(budget.id)}
+                            className="text-fg-tertiary hover:text-status-negative"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-fg-secondary">{budget.container.name}</p>
+                    </div>
+                    <span
+                      className={`text-xs font-medium px-2 py-1 rounded ${budget.percentage >= 100 ? 'bg-status-negative/10 text-status-negative' : 'bg-bg-tertiary text-fg-secondary'}`}
+                    >
+                      {budget.percentage}%
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-fg-secondary">Spent</span>
+                      <span className="text-fg-primary font-mono">
+                        <AmountDisplay value={budget.spent} currency={budget.currency} />
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-fg-secondary">Remaining</span>
+                      <span
+                        className={`font-mono ${budget.remaining < 0 ? 'text-status-negative' : 'text-status-positive'}`}
+                      >
+                        <AmountDisplay value={budget.remaining} currency={budget.currency} />
+                      </span>
+                    </div>
+                    <ProgressBar percentage={budget.percentage} />
+                    <p className="text-xs text-fg-secondary text-right mt-2">
+                      Target: <AmountDisplay value={budget.amount} currency={budget.currency} />
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Wallet}
+              title="No budgets yet"
+              description="Create a budget or copy last month's budgets to get started."
+              action={
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-hover transition-colors"
+                >
+                  Create Your First Budget
+                </button>
+              }
+            />
+          )}
+        </>
+      )}
+
+      {activeTab === 'unbudgeted' && (
+        <div className="bg-bg-secondary border border-border-subtle rounded-lg p-6">
+          <h2 className="text-lg font-medium text-fg-primary mb-4">Spending Without a Budget</h2>
+          {unbudgetedLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : unbudgeted && unbudgeted.length > 0 ? (
+            <div className="space-y-3">
+              {unbudgeted.map((item) => (
+                <div
+                  key={item.categoryName}
+                  className="flex justify-between items-center py-2 border-b border-border-subtle last:border-0"
+                >
+                  <span className="text-fg-primary">{item.categoryName}</span>
+                  <span className="font-mono text-status-negative">
+                    <AmountDisplay value={item.total} currency={item.currency} />
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-fg-secondary">
+              You have no unbudgeted spending this month. Great job!
+            </p>
+          )}
         </div>
-      ) : (
-        <EmptyState
-          icon={Wallet}
-          title="No budgets yet"
-          description="Create a budget or copy last month's budgets to get started."
-          action={
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-hover transition-colors"
-            >
-              Create Your First Budget
-            </button>
-          }
-        />
       )}
 
       <CreateBudgetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
