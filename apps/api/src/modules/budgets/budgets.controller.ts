@@ -41,6 +41,12 @@ export class BudgetsController {
     return this.budgetsService.getReport(user.id);
   }
 
+  @Get('unbudgeted')
+  @ApiOperation({ summary: 'Get spending in categories that have no budget' })
+  async getUnbudgeted(@CurrentUser() user: any) {
+    return this.budgetsService.getUnbudgetedSpending(user.id);
+  }
+
   @Post('copy-previous')
   @ApiOperation({ summary: 'Copy budgets from the previous month to the current month' })
   async copyPrevious(@CurrentUser() user: any) {
