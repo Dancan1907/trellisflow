@@ -631,13 +631,33 @@ model ApiToken {
   status         ApiTokenStatus @default(ACTIVE)
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container       Container        @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  idempotencyKeys IdempotencyKey[]
 
   @@index([containerId, status])
   @@index([expiresAt])
   @@index([userId])
   @@map("api_tokens")
+}
+
+// Remembers the response to a POST sent with an `Idempotency-Key` header, so a retried
+// request returns the original result instead of running twice. Scoped per API token.
+model IdempotencyKey {
+  id             String   @id @db.Uuid
+  tokenId        String   @map("token_id") @db.Uuid
+  key            String
+  requestHash    String   @map("request_hash")
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+
+  token ApiToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }
 
 // ============================================================================
