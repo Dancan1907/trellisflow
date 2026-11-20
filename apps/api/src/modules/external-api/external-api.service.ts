@@ -26,11 +26,14 @@ export class ExternalApiService {
       // Reuse the existing Wave 4 logic
       return await this.summariesService.create(userId, containerId, dto);
     } catch (error) {
-      // Idempotency: If the exact (date + unit) summary already exists, return it instead of throwing a 409
+      // Idempotency: if the exact (date + unit) summary already exists, return it instead of
+      // throwing a 409, so retries after a network failure are safe.
       if (error instanceof ConflictException) {
-        const existingSummaries = await this.summariesService.findAll(userId, containerId);
-        const match = existingSummaries.items.find(
-          (s) => s.date === dto.date.slice(0, 10) && s.unit === (dto.unit?.trim() || null),
+        const match = await this.summariesService.findByDateAndUnit(
+          userId,
+          containerId,
+          dto.date,
+          dto.unit,
         );
         if (match) {
           return { ...match, idempotent: true };
