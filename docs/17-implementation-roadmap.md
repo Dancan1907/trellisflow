@@ -463,16 +463,16 @@
 
 ### 5.1 — External Business API
 
-- ☐ `POST /v1/summary` (single + bulk)
-- ☐ `GET /v1/business`
-- ☐ `GET /v1/summary/latest`
-- ☐ API token module (create/rotate/revoke)
-- ☐ Rotating token expiry + warnings
-- ☐ Payload validation
-- ☐ Rate limiting per token
-- ☐ Idempotency keys
-- ☐ Public API docs
-- ☐ Tests
+- ☑ `POST /v1/summary` (single + bulk, bulk at `/v1/summary/bulk`)
+- ☑ `GET /v1/business`
+- ☑ `GET /v1/summary/latest`
+- ☑ API token module (create/rotate/revoke)
+- ☑ Rotating token expiry + warnings
+- ☑ Payload validation
+- ☑ Rate limiting per token
+- ☑ Idempotency keys
+- ☑ Public API docs
+- ☐ Tests (unit + integration + e2e written; new rotate / idempotency / per-token-limit e2e awaiting a run)
 
 ### 5.2 — Advanced Budgets
 
