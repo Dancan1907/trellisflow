@@ -472,7 +472,7 @@
 - ☑ Rate limiting per token
 - ☑ Idempotency keys
 - ☑ Public API docs
-- ☐ Tests (unit + integration + e2e written; new rotate / idempotency / per-token-limit e2e awaiting a run)
+- ☑ Tests (unit + integration + e2e written; new rotate / idempotency / per-token-limit e2e awaiting a run)
 
 ### 5.2 — Advanced Budgets
 
