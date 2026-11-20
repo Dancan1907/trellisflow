@@ -29,6 +29,9 @@ import { HoldingsModule } from './modules/holdings/holdings.module';
 import { InvestmentEventsModule } from './modules/investment-events/investment-events.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { SummariesModule } from './modules/summaries/summaries.module';
+import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
+import { ExternalApiModule } from './modules/external-api/external-api.module';
+import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
 
 @Module({
   imports: [
@@ -47,8 +50,10 @@ import { SummariesModule } from './modules/summaries/summaries.module';
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 10,
+        limit: 100,
       },
+      // Per-IP backstop for the public API (the per-token limit lives on ExternalApiController)
+      apiIpThrottler,
     ]),
     CategoriesModule,
     AccountsModule,
@@ -64,6 +69,8 @@ import { SummariesModule } from './modules/summaries/summaries.module';
     InvestmentEventsModule,
     BusinessesModule,
     SummariesModule,
+    ApiTokensModule,
+    ExternalApiModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

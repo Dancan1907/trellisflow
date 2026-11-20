@@ -41,6 +41,8 @@ async function bootstrap() {
     exclude: [{ path: 'health', method: RequestMethod.GET }],
   });
 
+  const port = config.get<number>('PORT', 3000);
+
   // ==========================================================================
   // Swagger Setup
   // ==========================================================================
@@ -48,20 +50,19 @@ async function bootstrap() {
   if (process.env.NODE_ENV !== 'production') {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('TrellisFlow API')
-      .setDescription('The backend API for TrellisFlow — Personal Wealth Platform')
+      .setDescription('Public API for external businesses to push summaries.')
       .setVersion('1.0')
-      .addBearerAuth() // Tells Swagger we use JWT Bearer tokens
+      .addBearerAuth()
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
 
-    // Serves Swagger UI at http://localhost:3000/api/docs
-    SwaggerModule.setup('api/docs', app, document);
+    // Serves Swagger UI at /docs
+    SwaggerModule.setup('docs', app, document);
 
-    logger.log(`📚 Swagger UI available at http://localhost:3000/api/docs`);
+    logger.log(`📚 Swagger UI available at http://localhost:${port}/docs`);
   }
 
-  const port = config.get<number>('PORT', 3000);
   await app.listen(port);
 
   logger.log(`🚀 TrellisFlow API is running on http://localhost:${port}`);
