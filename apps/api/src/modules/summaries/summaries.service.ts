@@ -129,6 +129,27 @@ export class SummariesService {
     return this.withVersionCount(summary);
   }
 
+  /**
+   * Finds the (non-deleted) summary for an exact date + unit, or null.
+   * Used by the external API to answer retries of an already-recorded summary.
+   */
+  async findByDateAndUnit(userId: string, businessId: string, date: string, unit?: string | null) {
+    const container = await this.getExternalBusiness(userId, businessId);
+
+    const summary = await this.prisma.summary.findFirst({
+      where: {
+        userId,
+        containerId: container.id,
+        date: this.parseDate(date),
+        unit: unit?.trim() || null,
+        deletedAt: null,
+      },
+      include: { _count: { select: { versions: true } } },
+    });
+
+    return summary ? this.withVersionCount(summary) : null;
+  }
+
   async findVersions(userId: string, summaryId: string) {
     const summary = await this.getSummaryWithContainer(userId, summaryId);
 
