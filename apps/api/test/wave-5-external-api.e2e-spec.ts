@@ -4,6 +4,10 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
+// Setup does 2 signups + 2 business creates against a remote DB, which can exceed the
+// 15s default from jest-e2e.json. Several tests also make multiple sequential requests.
+jest.setTimeout(90_000);
+
 /**
  * Wave 5.1 — External Business API (e2e)
  *
@@ -86,7 +90,7 @@ describe('Wave 5 - External Business API (e2e)', () => {
 
     businessId = await createBusiness('Wave 5 Farm');
     otherBusinessId = await createBusiness('Wave 5 Shop');
-  });
+  }, 120_000);
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { email: { in: [ownerEmail, strangerEmail] } } });
