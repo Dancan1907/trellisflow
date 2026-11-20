@@ -30,6 +30,7 @@ import { InvestmentEventsModule } from './modules/investment-events/investment-e
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { SummariesModule } from './modules/summaries/summaries.module';
 import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
+import { ExternalApiModule } from './modules/external-api/external-api.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
     BusinessesModule,
     SummariesModule,
     ApiTokensModule,
+    ExternalApiModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
