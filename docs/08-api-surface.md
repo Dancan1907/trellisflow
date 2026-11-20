@@ -90,13 +90,15 @@ Mutating endpoints accept an `Idempotency-Key` header (UUID). Repeating the same
 
 ## External API
 
-**Base path:** `/api/trellisflow/v1`
+> **Note:** This section is the original design-time contract. The implemented contract (paths under `/api/v1`, camelCase fields, 60 requests/minute per token, standard error shape) is documented in [`docs/integrations/external-api.md`](integrations/external-api.md).
+
+**Base path:** `/api/v1`
 
 **Auth:** Bearer API token (`tf_...`), generated in TrellisFlow settings.
 
-**Docs:** Public developer guide in `docs/integrations/external-api.md` (to be written when Wave 5 begins).
+**Docs:** Public developer guide in [`docs/integrations/external-api.md`](integrations/external-api.md).
 
-**Rate limit:** 1,000 requests/hour per token, burst 100.
+**Rate limit:** 60 requests/minute per token (plus a 300/minute per-IP backstop).
 
 ### Endpoints
 
