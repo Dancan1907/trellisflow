@@ -53,6 +53,65 @@ export class InsightsService {
     return { created };
   }
 
+  private async getEffectiveAmount(userId: string, budget: any): Promise<number> {
+    const baseAmount = Number(budget.amount);
+    if (!budget.rollover) return baseAmount;
+
+    // Calculate rollover from previous period
+    const now = new Date();
+    let prevStart: Date;
+    let prevEnd: Date;
+
+    switch (budget.period) {
+      case 'DAILY':
+        prevStart = new Date(now);
+        prevStart.setDate(prevStart.getDate() - 1);
+        prevStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(prevStart);
+        prevEnd.setHours(23, 59, 59, 999);
+        break;
+      case 'WEEKLY':
+        prevStart = new Date(now);
+        prevStart.setDate(prevStart.getDate() - 7);
+        prevStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(prevStart);
+        prevEnd.setDate(prevEnd.getDate() + 6);
+        prevEnd.setHours(23, 59, 59, 999);
+        break;
+      case 'MONTHLY':
+        prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        break;
+      case 'QUARTERLY': {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        prevStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+        prevEnd = new Date(now.getFullYear(), currentQuarter * 3, 0, 23, 59, 59, 999);
+        break;
+      }
+      case 'YEARLY':
+        prevStart = new Date(now.getFullYear() - 1, 0, 1);
+        prevEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+        break;
+      default:
+        return baseAmount;
+    }
+
+    const prevTransactions = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        containerId: budget.containerId,
+        categoryId: budget.categoryId,
+        type: 'EXPENSE',
+        date: { gte: prevStart, lte: prevEnd },
+        deletedAt: null,
+      },
+    });
+    const prevSpent = prevTransactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const rolloverBalance = Math.max(0, baseAmount - prevSpent);
+
+    return baseAmount + rolloverBalance;
+  }
+
   private async checkBudgetOverspent(userId: string) {
     const budgets = await this.prisma.budget.findMany({
       where: { userId, status: 'ACTIVE' },
@@ -62,9 +121,9 @@ export class InsightsService {
 
     for (const budget of budgets) {
       const spent = await this.getSpentForBudget(userId, budget);
-      const target = Number(budget.amount);
+      const effectiveAmount = await this.getEffectiveAmount(userId, budget);
 
-      if (spent > target) {
+      if (spent > effectiveAmount) {
         const existing = await this.prisma.insight.findFirst({
           where: {
             userId,
@@ -80,7 +139,7 @@ export class InsightsService {
             'BUDGET_OVERSPENT',
             'WARNING',
             'Budget Exceeded',
-            `You have exceeded your budget of ${budget.currency} ${target} by ${budget.currency} ${(spent - target).toFixed(2)}.`,
+            `You have exceeded your budget of ${budget.currency} ${effectiveAmount} by ${budget.currency} ${(spent - effectiveAmount).toFixed(2)}.`,
             budget.containerId,
             budget.id,
           );
@@ -100,8 +159,8 @@ export class InsightsService {
 
     for (const budget of budgets) {
       const spent = await this.getSpentForBudget(userId, budget);
-      const target = Number(budget.amount);
-      const percentage = target === 0 ? 0 : (spent / target) * 100;
+      const effectiveAmount = await this.getEffectiveAmount(userId, budget);
+      const percentage = effectiveAmount === 0 ? 0 : (spent / effectiveAmount) * 100;
 
       if (percentage >= 80 && percentage < 100) {
         const existing = await this.prisma.insight.findFirst({
