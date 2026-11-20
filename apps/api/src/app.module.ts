@@ -31,6 +31,7 @@ import { BusinessesModule } from './modules/businesses/businesses.module';
 import { SummariesModule } from './modules/summaries/summaries.module';
 import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
 import { ExternalApiModule } from './modules/external-api/external-api.module';
+import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
 
 @Module({
   imports: [
@@ -51,6 +52,8 @@ import { ExternalApiModule } from './modules/external-api/external-api.module';
         ttl: 60000,
         limit: 100,
       },
+      // Per-IP backstop for the public API (the per-token limit lives on ExternalApiController)
+      apiIpThrottler,
     ]),
     CategoriesModule,
     AccountsModule,
