@@ -12,10 +12,23 @@ export interface Budget {
   container: { name: string };
 }
 
+export interface UnbudgetedCategory {
+  categoryName: string;
+  total: number;
+  currency: string;
+}
+
 export function useBudgets() {
   return useQuery({
     queryKey: ['budgets'],
     queryFn: () => apiFetch<Budget[]>('/api/budgets'),
+  });
+}
+
+export function useUnbudgetedSpending() {
+  return useQuery({
+    queryKey: ['budgets', 'unbudgeted'],
+    queryFn: () => apiFetch<UnbudgetedCategory[]>('/api/budgets/unbudgeted'),
   });
 }
 
