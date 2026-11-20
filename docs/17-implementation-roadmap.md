@@ -476,12 +476,12 @@
 
 ### 5.2 — Advanced Budgets
 
-- ☐ Rollover budgets
-- ☐ Budget alerts
-- ☐ Envelope method
-- ☐ Copy previous month UI
-- ☐ Business budgets UI
-- ☐ Unbudgeted spending report
+- ☑ Rollover budgets
+- ☑ Budget alerts
+- ☑ Envelope method
+- ☑ Copy previous month UI
+- ☑ Business budgets UI
+- ☑ Unbudgeted spending report
 
 ### 5.3 — Savings Goals Advanced
 
