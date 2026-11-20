@@ -178,9 +178,44 @@ export class InsightsService {
   }
 
   private async getSpentForBudget(userId: string, budget: any): Promise<number> {
+    // Replicate the period logic from BudgetsService
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    let start: Date;
+    let end: Date;
+
+    switch (budget.period) {
+      case 'DAILY':
+        start = new Date(now.setHours(0, 0, 0, 0));
+        end = new Date(now.setHours(23, 59, 59, 999));
+        break;
+      case 'WEEKLY': {
+        const day = now.getDay();
+        const diff = now.getDate() - day;
+        start = new Date(now.setDate(diff));
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'MONTHLY':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      case 'QUARTERLY': {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        start = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        end = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
+        break;
+      }
+      case 'YEARLY':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      default:
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
 
     const transactions = await this.prisma.transaction.findMany({
       where: {
