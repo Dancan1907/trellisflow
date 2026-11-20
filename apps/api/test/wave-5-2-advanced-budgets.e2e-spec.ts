@@ -151,7 +151,7 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
       where: { userId, type: 'BUDGET_NEAR_LIMIT', relatedEntityId: budgetId },
     });
     expect(insights.length).toBe(1);
-    expect(insights[0].message).toContain('81');
+    expect(insights[0]!.message).toContain('81');
 
     // --- 4. Business Budgets ---
     const business = await prisma.container.create({
