@@ -79,7 +79,7 @@ export class BudgetsService {
         periodStart: dto.periodStart ? new Date(dto.periodStart) : null,
         periodEnd: dto.periodEnd ? new Date(dto.periodEnd) : null,
         rollover: dto.rollover ?? false,
-        method: 'TARGET',
+        method: dto.method ?? 'TARGET',
         status: 'ACTIVE',
       },
     });
@@ -153,6 +153,8 @@ export class BudgetsService {
    */
   private async calculateProgress(userId: string, budget: Budget & { container?: any }) {
     const { start, end } = this.getPeriodDates(budget.period);
+
+    // 1. Get current spent
     const transactions = await this.prisma.transaction.findMany({
       where: {
         userId,
@@ -164,11 +166,46 @@ export class BudgetsService {
       },
     });
     const spent = transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
-    const amount = Number(budget.amount);
-    const remaining = amount - spent;
-    const percentage = amount === 0 ? 0 : Math.round((spent / amount) * 100);
+
+    // 2. Handle Rollover (calculate unused money from the *previous* period)
+    let rolloverBalance = 0;
+    if (budget.rollover) {
+      const prevStart = new Date(start);
+      const prevEnd = new Date(start);
+      prevEnd.setDate(prevEnd.getDate() - 1);
+
+      if (budget.period === 'MONTHLY') {
+        prevStart.setMonth(prevStart.getMonth() - 1);
+      } else if (budget.period === 'WEEKLY') {
+        prevStart.setDate(prevStart.getDate() - 7);
+      } else if (budget.period === 'YEARLY') {
+        prevStart.setFullYear(prevStart.getFullYear() - 1);
+      }
+
+      const prevTransactions = await this.prisma.transaction.findMany({
+        where: {
+          userId,
+          containerId: budget.containerId,
+          categoryId: budget.categoryId,
+          type: 'EXPENSE',
+          date: { gte: prevStart, lte: prevEnd },
+          deletedAt: null,
+        },
+      });
+      const prevSpent = prevTransactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+      rolloverBalance = Math.max(0, Number(budget.amount) - prevSpent);
+    }
+
+    const effectiveAmount = Number(budget.amount) + rolloverBalance;
+    const remaining = effectiveAmount - spent;
+    const percentage = effectiveAmount === 0 ? 0 : Math.round((spent / effectiveAmount) * 100);
+
     return {
       ...budget,
+      amount: effectiveAmount,
+      baseAmount: Number(budget.amount),
+      rolloverBalance,
       spent,
       remaining,
       percentage,
@@ -254,5 +291,46 @@ export class BudgetsService {
       }
     }
     return { copied: copiedCount, skipped: previousBudgets.length - copiedCount, errors };
+  }
+
+  async getUnbudgetedSpending(userId: string) {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const budgets = await this.prisma.budget.findMany({
+      where: { userId, status: 'ACTIVE' },
+      select: { categoryId: true, containerId: true },
+    });
+
+    const budgetedCategoryIds = budgets.map((b) => b.categoryId);
+
+    const unbudgetedTransactions = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        type: 'EXPENSE',
+        date: { gte: start, lte: end },
+        deletedAt: null,
+        categoryId: { notIn: budgetedCategoryIds },
+      },
+      include: {
+        category: { select: { name: true } },
+        container: { select: { name: true } },
+      },
+    });
+
+    const byCategory = unbudgetedTransactions.reduce(
+      (acc, tx) => {
+        const catName = tx.category?.name ?? 'Uncategorized';
+        if (!acc[catName]) {
+          acc[catName] = { categoryName: catName, total: 0, currency: tx.currency };
+        }
+        acc[catName].total += Number(tx.amount);
+        return acc;
+      },
+      {} as Record<string, { categoryName: string; total: number; currency: string }>,
+    );
+
+    return Object.values(byCategory);
   }
 }
