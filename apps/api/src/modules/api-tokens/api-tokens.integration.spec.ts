@@ -50,7 +50,15 @@ describe('ApiTokens (Integration)', () => {
     // 2. Validate
     const validated = await service.validateToken(created.token);
     expect(validated.container.id).toBe(businessId);
-    expect(validated.lastUsedAt).not.toBeNull();
+
+    // lastUsedAt is written fire-and-forget AFTER the token is returned, so the returned
+    // object still has the old value. Poll the DB until the background write lands.
+    let stored = await prisma.apiToken.findUnique({ where: { id: created.id } });
+    for (let i = 0; i < 20 && !stored?.lastUsedAt; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      stored = await prisma.apiToken.findUnique({ where: { id: created.id } });
+    }
+    expect(stored?.lastUsedAt).toBeInstanceOf(Date);
 
     // 3. Revoke
     await service.revoke(userId, created.id);
