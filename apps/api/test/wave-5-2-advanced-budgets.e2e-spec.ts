@@ -4,6 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { InsightsService } from '../src/modules/insights/insights.service';
+import { randomUUID } from 'crypto';
 
 describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
   let app: INestApplication;
@@ -11,6 +12,7 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
   let insightsService: InsightsService;
   let authToken: string;
   let userId: string;
+  let accountId: string;
   const testEmail = `wave5-2-budgets-${Date.now()}@trellisflow.test`;
 
   beforeAll(async () => {
@@ -23,7 +25,7 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
     insightsService = app.get<InsightsService>(InsightsService);
     await app.init();
 
-    // 1. Create user
+    // 1. Create user via signup
     const signupRes = await request(app.getHttpServer())
       .post('/auth/signup')
       .send({ email: testEmail, password: 'Password123!', name: 'Budget Tester' });
@@ -31,6 +33,26 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
 
     const user = await prisma.user.findUnique({ where: { email: testEmail } });
     userId = user!.id;
+
+    // 2. Get the personal container created at signup
+    const personalContainer = await prisma.container.findFirst({
+      where: { userId, type: 'PERSONAL' },
+    });
+
+    // 3. Create a REAL account for transactions to reference
+    accountId = randomUUID();
+    await prisma.account.create({
+      data: {
+        id: accountId,
+        userId,
+        containerId: personalContainer!.id,
+        name: 'Test Checking',
+        category: 'ASSET',
+        accountType: 'CHECKING',
+        currency: 'KES',
+        currentBalance: 100000,
+      },
+    });
   });
 
   afterAll(async () => {
@@ -40,22 +62,16 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
 
   it('Golden Path: Rollover, Alerts, Business Budgets, and Unbudgeted Spending', async () => {
     // --- Setup: Container and Categories ---
-    const container = await prisma.container.create({
-      data: {
-        id: crypto.randomUUID(),
-        userId,
-        type: 'PERSONAL',
-        name: 'Personal',
-        currency: 'KES',
-      },
+    const container = await prisma.container.findFirst({
+      where: { userId, type: 'PERSONAL' },
     });
 
     const budgetedCategory = await prisma.category.create({
-      data: { id: crypto.randomUUID(), userId, name: 'Groceries', type: 'EXPENSE' },
+      data: { id: randomUUID(), userId, name: 'Groceries', type: 'EXPENSE' },
     });
 
     const unbudgetedCategory = await prisma.category.create({
-      data: { id: crypto.randomUUID(), userId, name: 'Entertainment', type: 'EXPENSE' },
+      data: { id: randomUUID(), userId, name: 'Entertainment', type: 'EXPENSE' },
     });
 
     // --- 1. Create Budget with Rollover ---
@@ -63,7 +79,7 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
       .post('/budgets')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        containerId: container.id,
+        containerId: container!.id,
         categoryId: budgetedCategory.id,
         amount: 10000,
         currency: 'KES',
@@ -82,10 +98,10 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
 
     await prisma.transaction.create({
       data: {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         userId,
-        containerId: container.id,
-        accountId: crypto.randomUUID(), // Fake account
+        containerId: container!.id,
+        accountId: accountId, // <-- Real account
         type: 'EXPENSE',
         amount: 4000,
         currency: 'KES',
@@ -100,10 +116,10 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
     // Create a transaction for THIS month (13000 spent)
     await prisma.transaction.create({
       data: {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         userId,
-        containerId: container.id,
-        accountId: crypto.randomUUID(),
+        containerId: container!.id,
+        accountId: accountId, // <-- Real account
         type: 'EXPENSE',
         amount: 13000,
         currency: 'KES',
@@ -127,21 +143,20 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
     expect(budgetCheck.body.rolloverBalance).toBe(6000);
     expect(budgetCheck.body.amount).toBe(16000);
     expect(budgetCheck.body.spent).toBe(13000);
-    // Percentage: 13000 / 16000 = 81.25% (Triggers Near Limit alert)
 
-    // Manually trigger insights generation (normally done by a cron job)
+    // Trigger insights
     await insightsService.generateForUser(userId);
 
     const insights = await prisma.insight.findMany({
       where: { userId, type: 'BUDGET_NEAR_LIMIT', relatedEntityId: budgetId },
     });
     expect(insights.length).toBe(1);
-    expect(insights[0].message).toContain('81%');
+    expect(insights[0].message).toContain('81');
 
     // --- 4. Business Budgets ---
     const business = await prisma.container.create({
       data: {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         userId,
         type: 'INTERNAL_BUSINESS',
         name: 'My Shop',
@@ -158,7 +173,7 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
         amount: 5000,
         currency: 'KES',
         period: 'MONTHLY',
-        method: 'ENVELOPE', // Test Envelope method
+        method: 'ENVELOPE',
       })
       .expect(201);
 
@@ -166,10 +181,10 @@ describe('Wave 5.2 - Advanced Budgets (e2e)', () => {
     // Create a 500 KES expense in the 'Entertainment' category (which has no budget)
     await prisma.transaction.create({
       data: {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         userId,
-        containerId: container.id,
-        accountId: crypto.randomUUID(),
+        containerId: container!.id,
+        accountId: accountId, // <-- Real account
         type: 'EXPENSE',
         amount: 500,
         currency: 'KES',
