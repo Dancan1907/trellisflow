@@ -76,6 +76,8 @@ describe('ApiTokensService', () => {
     });
 
     it('returns token and updates lastUsedAt for valid token', async () => {
+      // validateToken fires `update(...).catch(...)`, so the mock must return a promise
+      mockPrisma.apiToken.update.mockResolvedValue({});
       mockPrisma.apiToken.findUnique.mockResolvedValue({
         id: 't1',
         status: 'ACTIVE',
