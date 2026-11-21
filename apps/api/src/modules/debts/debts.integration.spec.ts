@@ -78,8 +78,8 @@ describe('Debts (Integration)', () => {
     expect(result.monthsToPayoff).toBe(7);
     expect(result.totalInterestPaid).toBe(0);
     expect(result.history).toHaveLength(7);
-    expect(result.history[0].totalBalance).toBe(1100);
-    expect(result.history[6].totalBalance).toBe(0);
+    expect(result.history[0]!.totalBalance).toBe(1100);
+    expect(result.history[6]!.totalBalance).toBe(0);
     expect(result.payoffDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     // Cleanup for next test
@@ -101,7 +101,7 @@ describe('Debts (Integration)', () => {
     expect(result.monthsToPayoff).toBeGreaterThan(0);
     expect(result.totalInterestPaid).toBeGreaterThan(0);
     expect(result.history.length).toBe(result.monthsToPayoff);
-    expect(result.history[result.history.length - 1].totalBalance).toBe(0);
+    expect(result.history[result.history.length - 1]!.totalBalance).toBe(0);
 
     await prisma.account.deleteMany({ where: { id: { in: [accA, accB] } } });
   });
