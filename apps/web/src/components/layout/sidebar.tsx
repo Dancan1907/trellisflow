@@ -43,8 +43,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
     items: [
       { label: 'Budgets', href: '/budgets', icon: Wallet },
       { label: 'Goals', href: '/goals', icon: Target },
-      // TODO: Uncomment in Wave 5.4
-      // { label: 'Debt', href: '/debt', icon: CreditCard },
+      { label: 'Debt', href: '/debt', icon: CreditCard },
     ],
   },
   {
