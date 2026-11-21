@@ -10,7 +10,7 @@
 //   3. Money Core     — Category, Account, Transaction, RecurringRule
 //   4. Investments    — Holding, InvestmentEvent
 //   5. Summaries      — Summary, SummaryVersion, ApiToken
-//   6. Planning       — Budget, SavingsGoal, DebtPayoffPlan
+//   6. Planning       — Budget, SavingsGoal, GoalContribution, DebtPayoffPlan
 //   7. Reporting      — NetWorthSnapshot, Insight
 //   8. System         — AuditLog, JobRun
 
@@ -80,6 +80,7 @@ model User {
   apiTokens          ApiToken[]
   budgets            Budget[]
   savingsGoals       SavingsGoal[]
+  goalContributions  GoalContribution[]
   debtPlans          DebtPayoffPlan[]
   netWorthSnapshots  NetWorthSnapshot[]
   insights           Insight[]
@@ -756,13 +757,31 @@ model SavingsGoal {
   updatedAt         DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container     Container          @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  contributions GoalContribution[]
 
   @@index([userId, status])
   @@index([containerId, status])
   @@index([linkedAccountId])
   @@map("savings_goals")
+}
+
+model GoalContribution {
+  id        String   @id @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  goalId    String   @map("goal_id") @db.Uuid
+  amount    Decimal  @db.Decimal(19, 4) // negative = withdrawal
+  date      DateTime @db.Date
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, date])
+  @@index([userId])
+  @@map("goal_contributions")
 }
 
 model DebtPayoffPlan {
@@ -801,6 +820,7 @@ enum InsightType {
   BUDGET_NEAR_LIMIT
   GOAL_ACHIEVED
   GOAL_BEHIND
+  GOAL_MILESTONE
   NET_WORTH_MILESTONE
   UNUSUAL_SPENDING
   DEBT_COMPLETED

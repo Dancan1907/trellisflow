@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
+import { CreateContributionDto } from './dto/create-contribution.dto';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @ApiTags('goals')
@@ -26,10 +27,26 @@ export class GoalsController {
     return this.goalsService.findOne(user.id, id);
   }
 
+  @Get(':id/history')
+  @ApiOperation({ summary: 'Cumulative progress history + projection (for charts)' })
+  async getHistory(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.goalsService.getHistory(user.id, id);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new savings goal' })
   async create(@CurrentUser() user: any, @Body() dto: CreateGoalDto) {
     return this.goalsService.create(user.id, dto);
+  }
+
+  @Post(':id/contributions')
+  @ApiOperation({ summary: 'Add money to (or withdraw from) a manual goal' })
+  async addContribution(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: CreateContributionDto,
+  ) {
+    return this.goalsService.addContribution(user.id, id, dto);
   }
 
   @Patch(':id')

@@ -7,12 +7,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InsightType, InsightSeverity } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { GoalsService } from '../goals/goals.service';
 
 @Injectable()
 export class InsightsService {
   private readonly logger = new Logger(InsightsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private goalsService: GoalsService,
+  ) {}
 
   async findAll(userId: string) {
     return this.prisma.insight.findMany({
@@ -49,6 +53,8 @@ export class InsightsService {
     created += await this.checkBudgetOverspent(userId);
     created += await this.checkBudgetNearLimit(userId);
     created += await this.checkGoalAchieved(userId);
+    created += await this.checkGoalMilestones(userId);
+    created += await this.checkGoalBehind(userId);
 
     return { created };
   }
@@ -236,6 +242,89 @@ export class InsightsService {
     return created;
   }
 
+  private async checkGoalMilestones(userId: string) {
+    const MILESTONES = [25, 50, 75, 90];
+    const goals = await this.goalsService.findAll(userId);
+    let created = 0;
+
+    for (const goal of goals) {
+      const target = Number(goal.targetAmount);
+      if (target <= 0) continue;
+      const pct = (goal.currentAmount / target) * 100;
+      if (pct >= 100) continue; // handled by checkGoalAchieved
+
+      const highest = [...MILESTONES].reverse().find((m) => pct >= m);
+      if (!highest) continue;
+
+      // ANY status: a dismissed milestone must not come back
+      const previous = await this.prisma.insight.findMany({
+        where: { userId, type: 'GOAL_MILESTONE', relatedEntityId: goal.id },
+        select: { metadata: true },
+      });
+      const highestReached = Math.max(
+        0,
+        ...previous.map((i) => (i.metadata as { milestone?: number } | null)?.milestone ?? 0),
+      );
+      if (highest <= highestReached) continue;
+
+      await this.createInsight(
+        userId,
+        'GOAL_MILESTONE',
+        'OPPORTUNITY',
+        `${highest}% milestone reached`,
+        `You've saved ${highest}% of "${goal.name}". Keep going!`,
+        goal.containerId,
+        goal.id,
+        { milestone: highest },
+      );
+      created++;
+    }
+    return created;
+  }
+
+  private async checkGoalBehind(userId: string) {
+    const goals = await this.goalsService.findAll(userId);
+    const now = new Date();
+    let created = 0;
+
+    for (const goal of goals) {
+      if (!goal.targetDate || goal.projection.status === 'ACHIEVED') continue;
+
+      let message: string | null = null;
+      if (goal.targetDate < now) {
+        message = `"${goal.name}" was due on ${goal.targetDate.toDateString()} and is ${goal.percentage}% complete.`;
+      } else if (goal.projection.status === 'BEHIND') {
+        const late = Math.abs(goal.projection.daysAhead ?? 0);
+        const need = goal.projection.requiredMonthly;
+        message =
+          `At your current pace "${goal.name}" finishes ${late} days after your target date.` +
+          (need
+            ? ` Saving about ${goal.currency} ${Math.round(need)} per month would get you there.`
+            : '');
+      }
+      if (!message) continue;
+
+      // Re-alert at most every 14 days, even if the earlier one was dismissed
+      const since = new Date(Date.now() - 14 * 86_400_000);
+      const recent = await this.prisma.insight.findFirst({
+        where: { userId, type: 'GOAL_BEHIND', relatedEntityId: goal.id, createdAt: { gte: since } },
+      });
+      if (recent) continue;
+
+      await this.createInsight(
+        userId,
+        'GOAL_BEHIND',
+        'WARNING',
+        'Goal behind schedule',
+        message,
+        goal.containerId,
+        goal.id,
+      );
+      created++;
+    }
+    return created;
+  }
+
   private async getSpentForBudget(userId: string, budget: any): Promise<number> {
     // Replicate the period logic from BudgetsService
     const now = new Date();
@@ -298,6 +387,7 @@ export class InsightsService {
     message: string,
     containerId: string | null,
     entityId: string,
+    metadata?: Record<string, unknown>,
   ) {
     await this.prisma.insight.create({
       data: {
@@ -310,6 +400,8 @@ export class InsightsService {
         relatedContainerId: containerId,
         relatedEntityId: entityId,
         relatedEntityType: type.includes('BUDGET') ? 'budget' : 'goal',
+        actionUrl: type.includes('GOAL') ? '/goals' : undefined,
+        metadata: metadata as any,
         status: 'ACTIVE',
       },
     });
