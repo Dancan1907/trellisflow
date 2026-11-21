@@ -494,12 +494,14 @@
 
 ### 5.4 — Debt Payoff Planner
 
-- ☐ DebtPayoffPlan module
-- ☐ Snowball / avalanche
-- ☐ Projections
-- ☐ Cross-debt strategy view
-- ☐ Screens
-- ☐ Completion alerts
+- ☑ DebtPayoffPlan module
+- ☑ Snowball / avalanche
+- ☑ Projections
+- ☑ Cross-debt strategy view
+- ☑ Screens
+- ☑ Completion alerts
+- ☑ Unit + Integration tests
+- ☑ E2E test
 
 ### 5.5 — Insights Expansion
 
