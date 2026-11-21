@@ -32,6 +32,7 @@ import { SummariesModule } from './modules/summaries/summaries.module';
 import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
 import { ExternalApiModule } from './modules/external-api/external-api.module';
 import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
+import { DebtsModule } from './modules/debts/debts.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
     SummariesModule,
     ApiTokensModule,
     ExternalApiModule,
+    DebtsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
