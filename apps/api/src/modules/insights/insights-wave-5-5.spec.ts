@@ -270,10 +270,23 @@ describe('InsightsService — Wave 5.5 Rules', () => {
       mockPrisma.container.findMany.mockResolvedValue([
         { id: 'biz-1', name: 'Sugarcane Farm', currency: 'KES' },
       ]);
-      // First call (last month) → 5000; Second call (prev month) → 10000
-      mockPrisma.transaction.findMany
-        .mockResolvedValueOnce([{ amount: '5000' }])
-        .mockResolvedValueOnce([{ amount: '10000' }]);
+
+      // checkProfitDecline issues two INCOME queries per business:
+      //   1) last month range  → 5000
+      //   2) prev month range  → 10000
+      // Other checks (unusual spending, runway) also call transaction.findMany,
+      // but they either use EXPENSE type or a 90-day window — return [] for them.
+      const now = new Date();
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 2, 1).getTime();
+
+      mockPrisma.transaction.findMany.mockImplementation(({ where }: any) => {
+        if (where?.type !== 'INCOME') return Promise.resolve([]);
+        const gte: number | undefined = where?.date?.gte?.getTime?.();
+        if (gte === lastMonthStart) return Promise.resolve([{ amount: '5000' }]);
+        if (gte === prevMonthStart) return Promise.resolve([{ amount: '10000' }]);
+        return Promise.resolve([]);
+      });
 
       await service.generateForUser('user-1');
 
@@ -286,9 +299,18 @@ describe('InsightsService — Wave 5.5 Rules', () => {
       mockPrisma.container.findMany.mockResolvedValue([
         { id: 'biz-1', name: 'Farm', currency: 'KES' },
       ]);
-      mockPrisma.transaction.findMany
-        .mockResolvedValueOnce([{ amount: '9000' }])
-        .mockResolvedValueOnce([{ amount: '10000' }]);
+
+      const now = new Date();
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 2, 1).getTime();
+
+      mockPrisma.transaction.findMany.mockImplementation(({ where }: any) => {
+        if (where?.type !== 'INCOME') return Promise.resolve([]);
+        const gte: number | undefined = where?.date?.gte?.getTime?.();
+        if (gte === lastMonthStart) return Promise.resolve([{ amount: '9000' }]);
+        if (gte === prevMonthStart) return Promise.resolve([{ amount: '10000' }]);
+        return Promise.resolve([]);
+      });
 
       await service.generateForUser('user-1');
 
