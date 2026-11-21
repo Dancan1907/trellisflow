@@ -15,9 +15,7 @@ export function CreateDebtModal({ isOpen, onClose }: Props) {
   const createDebt = useCreateDebt();
   const { data: accounts } = useAccounts();
 
-  const liabilityAccounts = (accounts ?? []).filter(
-    (a) => a.category === 'LIABILITY' && a.status === 'ACTIVE',
-  );
+  const liabilityAccounts = (accounts ?? []).filter((a) => a.category === 'LIABILITY');
 
   const [accountId, setAccountId] = useState('');
   const [minimumPayment, setMinimumPayment] = useState('');
