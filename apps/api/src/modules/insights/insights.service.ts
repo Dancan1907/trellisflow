@@ -50,21 +50,405 @@ export class InsightsService {
   async generateForUser(userId: string) {
     let created = 0;
 
-    created += await this.checkBudgetOverspent(userId);
-    created += await this.checkBudgetNearLimit(userId);
-    created += await this.checkGoalAchieved(userId);
-    created += await this.checkGoalMilestones(userId);
-    created += await this.checkGoalBehind(userId);
-    created += await this.checkDebtCompleted(userId);
+    const checks: Array<{ name: string; fn: () => Promise<number> }> = [
+      { name: 'checkBudgetOverspent', fn: () => this.checkBudgetOverspent(userId) },
+      { name: 'checkBudgetNearLimit', fn: () => this.checkBudgetNearLimit(userId) },
+      { name: 'checkGoalAchieved', fn: () => this.checkGoalAchieved(userId) },
+      { name: 'checkGoalMilestones', fn: () => this.checkGoalMilestones(userId) },
+      { name: 'checkGoalBehind', fn: () => this.checkGoalBehind(userId) },
+      { name: 'checkDebtCompleted', fn: () => this.checkDebtCompleted(userId) },
+      // Wave 5.5 additions
+      { name: 'checkTokenExpiring', fn: () => this.checkTokenExpiring(userId) },
+      { name: 'checkNetWorthMilestone', fn: () => this.checkNetWorthMilestone(userId) },
+      { name: 'checkUnusualSpending', fn: () => this.checkUnusualSpending(userId) },
+      { name: 'checkOptimizationOpportunity', fn: () => this.checkOptimizationOpportunity(userId) },
+      { name: 'checkRebalanceSuggested', fn: () => this.checkRebalanceSuggested(userId) },
+      { name: 'checkProfitDecline', fn: () => this.checkProfitDecline(userId) },
+      { name: 'checkRunwayLow', fn: () => this.checkRunwayLow(userId) },
+    ];
+
+    for (const check of checks) {
+      try {
+        created += await check.fn();
+      } catch (err) {
+        this.logger.warn(`Insight check "${check.name}" failed: ${(err as Error).message}`);
+      }
+    }
 
     return { created };
   }
+
+  // ==========================================================================
+  // NEW — Wave 5.5 Rules
+  // ==========================================================================
+
+  /** 1. API tokens expiring within 7 days. Once per token. */
+  private async checkTokenExpiring(userId: string) {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 86_400_000);
+
+    const tokens = await this.prisma.apiToken.findMany({
+      where: {
+        userId,
+        status: 'ACTIVE',
+        expiresAt: { gte: now, lte: sevenDaysFromNow },
+      },
+      include: { container: { select: { id: true, name: true } } },
+    });
+
+    let created = 0;
+    for (const token of tokens) {
+      const existing = await this.prisma.insight.findFirst({
+        where: { userId, type: 'TOKEN_EXPIRING', relatedEntityId: token.id },
+      });
+      if (existing) continue;
+
+      const daysLeft = Math.ceil((token.expiresAt.getTime() - now.getTime()) / 86_400_000);
+      await this.createInsight(
+        userId,
+        'TOKEN_EXPIRING',
+        'WARNING',
+        'API Token Expiring Soon',
+        `The token "${token.label}" for ${token.container.name} expires in ${daysLeft} day(s). Rotate it to keep the integration running.`,
+        token.containerId,
+        token.id,
+        { daysLeft },
+      );
+      created++;
+    }
+    return created;
+  }
+
+  /** 2. Net worth crossed a new round-number milestone. Once per milestone level. */
+  private async checkNetWorthMilestone(userId: string) {
+    const latest = await this.prisma.netWorthSnapshot.findFirst({
+      where: { userId },
+      orderBy: { date: 'desc' },
+    });
+    if (!latest) return 0;
+
+    const total = Number(latest.totalNetWorth);
+    const MILESTONES = [100_000, 250_000, 500_000, 1_000_000, 2_500_000, 5_000_000, 10_000_000];
+
+    const reached = [...MILESTONES].reverse().find((m) => total >= m);
+    if (!reached) return 0;
+
+    // Dedupe: only alert for milestones never alerted before
+    const previous = await this.prisma.insight.findMany({
+      where: { userId, type: 'NET_WORTH_MILESTONE' },
+      select: { metadata: true },
+    });
+    const highestAlerted = Math.max(
+      0,
+      ...previous.map((i) => (i.metadata as { milestone?: number } | null)?.milestone ?? 0),
+    );
+    if (reached <= highestAlerted) return 0;
+
+    await this.createInsight(
+      userId,
+      'NET_WORTH_MILESTONE',
+      'OPPORTUNITY',
+      `Net Worth Milestone: ${latest.currency} ${reached.toLocaleString()}`,
+      `Your total net worth has crossed ${latest.currency} ${reached.toLocaleString()}. Great work!`,
+      null,
+      latest.id,
+      { milestone: reached },
+    );
+    return 1;
+  }
+
+  /** 3. Category spend this month > 150% of 3-month average. Once per category per month. */
+  private async checkUnusualSpending(userId: string) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        type: 'EXPENSE',
+        date: { gte: threeMonthsAgo, lte: monthEnd },
+        deletedAt: null,
+        categoryId: { not: null },
+      },
+      select: { categoryId: true, amount: true, date: true },
+    });
+
+    const byCategory = new Map<string, { current: number; past: number }>();
+    for (const tx of transactions) {
+      if (!tx.categoryId) continue;
+      const entry = byCategory.get(tx.categoryId) ?? { current: 0, past: 0 };
+      if (tx.date >= monthStart) entry.current += Number(tx.amount);
+      else entry.past += Number(tx.amount);
+      byCategory.set(tx.categoryId, entry);
+    }
+
+    let created = 0;
+    for (const [categoryId, { current, past }] of byCategory) {
+      const monthlyAvg = past / 3;
+      if (monthlyAvg < 100 || current < 1000) continue; // Ignore noise
+      if (current < monthlyAvg * 1.5) continue;
+
+      const existing = await this.prisma.insight.findFirst({
+        where: {
+          userId,
+          type: 'UNUSUAL_SPENDING',
+          relatedEntityId: categoryId,
+          createdAt: { gte: monthStart },
+        },
+      });
+      if (existing) continue;
+
+      const cat = await this.prisma.category.findUnique({ where: { id: categoryId } });
+      const name = cat?.name ?? 'a category';
+      const pct = Math.round((current / monthlyAvg - 1) * 100);
+
+      await this.createInsight(
+        userId,
+        'UNUSUAL_SPENDING',
+        'WARNING',
+        'Unusual Spending Spike',
+        `You've spent ${pct}% more on "${name}" this month than your 3-month average.`,
+        null,
+        categoryId,
+        { categoryId, current, monthlyAvg: Math.round(monthlyAvg) },
+      );
+      created++;
+    }
+    return created;
+  }
+
+  /** 4. Savings exist AND high-interest debt exists. Once per month. */
+  private async checkOptimizationOpportunity(userId: string) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const existing = await this.prisma.insight.findFirst({
+      where: { userId, type: 'OPTIMIZATION_OPPORTUNITY', createdAt: { gte: monthStart } },
+    });
+    if (existing) return 0;
+
+    const accounts = await this.prisma.account.findMany({
+      where: {
+        userId,
+        category: 'ASSET',
+        accountType: { in: ['SAVINGS', 'CHECKING', 'MOBILE_MONEY', 'PREPAID_CARD', 'CASH'] },
+        status: 'ACTIVE',
+      },
+    });
+    const savings = accounts.reduce((s, a) => s + Number(a.currentBalance), 0);
+    if (savings < 50_000) return 0;
+
+    const highInterest = await this.prisma.debtPayoffPlan.findMany({
+      where: {
+        userId,
+        status: 'ACTIVE',
+        interestRate: { gte: 15 },
+        account: { status: 'ACTIVE' },
+      },
+      include: { account: true },
+    });
+    if (highInterest.length === 0) return 0;
+
+    const first = highInterest[0]!;
+    const totalDebt = highInterest.reduce((s, p) => s + Number(p.account.currentBalance), 0);
+    const maxRate = Math.max(...highInterest.map((p) => Number(p.interestRate)));
+
+    await this.createInsight(
+      userId,
+      'OPTIMIZATION_OPPORTUNITY',
+      'OPPORTUNITY',
+      'Pay Off High-Interest Debt',
+      `You have ${first.account.currency} ${Math.round(savings).toLocaleString()} in savings and ${first.account.currency} ${Math.round(totalDebt).toLocaleString()} in debt at up to ${maxRate}% APR. Consider prioritizing debt payoff.`,
+      null,
+      first.id,
+      { savings, highInterestDebt: totalDebt, maxRate },
+    );
+    return 1;
+  }
+
+  /** 5. Any single asset class > 60% of portfolio. Once per month. */
+  private async checkRebalanceSuggested(userId: string) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const existing = await this.prisma.insight.findFirst({
+      where: { userId, type: 'REBALANCE_SUGGESTED', createdAt: { gte: monthStart } },
+    });
+    if (existing) return 0;
+
+    const holdings = await this.prisma.holding.findMany({
+      where: { userId, status: 'OPEN', deletedAt: null },
+    });
+    if (holdings.length < 2) return 0;
+
+    const totalValue = holdings.reduce((s, h) => s + Number(h.currentValueTotal), 0);
+    if (totalValue < 100_000) return 0;
+
+    const byAsset = new Map<string, number>();
+    for (const h of holdings) {
+      byAsset.set(h.assetClass, (byAsset.get(h.assetClass) ?? 0) + Number(h.currentValueTotal));
+    }
+    if (byAsset.size < 2) return 0;
+
+    for (const [assetClass, value] of byAsset) {
+      const pct = (value / totalValue) * 100;
+      if (pct <= 60) continue;
+
+      await this.createInsight(
+        userId,
+        'REBALANCE_SUGGESTED',
+        'OPPORTUNITY',
+        'Portfolio Concentration Risk',
+        `${Math.round(pct)}% of your portfolio is in ${assetClass.replace(/_/g, ' ').toLowerCase()}. Consider diversifying.`,
+        null,
+        holdings[0]!.id,
+        { assetClass, percentage: Math.round(pct) },
+      );
+      return 1;
+    }
+    return 0;
+  }
+
+  /** 6. Business income dropped > 25% MoM. Once per business per month. */
+  private async checkProfitDecline(userId: string) {
+    const now = new Date();
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const businesses = await this.prisma.container.findMany({
+      where: { userId, type: 'INTERNAL_BUSINESS', status: 'ACTIVE' },
+    });
+
+    let created = 0;
+    for (const business of businesses) {
+      const existing = await this.prisma.insight.findFirst({
+        where: {
+          userId,
+          type: 'PROFIT_DECLINE',
+          relatedContainerId: business.id,
+          createdAt: { gte: monthStart },
+        },
+      });
+      if (existing) continue;
+
+      const lastTx = await this.prisma.transaction.findMany({
+        where: {
+          userId,
+          containerId: business.id,
+          type: 'INCOME',
+          date: { gte: lastMonthStart, lte: lastMonthEnd },
+          deletedAt: null,
+        },
+      });
+      const lastIncome = lastTx.reduce((s, t) => s + Number(t.amount), 0);
+
+      const prevTx = await this.prisma.transaction.findMany({
+        where: {
+          userId,
+          containerId: business.id,
+          type: 'INCOME',
+          date: { gte: prevMonthStart, lte: prevMonthEnd },
+          deletedAt: null,
+        },
+      });
+      const prevIncome = prevTx.reduce((s, t) => s + Number(t.amount), 0);
+
+      if (prevIncome < 1000) continue;
+      if (lastIncome >= prevIncome * 0.75) continue;
+
+      const decline = ((prevIncome - lastIncome) / prevIncome) * 100;
+
+      await this.createInsight(
+        userId,
+        'PROFIT_DECLINE',
+        'WARNING',
+        `Profit Decline: ${business.name}`,
+        `${business.name}'s income dropped ${Math.round(decline)}% last month (${business.currency} ${Math.round(prevIncome).toLocaleString()} → ${business.currency} ${Math.round(lastIncome).toLocaleString()}).`,
+        business.id,
+        business.id,
+        { prevIncome, lastIncome, declinePct: Math.round(decline) },
+      );
+      created++;
+    }
+    return created;
+  }
+
+  /** 7. Business cash runway < 3 months. Once per business per 7 days. */
+  private async checkRunwayLow(userId: string) {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+
+    const businesses = await this.prisma.container.findMany({
+      where: { userId, type: 'INTERNAL_BUSINESS', status: 'ACTIVE' },
+    });
+
+    let created = 0;
+    for (const business of businesses) {
+      const existing = await this.prisma.insight.findFirst({
+        where: {
+          userId,
+          type: 'RUNWAY_LOW',
+          relatedContainerId: business.id,
+          createdAt: { gte: sevenDaysAgo },
+        },
+      });
+      if (existing) continue;
+
+      const accounts = await this.prisma.account.findMany({
+        where: {
+          userId,
+          containerId: business.id,
+          category: 'ASSET',
+          accountType: { in: ['CHECKING', 'SAVINGS', 'CASH', 'MOBILE_MONEY', 'PREPAID_CARD'] },
+          status: 'ACTIVE',
+        },
+      });
+      const cash = accounts.reduce((s, a) => s + Number(a.currentBalance), 0);
+
+      const ninetyDaysAgo = new Date(now.getTime() - 90 * 86_400_000);
+      const expenses = await this.prisma.transaction.findMany({
+        where: {
+          userId,
+          containerId: business.id,
+          type: 'EXPENSE',
+          date: { gte: ninetyDaysAgo, lte: now },
+          deletedAt: null,
+        },
+      });
+      const monthlyBurn = expenses.reduce((s, t) => s + Number(t.amount), 0) / 3;
+      if (monthlyBurn <= 0) continue;
+
+      const runway = cash / monthlyBurn;
+      if (runway >= 3) continue;
+
+      await this.createInsight(
+        userId,
+        'RUNWAY_LOW',
+        'WARNING',
+        `Low Cash Runway: ${business.name}`,
+        `${business.name} has ${runway.toFixed(1)} month(s) of runway. Consider reducing expenses or increasing revenue.`,
+        business.id,
+        business.id,
+        { runwayMonths: Math.round(runway * 10) / 10, cash, monthlyBurn },
+      );
+      created++;
+    }
+    return created;
+  }
+
+  // ==========================================================================
+  // Existing rules — UNCHANGED (Wave 5.2 – 5.4)
+  // ==========================================================================
 
   private async getEffectiveAmount(userId: string, budget: any): Promise<number> {
     const baseAmount = Number(budget.amount);
     if (!budget.rollover) return baseAmount;
 
-    // Calculate rollover from previous period
     const now = new Date();
     let prevStart: Date;
     let prevEnd: Date;
@@ -90,9 +474,9 @@ export class InsightsService {
         prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
         break;
       case 'QUARTERLY': {
-        const currentQuarter = Math.floor(now.getMonth() / 3);
-        prevStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
-        prevEnd = new Date(now.getFullYear(), currentQuarter * 3, 0, 23, 59, 59, 999);
+        const q = Math.floor(now.getMonth() / 3);
+        prevStart = new Date(now.getFullYear(), (q - 1) * 3, 1);
+        prevEnd = new Date(now.getFullYear(), q * 3, 0, 23, 59, 59, 999);
         break;
       }
       case 'YEARLY':
@@ -113,10 +497,8 @@ export class InsightsService {
         deletedAt: null,
       },
     });
-    const prevSpent = prevTransactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
-    const rolloverBalance = Math.max(0, baseAmount - prevSpent);
-
-    return baseAmount + rolloverBalance;
+    const prevSpent = prevTransactions.reduce((s, tx) => s + Number(tx.amount), 0);
+    return baseAmount + Math.max(0, baseAmount - prevSpent);
   }
 
   private async checkBudgetOverspent(userId: string) {
@@ -125,21 +507,14 @@ export class InsightsService {
     });
 
     let created = 0;
-
     for (const budget of budgets) {
       const spent = await this.getSpentForBudget(userId, budget);
       const effectiveAmount = await this.getEffectiveAmount(userId, budget);
 
       if (spent > effectiveAmount) {
         const existing = await this.prisma.insight.findFirst({
-          where: {
-            userId,
-            type: 'BUDGET_OVERSPENT',
-            relatedEntityId: budget.id,
-            status: 'ACTIVE',
-          },
+          where: { userId, type: 'BUDGET_OVERSPENT', relatedEntityId: budget.id, status: 'ACTIVE' },
         });
-
         if (!existing) {
           await this.createInsight(
             userId,
@@ -163,13 +538,12 @@ export class InsightsService {
     });
 
     let created = 0;
-
     for (const budget of budgets) {
       const spent = await this.getSpentForBudget(userId, budget);
       const effectiveAmount = await this.getEffectiveAmount(userId, budget);
-      const percentage = effectiveAmount === 0 ? 0 : (spent / effectiveAmount) * 100;
+      const pct = effectiveAmount === 0 ? 0 : (spent / effectiveAmount) * 100;
 
-      if (percentage >= 80 && percentage < 100) {
+      if (pct >= 80 && pct < 100) {
         const existing = await this.prisma.insight.findFirst({
           where: {
             userId,
@@ -178,14 +552,13 @@ export class InsightsService {
             status: 'ACTIVE',
           },
         });
-
         if (!existing) {
           await this.createInsight(
             userId,
             'BUDGET_NEAR_LIMIT',
             'INFO',
             'Approaching Budget Limit',
-            `You have used ${Math.round(percentage)}% of your budget for this period.`,
+            `You have used ${Math.round(pct)}% of your budget for this period.`,
             budget.containerId,
             budget.id,
           );
@@ -202,15 +575,10 @@ export class InsightsService {
     });
 
     let created = 0;
-
     for (const goal of goals) {
-      // Fix: Declare without initial value to satisfy no-useless-assignment
       let currentAmount: number;
-
       if (goal.linkedAccountId) {
-        const acc = await this.prisma.account.findUnique({
-          where: { id: goal.linkedAccountId },
-        });
+        const acc = await this.prisma.account.findUnique({ where: { id: goal.linkedAccountId } });
         currentAmount = acc ? Number(acc.currentBalance) : 0;
       } else {
         currentAmount = Number(goal.manualSavedAmount || 0);
@@ -218,14 +586,8 @@ export class InsightsService {
 
       if (currentAmount >= Number(goal.targetAmount)) {
         const existing = await this.prisma.insight.findFirst({
-          where: {
-            userId,
-            type: 'GOAL_ACHIEVED',
-            relatedEntityId: goal.id,
-            status: 'ACTIVE',
-          },
+          where: { userId, type: 'GOAL_ACHIEVED', relatedEntityId: goal.id, status: 'ACTIVE' },
         });
-
         if (!existing) {
           await this.createInsight(
             userId,
@@ -252,12 +614,11 @@ export class InsightsService {
       const target = Number(goal.targetAmount);
       if (target <= 0) continue;
       const pct = (goal.currentAmount / target) * 100;
-      if (pct >= 100) continue; // handled by checkGoalAchieved
+      if (pct >= 100) continue;
 
       const highest = [...MILESTONES].reverse().find((m) => pct >= m);
       if (!highest) continue;
 
-      // ANY status: a dismissed milestone must not come back
       const previous = await this.prisma.insight.findMany({
         where: { userId, type: 'GOAL_MILESTONE', relatedEntityId: goal.id },
         select: { metadata: true },
@@ -305,7 +666,6 @@ export class InsightsService {
       }
       if (!message) continue;
 
-      // Re-alert at most every 14 days, even if the earlier one was dismissed
       const since = new Date(Date.now() - 14 * 86_400_000);
       const recent = await this.prisma.insight.findFirst({
         where: { userId, type: 'GOAL_BEHIND', relatedEntityId: goal.id, createdAt: { gte: since } },
@@ -339,19 +699,15 @@ export class InsightsService {
           where: { userId, type: 'DEBT_COMPLETED', relatedEntityId: plan.id, status: 'ACTIVE' },
         });
         if (!existing) {
-          await this.prisma.insight.create({
-            data: {
-              id: randomUUID(),
-              userId,
-              type: 'DEBT_COMPLETED',
-              severity: 'OPPORTUNITY',
-              title: 'Debt Paid Off!',
-              message: `Congratulations! You have fully paid off "${plan.account.name}".`,
-              relatedEntityId: plan.id,
-              relatedEntityType: 'debt_plan',
-              status: 'ACTIVE',
-            },
-          });
+          await this.createInsight(
+            userId,
+            'DEBT_COMPLETED',
+            'OPPORTUNITY',
+            'Debt Paid Off!',
+            `Congratulations! You have fully paid off "${plan.account.name}".`,
+            plan.account.containerId,
+            plan.id,
+          );
           created++;
         }
       }
@@ -360,7 +716,6 @@ export class InsightsService {
   }
 
   private async getSpentForBudget(userId: string, budget: any): Promise<number> {
-    // Replicate the period logic from BudgetsService
     const now = new Date();
     let start: Date;
     let end: Date;
@@ -385,9 +740,9 @@ export class InsightsService {
         end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         break;
       case 'QUARTERLY': {
-        const currentQuarter = Math.floor(now.getMonth() / 3);
-        start = new Date(now.getFullYear(), currentQuarter * 3, 1);
-        end = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
+        const q = Math.floor(now.getMonth() / 3);
+        start = new Date(now.getFullYear(), q * 3, 1);
+        end = new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
         break;
       }
       case 'YEARLY':
@@ -410,7 +765,31 @@ export class InsightsService {
       },
     });
 
-    return transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    return transactions.reduce((s, tx) => s + Number(tx.amount), 0);
+  }
+
+  private entityTypeFor(type: InsightType): string {
+    if (type === 'TOKEN_EXPIRING') return 'api_token';
+    if (type === 'NET_WORTH_MILESTONE') return 'snapshot';
+    if (type === 'UNUSUAL_SPENDING') return 'category';
+    if (type === 'OPTIMIZATION_OPPORTUNITY') return 'debt_plan';
+    if (type === 'REBALANCE_SUGGESTED') return 'portfolio';
+    if (type === 'PROFIT_DECLINE' || type === 'RUNWAY_LOW') return 'business';
+    if (type === 'DEBT_COMPLETED') return 'debt_plan';
+    if (type.includes('BUDGET')) return 'budget';
+    return 'goal';
+  }
+
+  private actionUrlFor(type: InsightType): string | undefined {
+    if (type === 'TOKEN_EXPIRING') return '/businesses';
+    if (type === 'NET_WORTH_MILESTONE') return '/reports/net-worth';
+    if (type === 'UNUSUAL_SPENDING') return '/transactions';
+    if (type === 'OPTIMIZATION_OPPORTUNITY' || type === 'DEBT_COMPLETED') return '/debts';
+    if (type === 'REBALANCE_SUGGESTED') return '/investments';
+    if (type === 'PROFIT_DECLINE' || type === 'RUNWAY_LOW') return '/businesses';
+    if (type.includes('GOAL')) return '/goals';
+    if (type.includes('BUDGET')) return '/budgets';
+    return undefined;
   }
 
   private async createInsight(
@@ -433,8 +812,8 @@ export class InsightsService {
         message,
         relatedContainerId: containerId,
         relatedEntityId: entityId,
-        relatedEntityType: type.includes('BUDGET') ? 'budget' : 'goal',
-        actionUrl: type.includes('GOAL') ? '/goals' : undefined,
+        relatedEntityType: this.entityTypeFor(type),
+        actionUrl: this.actionUrlFor(type),
         metadata: metadata as any,
         status: 'ACTIVE',
       },
