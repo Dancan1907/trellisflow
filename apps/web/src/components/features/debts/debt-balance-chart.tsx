@@ -38,7 +38,7 @@ export function DebtBalanceChart({ simulation, currency }: Props) {
         />
         <YAxis
           tick={{ fontSize: 10, fill: '#9ca3af' }}
-          tickFormatter={(v) => `${currency} ${(v / 1000).toFixed(0)}k`}
+          tickFormatter={(v) => `${currency} ${(Number(v) / 1000).toFixed(0)}k`}
           tickLine={false}
           axisLine={false}
           width={70}
@@ -50,8 +50,8 @@ export function DebtBalanceChart({ simulation, currency }: Props) {
             borderRadius: '6px',
             fontSize: '12px',
           }}
-          formatter={(value: number) => [`${currency} ${value.toLocaleString()}`, 'Remaining']}
-          labelFormatter={(label) => `Month ${label.replace('M', '')}`}
+          formatter={(value) => [`${currency} ${Number(value ?? 0).toLocaleString()}`, 'Remaining']}
+          labelFormatter={(label) => `Month ${String(label).replace('M', '')}`}
         />
         <Line
           type="monotone"
