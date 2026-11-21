@@ -505,7 +505,14 @@
 
 ### 5.5 — Insights Expansion
 
-- ☐ 7 additional rules
+- ☑ 7 additional rules
+- ☑ (1)TOKEN_EXPIRING API token expires in ≤ 7 days
+- ☑ (2)NET_WORTH_MILESTONE Crossed a round number (100k, 250k, 500k, 1M…)
+- ☑ (3)UNUSUAL_SPENDING Category spend > 150% of 3-month average
+- ☑ (4)OPTIMIZATION_OPPORTUNITY Savings ≥ 50k AND high-interest debt (≥ 15% APR)
+- ☑ (5)REBALANCE_SUGGESTED One asset class > 60% of portfolio
+- ☑ (6)PROFIT_DECLINE Business income dropped > 25% MoM
+- ☑ (7)RUNWAY_LOW Business cash runway < 3 months
 
 ### 5.6 — Internal → External Conversion
 
