@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BusinessesService } from './businesses.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AuditLogService } from '../audit/audit-log.service';
 
 const mockTx = {
   container: { update: jest.fn() },
@@ -10,6 +9,7 @@ const mockTx = {
   account: { updateMany: jest.fn() },
   summary: { create: jest.fn() },
   insight: { updateMany: jest.fn() },
+  auditLog: { create: jest.fn() },
 };
 
 const mockPrisma: any = {
@@ -17,19 +17,13 @@ const mockPrisma: any = {
   $transaction: jest.fn((fn: any) => fn(mockTx)),
 };
 
-const mockAudit = { log: jest.fn().mockResolvedValue(undefined) };
-
 describe('BusinessesService.convertToExternal', () => {
   let service: BusinessesService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        BusinessesService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: AuditLogService, useValue: mockAudit },
-      ],
+      providers: [BusinessesService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
     service = module.get(BusinessesService);
   });
@@ -48,7 +42,7 @@ describe('BusinessesService.convertToExternal', () => {
     ],
   };
 
-  it('throws NotFound for an unknown / unowned business', async () => {
+  it('throws NotFound for unknown / unowned business', async () => {
     mockPrisma.container.findFirst.mockResolvedValue(null);
     await expect(service.convertToExternal('u1', 'biz-x')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -65,10 +59,14 @@ describe('BusinessesService.convertToExternal', () => {
     );
   });
 
-  it('flips type, creates source, archives accounts, seeds summary, expires insights', async () => {
+  it('flips type, creates source, archives accounts, seeds summary, expires insights, audits', async () => {
     mockPrisma.container.findFirst.mockResolvedValue(internalBusiness);
-    mockTx.container.update.mockResolvedValue({ ...internalBusiness, type: 'EXTERNAL_BUSINESS' });
+    mockTx.container.update.mockResolvedValue({
+      ...internalBusiness,
+      type: 'EXTERNAL_BUSINESS',
+    });
     mockTx.externalBusinessSource.create.mockResolvedValue({
+      id: 'src-1',
       sourceType: 'MANUAL',
       syncInterval: 'MANUAL',
       lastSummaryAt: new Date(),
@@ -92,7 +90,6 @@ describe('BusinessesService.convertToExternal', () => {
       data: { status: 'ARCHIVED', archivedAt: expect.any(Date) },
     });
 
-    // Seed summary should reflect 100k assets - 25k liabilities = 75k net worth.
     const createArg = mockTx.summary.create.mock.calls[0][0].data;
     expect(createArg.assetsValue).toBe(100000);
     expect(createArg.liabilitiesValue).toBe(25000);
@@ -107,15 +104,18 @@ describe('BusinessesService.convertToExternal', () => {
       data: { status: 'EXPIRED', expiresAt: expect.any(Date) },
     });
 
-    expect(result.type).toBe('EXTERNAL_BUSINESS');
-    expect(result.seedSummary.netWorth).toBe(75000);
-    expect(mockAudit.log).toHaveBeenCalledWith(
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        entityType: 'container',
-        entityId: 'biz-1',
-        action: 'UPDATE',
-        changedFields: ['type'],
+        data: expect.objectContaining({
+          entityType: 'container',
+          entityId: 'biz-1',
+          action: 'UPDATE',
+          changedFields: ['type'],
+        }),
       }),
     );
+
+    expect(result.type).toBe('EXTERNAL_BUSINESS');
+    expect(result.seedSummary.netWorth).toBe(75000);
   });
 });
