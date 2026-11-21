@@ -175,11 +175,11 @@ describe('DebtsService (Unit)', () => {
       // M5: B=300
       // M6: B=100
       // M7: B=0
-      expect(result.history[0].totalBalance).toBe(1100);
-      expect(result.history[1].totalBalance).toBe(900);
-      expect(result.history[2].totalBalance).toBe(700);
-      expect(result.history[3].totalBalance).toBe(500);
-      expect(result.history[6].totalBalance).toBe(0);
+      expect(result.history[0]!.totalBalance).toBe(1100);
+      expect(result.history[1]!.totalBalance).toBe(900);
+      expect(result.history[2]!.totalBalance).toBe(700);
+      expect(result.history[3]!.totalBalance).toBe(500);
+      expect(result.history[6]!.totalBalance).toBe(0);
     });
 
     it('avalanche: prioritizes highest interest rate', async () => {
