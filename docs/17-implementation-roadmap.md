@@ -485,9 +485,12 @@
 
 ### 5.3 — Savings Goals Advanced
 
-- ☐ Projected completion
-- ☐ Milestone alerts
-- ☐ Progress charts
+- ☑ Projected completion (recent-pace projection, required monthly amount, on-track/behind status)
+- ☑ Milestone alerts (25/50/75/90%, one per crossing, dismissals respected)
+- ☑ Progress charts (history, projection line, deadline marker)
+- ☑ Manual goal contributions (`GoalContribution`, add/withdraw)
+- ☑ Behind-schedule alerts (14-day throttle)
+- ☑ Tests (unit + integration written; E2E pending)
 
 ### 5.4 — Debt Payoff Planner
 
