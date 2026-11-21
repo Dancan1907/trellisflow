@@ -4,11 +4,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GoalsService } from '../goals/goals.service';
 
 const mockPrisma = {
+  insight: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
   budget: { findMany: jest.fn() },
-  savingsGoal: { findMany: jest.fn() },
-  transaction: { findMany: jest.fn() },
+  savingsGoal: { findMany: jest.fn(), findUnique: jest.fn() },
+  debtPayoffPlan: { findMany: jest.fn() },
   account: { findUnique: jest.fn() },
-  insight: { findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn() },
+  transaction: { findMany: jest.fn() },
 };
 
 describe('InsightsService (Unit)', () => {
@@ -24,6 +30,13 @@ describe('InsightsService (Unit)', () => {
     }).compile();
 
     service = module.get<InsightsService>(InsightsService);
+
+    // Default: no debts, no goals, no budgets — so generateForUser() doesn't crash
+    mockPrisma.debtPayoffPlan.findMany.mockResolvedValue([]);
+    mockPrisma.savingsGoal.findMany.mockResolvedValue([]);
+    mockPrisma.budget.findMany.mockResolvedValue([]);
+    mockPrisma.insight.findFirst.mockResolvedValue(null);
+    mockPrisma.insight.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => jest.clearAllMocks());
