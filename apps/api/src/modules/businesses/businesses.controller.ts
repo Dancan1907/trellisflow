@@ -17,6 +17,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { QueryPnlDto } from './dto/query-pnl.dto';
+import { ConvertToExternalDto } from './dto/convert-to-external.dto';
 
 @ApiTags('businesses')
 @ApiBearerAuth()
@@ -59,6 +60,20 @@ export class BusinessesController {
   @ApiOperation({ summary: 'Create a new internal business' })
   async create(@CurrentUser() user: any, @Body() dto: CreateBusinessDto) {
     return this.businessesService.create(user.id, dto);
+  }
+
+  @Post(':id/convert-to-external')
+  @ApiOperation({
+    summary: 'Convert an internal business to an external business (one-way)',
+    description:
+      "Keeps historical net worth snapshots intact. Archives internal accounts, seeds a Summary from today's internal net worth, and disables P&L/runway.",
+  })
+  async convertToExternal(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: ConvertToExternalDto,
+  ) {
+    return this.businessesService.convertToExternal(user.id, id, dto);
   }
 
   @Patch(':id')
