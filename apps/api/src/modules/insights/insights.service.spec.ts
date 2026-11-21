@@ -13,8 +13,14 @@ const mockPrisma = {
   budget: { findMany: jest.fn() },
   savingsGoal: { findMany: jest.fn(), findUnique: jest.fn() },
   debtPayoffPlan: { findMany: jest.fn() },
-  account: { findUnique: jest.fn() },
+  account: { findUnique: jest.fn(), findMany: jest.fn() },
   transaction: { findMany: jest.fn() },
+  // NEW for Wave 5.5:
+  apiToken: { findMany: jest.fn() },
+  netWorthSnapshot: { findFirst: jest.fn() },
+  category: { findUnique: jest.fn() },
+  holding: { findMany: jest.fn() },
+  container: { findMany: jest.fn() },
 };
 
 describe('InsightsService (Unit)', () => {
@@ -31,12 +37,18 @@ describe('InsightsService (Unit)', () => {
 
     service = module.get<InsightsService>(InsightsService);
 
-    // Default: no debts, no goals, no budgets — so generateForUser() doesn't crash
+    // Default: safe mock resolutions so generateForUser() doesn't crash
     mockPrisma.debtPayoffPlan.findMany.mockResolvedValue([]);
     mockPrisma.savingsGoal.findMany.mockResolvedValue([]);
     mockPrisma.budget.findMany.mockResolvedValue([]);
     mockPrisma.insight.findFirst.mockResolvedValue(null);
     mockPrisma.insight.findMany.mockResolvedValue([]);
+    mockPrisma.apiToken.findMany.mockResolvedValue([]);
+    mockPrisma.netWorthSnapshot.findFirst.mockResolvedValue(null);
+    mockPrisma.category.findUnique.mockResolvedValue(null);
+    mockPrisma.holding.findMany.mockResolvedValue([]);
+    mockPrisma.container.findMany.mockResolvedValue([]);
+    mockPrisma.account.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => jest.clearAllMocks());
