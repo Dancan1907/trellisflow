@@ -154,6 +154,27 @@ export function useArchiveBusiness() {
   });
 }
 
+export function useConvertBusinessToExternal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      apiFetch<{
+        id: string;
+        type: 'EXTERNAL_BUSINESS';
+        seedSummary: { id: string; netWorth: number; currency: string };
+      }>(`/api/businesses/${id}/convert-to-external`, {
+        method: 'POST',
+        body: JSON.stringify({ note }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['insights'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+    },
+  });
+}
+
 export function useBusinessPnl(id: string) {
   return useQuery({
     queryKey: ['businesses', id, 'pnl'],
