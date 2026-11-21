@@ -103,11 +103,19 @@ export function useDeleteGoal() {
 export function useAddContribution() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }: AddContributionInput) =>
-      apiFetch<unknown>(`/api/goals/${id}/contributions`, {
+    mutationFn: async ({ id, ...body }: AddContributionInput) => {
+      const result = await apiFetch<unknown>(`/api/goals/${id}/contributions`, {
         method: 'POST',
         body: JSON.stringify(body),
-      }),
+      });
+      // Best-effort: surface milestone / behind-schedule alerts immediately
+      try {
+        await apiFetch<unknown>('/api/insights/generate', { method: 'POST' });
+      } catch {
+        /* alerts will be picked up on the next generation run */
+      }
+      return result;
+    },
     onSuccess: () => invalidateGoalData(queryClient),
   });
 }
