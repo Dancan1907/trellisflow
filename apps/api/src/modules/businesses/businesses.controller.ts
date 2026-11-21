@@ -9,6 +9,7 @@ import {
   Param,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BusinessesService } from './businesses.service';
@@ -70,7 +71,7 @@ export class BusinessesController {
   })
   async convertToExternal(
     @CurrentUser() user: any,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConvertToExternalDto,
   ) {
     return this.businessesService.convertToExternal(user.id, id, dto);
