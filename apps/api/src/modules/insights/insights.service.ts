@@ -55,6 +55,7 @@ export class InsightsService {
     created += await this.checkGoalAchieved(userId);
     created += await this.checkGoalMilestones(userId);
     created += await this.checkGoalBehind(userId);
+    created += await this.checkDebtCompleted(userId);
 
     return { created };
   }
@@ -321,6 +322,39 @@ export class InsightsService {
         goal.id,
       );
       created++;
+    }
+    return created;
+  }
+
+  private async checkDebtCompleted(userId: string) {
+    const plans = await this.prisma.debtPayoffPlan.findMany({
+      where: { userId, status: 'ACTIVE' },
+      include: { account: true },
+    });
+
+    let created = 0;
+    for (const plan of plans) {
+      if (Number(plan.account.currentBalance) <= 0) {
+        const existing = await this.prisma.insight.findFirst({
+          where: { userId, type: 'DEBT_COMPLETED', relatedEntityId: plan.id, status: 'ACTIVE' },
+        });
+        if (!existing) {
+          await this.prisma.insight.create({
+            data: {
+              id: randomUUID(),
+              userId,
+              type: 'DEBT_COMPLETED',
+              severity: 'OPPORTUNITY',
+              title: 'Debt Paid Off!',
+              message: `Congratulations! You have fully paid off "${plan.account.name}".`,
+              relatedEntityId: plan.id,
+              relatedEntityType: 'debt_plan',
+              status: 'ACTIVE',
+            },
+          });
+          created++;
+        }
+      }
     }
     return created;
   }
