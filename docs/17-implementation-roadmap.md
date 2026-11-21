@@ -516,9 +516,14 @@
 
 ### 5.6 — Internal → External Conversion
 
-- ☐ Conversion flow
-- ☐ Continuity in trend
-- ☐ UI
+**Status:** ☑ complete
+
+- ☑ Conversion flow
+- ☑ Continuity in trend
+- ☑ UI
+- ☑ Tests
+  - Unit: `businesses.service.convert.spec.ts` — 404, 400, happy path
+  - E2E: `test/wave-5.6-conversion.e2e-spec.ts` — signup → business → convert → seed summary → snapshot continuity → 400 on re-convert
 
 ### 5.7 — Auto-Pricing
 
