@@ -1,13 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InsightsService } from './insights.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GoalsService } from '../goals/goals.service';
 
 const mockPrisma = {
   budget: { findMany: jest.fn() },
   savingsGoal: { findMany: jest.fn() },
   transaction: { findMany: jest.fn() },
   account: { findUnique: jest.fn() },
-  insight: { findFirst: jest.fn(), create: jest.fn() },
+  insight: { findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn() },
 };
 
 describe('InsightsService (Unit)', () => {
@@ -15,7 +16,11 @@ describe('InsightsService (Unit)', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [InsightsService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        InsightsService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: GoalsService, useValue: { findAll: jest.fn().mockResolvedValue([]) } },
+      ],
     }).compile();
 
     service = module.get<InsightsService>(InsightsService);
