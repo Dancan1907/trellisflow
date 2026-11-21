@@ -3,7 +3,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDebtPlanDto } from './dto/create-debt-plan.dto';
 import { SimulateDebtDto } from './dto/simulate-debt.dto';
 import { randomUUID } from 'crypto';
-import { DebtMethod } from '@prisma/client';
 
 @Injectable()
 export class DebtsService {
@@ -13,7 +12,9 @@ export class DebtsService {
     return this.prisma.debtPayoffPlan.findMany({
       where: { userId, status: 'ACTIVE', account: { status: 'ACTIVE' } },
       include: {
-        account: { select: { id: true, name: true, currentBalance: true, currency: true } },
+        account: {
+          select: { id: true, name: true, currentBalance: true, currency: true },
+        },
       },
     });
   }
@@ -58,56 +59,73 @@ export class DebtsService {
       throw new BadRequestException('No active debts found to simulate.');
     }
 
-    // Map to a mutable working structure
     const debts = plans.map((p) => ({
       id: p.id,
       name: p.account.name,
       balance: Number(p.account.currentBalance),
       minimumPayment: Number(p.minimumPayment),
-      interestRate: Number(p.interestRate) / 100 / 12, // Monthly rate
+      interestRate: Number(p.interestRate) / 100 / 12,
+      paidOff: false,
     }));
-
-    // Sort based on method
-    if (dto.method === 'SNOWBALL') {
-      debts.sort((a, b) => a.balance - b.balance);
-    } else {
-      debts.sort((a, b) => b.interestRate - a.interestRate); // Avalanche
-    }
 
     const extra = dto.extraMonthlyPayment;
     let totalInterestPaid = 0;
     let month = 0;
-    const MAX_MONTHS = 600; // 50 year safety limit
+    const MAX_MONTHS = 600;
     const history: Array<{ month: number; totalBalance: number }> = [];
+    // CRITICAL: Tracks minimums freed when a debt is paid off.
+    // Snowball/avalanche strategies roll these into the extra pool.
+    let freedUpMinPayments = 0;
 
     while (debts.some((d) => d.balance > 0) && month < MAX_MONTHS) {
       month++;
-      let currentExtra = extra;
+
+      // Re-sort each month: paid-off debts sink to the bottom, then by strategy
+      debts.sort((a, b) => {
+        if (a.balance <= 0 && b.balance > 0) return 1;
+        if (a.balance > 0 && b.balance <= 0) return -1;
+        if (a.balance <= 0 && b.balance <= 0) return 0;
+        if (dto.method === 'SNOWBALL') return a.balance - b.balance;
+        return b.interestRate - a.interestRate;
+      });
+
+      // Compute extra pool ONCE per month — captures freed minimums from prior months
+      let remainingExtra = extra + freedUpMinPayments;
       let totalBalanceThisMonth = 0;
 
       for (const debt of debts) {
         if (debt.balance <= 0) continue;
 
-        // 1. Apply interest
+        // 1. Interest
         const interest = debt.balance * debt.interestRate;
         debt.balance += interest;
         totalInterestPaid += interest;
 
-        // 2. Apply minimum payment
-        const payment = Math.min(debt.balance, debt.minimumPayment);
-        debt.balance -= payment;
+        // 2. Minimum payment
+        const minPayment = Math.min(debt.balance, debt.minimumPayment);
+        debt.balance -= minPayment;
 
-        // 3. Apply extra payment (Snowball/Avalanche target)
-        if (currentExtra > 0 && debt.balance > 0) {
-          const extraPayment = Math.min(debt.balance, currentExtra);
+        // 3. Extra (target debt only)
+        if (remainingExtra > 0 && debt.balance > 0) {
+          const extraPayment = Math.min(debt.balance, remainingExtra);
           debt.balance -= extraPayment;
-          currentExtra -= extraPayment;
+          remainingExtra -= extraPayment;
+        }
+
+        // 4. Detect payoff — roll the freed minimum into next month's pool
+        if (debt.balance <= 0 && !debt.paidOff) {
+          debt.balance = 0;
+          debt.paidOff = true;
+          freedUpMinPayments += debt.minimumPayment;
         }
 
         totalBalanceThisMonth += debt.balance;
       }
 
-      history.push({ month, totalBalance: Math.round(totalBalanceThisMonth * 100) / 100 });
+      history.push({
+        month,
+        totalBalance: Math.round(totalBalanceThisMonth * 100) / 100,
+      });
     }
 
     return {
@@ -118,7 +136,7 @@ export class DebtsService {
       totalInterestPaid: Math.round(totalInterestPaid * 100) / 100,
       monthlyExtra: extra,
       method: dto.method,
-      history, // For charting
+      history,
     };
   }
 
