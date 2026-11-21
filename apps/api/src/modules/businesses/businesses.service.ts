@@ -4,7 +4,6 @@ import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { QueryPnlDto } from './dto/query-pnl.dto';
 import { ConvertToExternalDto } from './dto/convert-to-external.dto';
-import { AuditLogService } from '../audit/audit-log.service';
 import { randomUUID } from 'crypto';
 import { DEFAULT_BUSINESS_CATEGORIES } from '../../common/constants/default-business-categories';
 import {
@@ -48,10 +47,7 @@ type BusinessWithProfile = Container & {
 
 @Injectable()
 export class BusinessesService {
-  constructor(
-    private prisma: PrismaService,
-    private auditLog: AuditLogService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   // ==========================================================================
   // Create
@@ -285,6 +281,7 @@ export class BusinessesService {
    *   immediately drop to zero before the user's first real external summary.
    * - Active PROFIT_DECLINE / RUNWAY_LOW insights for this business are expired,
    *   since those rules no longer apply to an external business.
+   * - An AuditLog row is written recording the type change.
    *
    * One-way: there is no reverse (external → internal) conversion.
    */
@@ -298,6 +295,7 @@ export class BusinessesService {
     // Compute the final internal net worth to seed the first external summary.
     const seedNetWorth = this.calculateNetWorth(container.accounts);
     const today = this.startOfUtcDay(new Date());
+    const auditId = randomUUID();
 
     const result = await this.prisma.$transaction(
       async (tx) => {
@@ -361,28 +359,30 @@ export class BusinessesService {
           data: { status: 'EXPIRED', expiresAt: new Date() },
         });
 
+        // 6. Audit log — record the type change on the container itself.
+        await tx.auditLog.create({
+          data: {
+            id: auditId,
+            userId,
+            actorType: 'USER',
+            actorId: userId,
+            entityType: 'container',
+            entityId: id,
+            action: 'UPDATE',
+            before: { type: 'INTERNAL_BUSINESS' },
+            after: {
+              type: 'EXTERNAL_BUSINESS',
+              seedSummaryId: seedSummary.id,
+              externalSourceId: source.id,
+            },
+            changedFields: ['type'],
+          },
+        });
+
         return { updated, source, seedSummary };
       },
       { timeout: 15000 },
     );
-
-    // 6. Audit log (outside the transaction — best-effort, non-blocking failures).
-    try {
-      await this.auditLog.log({
-        userId,
-        actorType: 'USER',
-        actorId: userId,
-        entityType: 'container',
-        entityId: id,
-        action: 'UPDATE',
-        before: { type: 'INTERNAL_BUSINESS' },
-        after: { type: 'EXTERNAL_BUSINESS', seedSummaryId: result.seedSummary.id },
-        changedFields: ['type'],
-      });
-    } catch (err) {
-      // Do not fail the conversion if audit logging fails; log and continue.
-      console.error('[BusinessesService.convertToExternal] audit log failed:', err);
-    }
 
     return {
       id: result.updated.id,
