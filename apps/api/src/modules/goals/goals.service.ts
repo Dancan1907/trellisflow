@@ -108,12 +108,8 @@ export class GoalsService {
         },
       });
 
-      // Recompute from the source of truth (null + x = null in SQL, so no `increment`)
-      const agg = await tx.goalContribution.aggregate({
-        where: { goalId },
-        _sum: { amount: true },
-      });
-      const total = Number(agg._sum.amount ?? 0);
+      const fresh = await tx.savingsGoal.findUniqueOrThrow({ where: { id: goalId } });
+      const total = Number(fresh.manualSavedAmount ?? 0) + dto.amount;
       if (total < 0) throw new BadRequestException('Withdrawal exceeds the saved amount');
 
       await tx.savingsGoal.update({ where: { id: goalId }, data: { manualSavedAmount: total } });
@@ -171,7 +167,7 @@ export class GoalsService {
    * Cumulative saved amount per day, ending exactly at the goal's current amount.
    * - Linked: rebuilt BACKWARDS from account.currentBalance, so it always matches reality
    *   (handles opening balances and transfers).
-   * - Manual: cumulative sum of contributions.
+   * - Manual: manualSavedAmount is the source of truth; contributions only shape the history.
    */
   private async buildHistory(
     userId: string,
@@ -217,19 +213,26 @@ export class GoalsService {
       return { history, currentAmount };
     }
 
+    // Manual goal: manualSavedAmount is the source of truth; contributions only shape the history
+    const currentAmount = round2(Number(goal.manualSavedAmount ?? 0));
+
     const contributions = await this.prisma.goalContribution.findMany({
       where: { goalId: goal.id, userId },
       orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
       select: { date: true, amount: true },
     });
 
-    const firstDate = contributions.length > 0 ? iso(contributions[0]!.date) : iso(goal.createdAt);
-    const startDate = firstDate < iso(goal.createdAt) ? firstDate : iso(goal.createdAt);
+    const total = contributions.reduce((s, c) => s + Number(c.amount), 0);
+    let running = currentAmount - total; // opening amount (0 unless set before contributions existed)
+
+    const createdIso = iso(goal.createdAt);
+    const firstIso = contributions.length > 0 ? iso(contributions[0]!.date) : createdIso;
+    const startIso = firstIso < createdIso ? firstIso : createdIso;
+
     const history: HistoryPoint[] = [
-      { date: iso(new Date(new Date(startDate).getTime() - DAY_MS)), amount: 0 },
+      { date: iso(new Date(new Date(startIso).getTime() - DAY_MS)), amount: round2(running) },
     ];
 
-    let running = 0;
     for (const c of contributions) {
       running += Number(c.amount);
       const d = iso(c.date);
@@ -238,9 +241,9 @@ export class GoalsService {
       else history.push({ date: d, amount: round2(running) });
     }
     if (history[history.length - 1]!.date < todayIso) {
-      history.push({ date: todayIso, amount: round2(running) });
+      history.push({ date: todayIso, amount: currentAmount });
     }
 
-    return { history, currentAmount: round2(running) };
+    return { history, currentAmount };
   }
 }
