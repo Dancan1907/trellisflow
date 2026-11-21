@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InsightsService } from './insights.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GoalsService } from '../goals/goals.service';
 import { ClsModule } from 'nestjs-cls';
 import { randomUUID } from 'crypto';
 
@@ -14,7 +15,7 @@ describe('Insights (Integration)', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ClsModule.forRoot({ global: true })],
-      providers: [InsightsService, PrismaService],
+      providers: [InsightsService, PrismaService, GoalsService],
     }).compile();
 
     service = module.get<InsightsService>(InsightsService);
