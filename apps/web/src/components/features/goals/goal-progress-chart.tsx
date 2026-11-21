@@ -97,7 +97,7 @@ export function GoalProgressChart({ goalId, currency, targetDate }: Props) {
             }}
             labelFormatter={(t) => fmtDate(Number(t))}
             formatter={(value, name) => [
-              money(Number(value)),
+              money(Number(value ?? 0)),
               name === 'projected' ? 'Projected' : 'Saved',
             ]}
           />
