@@ -11,6 +11,7 @@ describe('Audit filters (E2E)', () => {
   let userId: string;
   let containerId: string;
   let accountId: string;
+  let categoryId: string;
 
   const email = `audit-filters-${Date.now()}@trellisflow.test`;
   const password = 'password123';
@@ -32,14 +33,14 @@ describe('Audit filters (E2E)', () => {
     accessToken = signup.body.accessToken;
     userId = signup.body.user.id;
 
-    // Fetch personal container
+    // Personal container
     const containers = await request(app.getHttpServer())
       .get('/api/containers')
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
     containerId = containers.body.find((c: any) => c.type === 'PERSONAL').id;
 
-    // Create an account — generates an audit entry
+    // Account (setup only — not asserted via audit)
     const account = await request(app.getHttpServer())
       .post('/api/accounts')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -49,10 +50,45 @@ describe('Audit filters (E2E)', () => {
         category: 'ASSET',
         accountType: 'CHECKING',
         currency: 'KES',
-        initialBalance: 1000,
+        initialBalance: 10000,
       })
       .expect(201);
     accountId = account.body.id;
+
+    // Category (setup only — not asserted via audit)
+    const categories = await request(app.getHttpServer())
+      .get('/api/categories')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const income = categories.body.find((c: any) => c.type === 'INCOME');
+    categoryId = income.id;
+
+    // Two transactions — these ARE audited
+    await request(app.getHttpServer())
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        accountId,
+        type: 'INCOME',
+        amount: 5000,
+        date: new Date().toISOString().split('T')[0],
+        description: 'Audit fixture income',
+        categoryId,
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        accountId,
+        type: 'EXPENSE',
+        amount: 1000,
+        date: new Date().toISOString().split('T')[0],
+        description: 'Audit fixture expense',
+        categoryId,
+      })
+      .expect(201);
   });
 
   afterAll(async () => {
@@ -74,22 +110,28 @@ describe('Audit filters (E2E)', () => {
 
   it('filters by entityType', async () => {
     const res = await request(app.getHttpServer())
-      .get('/api/audit?entityType=Account')
+      .get('/api/audit?entityType=Transaction')
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
     expect(res.body.items.length).toBeGreaterThanOrEqual(1);
-    expect(res.body.items.every((e: any) => e.entityType === 'Account')).toBe(true);
+    expect(res.body.items.every((e: any) => e.entityType === 'Transaction')).toBe(true);
   });
 
   it('filters by entityId', async () => {
+    // Use the entityId of the first transaction-level audit row for this user
+    const first = await prisma.auditLog.findFirst({
+      where: { userId, entityType: 'Transaction' },
+    });
+    expect(first).not.toBeNull();
+
     const res = await request(app.getHttpServer())
-      .get(`/api/audit?entityType=Account&entityId=${accountId}`)
+      .get(`/api/audit?entityType=Transaction&entityId=${first!.entityId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
     expect(res.body.items.length).toBeGreaterThanOrEqual(1);
-    expect(res.body.items.every((e: any) => e.entityId === accountId)).toBe(true);
+    expect(res.body.items.every((e: any) => e.entityId === first!.entityId)).toBe(true);
   });
 
   it('filters by action', async () => {
