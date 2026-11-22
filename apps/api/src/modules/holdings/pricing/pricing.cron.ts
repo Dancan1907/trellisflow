@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PricingService } from './pricing.service';
 
 @Injectable()
@@ -9,12 +9,13 @@ export class PricingCron {
 
   constructor(private pricingService: PricingService) {}
 
-  // Every 30 minutes by default; override with PRICE_REFRESH_CRON env var.
-  // @nestjs/schedule supports custom envs via the decorator argument.
-  @Cron(process.env.PRICE_REFRESH_CRON ?? '*/30 * * * *')
+  // Runs every 30 minutes. The decorator is evaluated at module load, so we
+  // don't read env vars here — the scheduler module itself has no per-cron
+  // override mechanism. To change the interval, edit this decorator directly.
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async handleRefresh() {
     if (this.running) {
-      this.logger.warn('Skipping refresh — previous run still in progress');
+      this.logger.warn('Skipping pricing refresh — previous run still in progress');
       return;
     }
     this.running = true;
