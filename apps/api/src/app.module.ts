@@ -34,6 +34,7 @@ import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
 import { ExternalApiModule } from './modules/external-api/external-api.module';
 import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
 import { DebtsModule } from './modules/debts/debts.module';
+import { ExportModule } from './modules/export/export.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { DebtsModule } from './modules/debts/debts.module';
     ApiTokensModule,
     ExternalApiModule,
     DebtsModule,
+    ExportModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
