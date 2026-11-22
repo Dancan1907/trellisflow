@@ -527,16 +527,17 @@
 
 ### 5.7 — Auto-Pricing
 
-**Status:** In Progress (Alpha Vantage only)
+**Status:** ☑ complete (Alpha Vantage only)
 
 - ☑ Alpha Vantage (stocks, ETFs)
 - ☐ Finnhub (stocks, ETFs) — deferred, API key not obtained
 - ☐ CoinGecko (crypto) — deferred, API key not obtained
 - ☑ Fallback logic (per-provider try/catch, chain continues on failure)
-- ☑ Refresh job (`@Cron` every 30 min, idempotent running guard)
+- ☑ Refresh job (30-min cron, idempotent running guard, batched concurrency)
 - ☑ UI toggle (Alpha Vantage selectable; crypto shows "coming soon" until CoinGecko key added)
-- ☐ Multi-currency FX conversion (USD prices written as-is; note in UI)
-- ☐ NSE equities (`.NR` symbols not reliably covered by free tiers — manual-only)
+- ☐ Multi-currency FX conversion (USD prices written as-is)
+- ☐ NSE equities (`.NR` symbols not covered by free tiers — manual-only)
+- ☑ Unit tests (4/4 passing)
 
 ### 5.8 — Audit Log UI
 
