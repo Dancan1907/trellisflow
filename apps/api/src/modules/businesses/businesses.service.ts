@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { QueryPnlDto } from './dto/query-pnl.dto';
+import { ConvertToExternalDto } from './dto/convert-to-external.dto';
 import { randomUUID } from 'crypto';
 import { DEFAULT_BUSINESS_CATEGORIES } from '../../common/constants/default-business-categories';
 import {
@@ -260,6 +261,147 @@ export class BusinessesService {
       currency: container.currency,
       status: 'ARCHIVED' as const,
       archivedAt,
+    };
+  }
+
+  // ==========================================================================
+  // Convert Internal → External
+  // ==========================================================================
+
+  /**
+   * Converts an INTERNAL_BUSINESS to an EXTERNAL_BUSINESS in place.
+   *
+   * Continuity guarantees:
+   * - The Container row is kept (same `id`), so every historical NetWorthSnapshot
+   *   that already recorded this business stays correct — snapshots don't recompute.
+   * - The internal accounts are ARCHIVED (not deleted) so their transactions stay
+   *   for audit and the archived balances remain inspectable.
+   * - A seed `Summary` is written from today's internal net worth, so future net
+   *   worth calculations (which read Summary for external businesses) do not
+   *   immediately drop to zero before the user's first real external summary.
+   * - Active PROFIT_DECLINE / RUNWAY_LOW insights for this business are expired,
+   *   since those rules no longer apply to an external business.
+   * - An AuditLog row is written recording the type change.
+   *
+   * One-way: there is no reverse (external → internal) conversion.
+   */
+  async convertToExternal(userId: string, id: string, dto: ConvertToExternalDto = {}) {
+    const container = await this.getBusinessWithDetails(userId, id);
+
+    if (container.type !== 'INTERNAL_BUSINESS') {
+      throw new BadRequestException('Only internal businesses can be converted to external');
+    }
+
+    // Compute the final internal net worth to seed the first external summary.
+    const seedNetWorth = this.calculateNetWorth(container.accounts);
+    const today = this.startOfUtcDay(new Date());
+    const auditId = randomUUID();
+
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        // 1. Flip the container type. Keep the same row for snapshot continuity.
+        const updated = await tx.container.update({
+          where: { id },
+          data: { type: 'EXTERNAL_BUSINESS' },
+        });
+
+        // 2. Create the ExternalBusinessSource (external businesses have exactly one).
+        const source = await tx.externalBusinessSource.create({
+          data: {
+            id: randomUUID(),
+            containerId: id,
+            sourceType: 'MANUAL',
+            syncInterval: 'MANUAL',
+            lastSummaryDate: today,
+            lastSummaryAt: new Date(),
+          },
+        });
+
+        // 3. Archive the internal accounts. Transactions remain untouched.
+        const archivedAt = new Date();
+        await tx.account.updateMany({
+          where: { containerId: id, status: 'ACTIVE' },
+          data: { status: 'ARCHIVED', archivedAt },
+        });
+
+        // 4. Seed the first external Summary from today's internal net worth so
+        //    net worth does not drop to zero on conversion day.
+        const seedSummary = await tx.summary.create({
+          data: {
+            id: randomUUID(),
+            userId,
+            containerId: id,
+            date: today,
+            period: 'DAY',
+            income: 0,
+            expenses: 0,
+            transfersIn: 0,
+            transfersOut: 0,
+            cashBalance: seedNetWorth.totalAssets,
+            assetsValue: seedNetWorth.totalAssets,
+            liabilitiesValue: seedNetWorth.totalLiabilities,
+            currency: container.currency,
+            source: 'MANUAL',
+            notes:
+              dto.note ??
+              'Opening summary generated automatically when converting from internal to external.',
+          },
+        });
+
+        // 5. Expire insights that no longer apply to external businesses.
+        await tx.insight.updateMany({
+          where: {
+            userId,
+            relatedContainerId: id,
+            type: { in: ['PROFIT_DECLINE', 'RUNWAY_LOW'] },
+            status: 'ACTIVE',
+          },
+          data: { status: 'EXPIRED', expiresAt: new Date() },
+        });
+
+        // 6. Audit log — record the type change on the container itself.
+        await tx.auditLog.create({
+          data: {
+            id: auditId,
+            userId,
+            actorType: 'USER',
+            actorId: userId,
+            entityType: 'container',
+            entityId: id,
+            action: 'UPDATE',
+            before: { type: 'INTERNAL_BUSINESS' },
+            after: {
+              type: 'EXTERNAL_BUSINESS',
+              seedSummaryId: seedSummary.id,
+              externalSourceId: source.id,
+            },
+            changedFields: ['type'],
+          },
+        });
+
+        return { updated, source, seedSummary };
+      },
+      { timeout: 15000 },
+    );
+
+    return {
+      id: result.updated.id,
+      name: result.updated.name,
+      type: result.updated.type,
+      currency: result.updated.currency,
+      status: result.updated.status,
+      externalSource: {
+        sourceType: result.source.sourceType,
+        syncInterval: result.source.syncInterval,
+        lastSummaryAt: result.source.lastSummaryAt,
+        lastSummaryDate: result.source.lastSummaryDate,
+      },
+      seedSummary: {
+        id: result.seedSummary.id,
+        date: this.formatDate(result.seedSummary.date),
+        netWorth: seedNetWorth.netWorth,
+        currency: result.seedSummary.currency,
+      },
     };
   }
 
