@@ -76,7 +76,7 @@ export default function AuditDataPage() {
 
   const handleExport = async (type: 'json' | 'csv' | 'pdf') => {
     try {
-      showToast('info', 'Generating export...');
+      showToast('success', 'Generating export...');
       if (type === 'json') await exportJson();
       if (type === 'csv') await exportCsv();
       if (type === 'pdf') await exportPdf();
