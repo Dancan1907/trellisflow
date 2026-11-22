@@ -28,6 +28,7 @@ import { AddTransactionModal } from '@/components/features/transactions/add-tran
 import { AddSummaryModal } from '@/components/features/businesses/add-summary-modal';
 import { CorrectSummaryModal } from '@/components/features/businesses/correct-summary-modal';
 import { ConvertToExternalModal } from '@/components/features/businesses/convert-to-external-modal';
+import { EntityHistory } from '@/components/features/audit/entity-history';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -515,6 +516,9 @@ export default function BusinessDetailPage() {
           )}
         </section>
       )}
+
+      {/* Audit history for this business container */}
+      <EntityHistory entityType="container" entityId={business.id} title="Business History" />
 
       {/* Modals */}
       <CreateAccountModal

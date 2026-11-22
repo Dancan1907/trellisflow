@@ -542,9 +542,26 @@
 
 ### 5.8 — Audit Log UI
 
-- ☐ Audit screen
-- ☐ Entity history viewer
-- ☐ Filters
+**Status:** ☑ complete (MVP — entity history wired into businesses only)
+
+- ☑ Audit screen
+  - `GET /api/audit` now returns paginated envelope: `{ items, total, limit, offset }`
+  - Filters: `entityType`, `entityId`, `action`, `from`, `to` (all server-side)
+  - `/settings/audit` page — filters bar, table, pagination, detail drawer
+- ☑ Entity history viewer
+  - `EntityHistory` reusable component (embeds a scoped audit table + detail drawer)
+  - Wired into `/businesses/[id]` as proof of concept
+  - Follow-up: embed into `/personal/accounts/[id]`, `/investments/[id]`, transaction drawer
+- ☑ Filters
+  - Dropdowns for entity type and action
+  - Date range pickers (from / to)
+  - Pagination via `limit` / `offset`
+- ☑ Detail drawer
+  - Field-by-field diff (using `changedFields[]`) with a "Show raw JSON" toggle
+- ☑ Tests
+  - `audit.service.spec.ts` — 6 unit tests updated for paginated response + `$transaction`
+  - `audit-filters.e2e-spec.ts` — 5 E2E tests covering envelope, all filters, and empty date range
+- ☐ CSV/JSON export of audit rows — deferred to 5.10 (Data Export)
 
 ### 5.9 — Tier & Billing Structure
 
