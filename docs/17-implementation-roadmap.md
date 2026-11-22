@@ -565,16 +565,40 @@
 
 ### 5.9 — Tier & Billing Structure
 
-- ☐ Tier enforcement
-- ☐ Limit checks
-- ☐ Upgrade/downgrade screens
-- ☐ Stripe (optional)
+**Status:** ☐ Deferred — design captured in `docs/19-tier-and-billing.md`
+
+**Reason:** Testing coverage of Waves 5.1–5.8 and the MVP release (5.11)
+take priority. A half-implemented billing layer adds 403s at unexpected
+moments, complicates E2E testing, and requires product decisions (limit
+values, Stripe pricing) that haven't been validated with real users yet.
+
+**What's already in place:**
+
+- ☑ `UserTier` enum (`FREE | PAID`) on `User` — schema ready, unused
+- ☐ No limit enforcement
+- ☐ No upgrade/downgrade UI
+- ☐ No Stripe integration
+
+**What ships when 5.9 resumes:** see `docs/19-tier-and-billing.md` for the
+full design (limits, feature gates, architecture, Stripe plan, checklist).
+
+**Next steps for the eventual session:**
+
+- ☐ Validate FREE limits against real usage
+- ☐ Decide pricing (see §6 of the design doc)
+- ☐ Implement backend enforcement (guard + decorator + admin endpoint)
+- ☐ Implement frontend (billing page + upgrade banner)
+- ☐ Stripe Checkout + Customer Portal (separate PR)
 
 ### 5.10 — Data Export
 
-- ☐ JSON export
-- ☐ CSV export
-- ☐ PDF export
+**Status:** ☑ complete
+
+- ☑ JSON export — complete account backup (containers, accounts, transactions, budgets, goals, holdings)
+- ☑ CSV export — transaction ledger with date filters (`from` / `to` query params)
+- ☑ PDF export — Net Worth statement generated via `pdfkit`
+- ☑ UI — Export buttons added to `/settings/data` with direct file downloads
+- ☑ Tests — 3 E2E tests verifying JSON payload, CSV headers, and PDF magic bytes (`%PDF`)
 
 ### 5.11 — Release
 
