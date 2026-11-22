@@ -12,6 +12,9 @@ import {
   ChevronRight,
   Filter,
   Code2,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import {
   useAuditLog,
@@ -19,9 +22,11 @@ import {
   type AuditLogEntry,
   type AuditQuery,
 } from '@/lib/hooks/use-audit';
+import { exportJson, exportCsv, exportPdf } from '@/lib/hooks/use-export';
 import { summarizeAuditEntry, getFormattedChanges } from '@/lib/utils/format-audit';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
+import { showToast } from '@/components/ui/toast';
 
 const ENTITY_TYPES = [
   'All',
@@ -69,95 +74,153 @@ export default function AuditDataPage() {
     });
   };
 
+  const handleExport = async (type: 'json' | 'csv' | 'pdf') => {
+    try {
+      showToast('info', 'Generating export...');
+      if (type === 'json') await exportJson();
+      if (type === 'csv') await exportCsv();
+      if (type === 'pdf') await exportPdf();
+      showToast('success', 'Export downloaded successfully');
+    } catch (err) {
+      showToast('error', 'Export failed', err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-medium text-fg-primary">Data & Audit</h2>
-        <p className="text-xs text-fg-secondary mt-1">
-          A record of every change made to your financial data.
+    <div className="space-y-8">
+      {/* Export Section */}
+      <div className="mb-8">
+        <h2 className="text-lg font-medium text-fg-primary mb-2">Export Your Data</h2>
+        <p className="text-sm text-fg-secondary mb-4">
+          Download your data in standard formats. JSON includes all your data; CSV includes all
+          transactions; PDF generates a Net Worth statement.
         </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <button
+            onClick={() => handleExport('json')}
+            className="flex items-center gap-3 p-4 rounded-lg bg-bg-secondary border border-border-subtle hover:border-accent-primary transition-colors text-left"
+          >
+            <FileJson className="text-accent-primary shrink-0" size={24} />
+            <div>
+              <p className="text-sm font-medium text-fg-primary">Export JSON</p>
+              <p className="text-xs text-fg-secondary">Complete account backup</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleExport('csv')}
+            className="flex items-center gap-3 p-4 rounded-lg bg-bg-secondary border border-border-subtle hover:border-accent-primary transition-colors text-left"
+          >
+            <FileSpreadsheet className="text-status-positive shrink-0" size={24} />
+            <div>
+              <p className="text-sm font-medium text-fg-primary">Export CSV</p>
+              <p className="text-xs text-fg-secondary">Transaction ledger</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleExport('pdf')}
+            className="flex items-center gap-3 p-4 rounded-lg bg-bg-secondary border border-border-subtle hover:border-accent-primary transition-colors text-left"
+          >
+            <FileText className="text-status-negative shrink-0" size={24} />
+            <div>
+              <p className="text-sm font-medium text-fg-primary">Export PDF</p>
+              <p className="text-xs text-fg-secondary">Net worth statement</p>
+            </div>
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-bg-tertiary/40 border border-border-subtle rounded-lg">
-        <div className="flex items-center gap-2 text-xs text-fg-secondary">
-          <Filter size={14} />
-          <span>Filter</span>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium text-fg-primary">Data & Audit</h2>
+          <p className="text-xs text-fg-secondary mt-1">
+            A record of every change made to your financial data.
+          </p>
         </div>
 
-        <select
-          value={entityType}
-          onChange={(e) => setEntityType(e.target.value)}
-          className="h-9 px-3 rounded-md border border-border-subtle bg-bg-primary text-sm text-fg-primary focus:outline-none focus:border-accent-primary"
-        >
-          {ENTITY_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t === 'All' ? 'All entities' : t.replace(/([A-Z])/g, ' $1').trim()}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-wrap items-center gap-3 p-3 bg-bg-tertiary/40 border border-border-subtle rounded-lg">
+          <div className="flex items-center gap-2 text-xs text-fg-secondary">
+            <Filter size={14} />
+            <span>Filter</span>
+          </div>
 
-        <select
-          value={action}
-          onChange={(e) => setAction(e.target.value as AuditAction | 'All')}
-          className="h-9 px-3 rounded-md border border-border-subtle bg-bg-primary text-sm text-fg-primary focus:outline-none focus:border-accent-primary"
-        >
-          {ACTIONS.map((a) => (
-            <option key={a} value={a}>
-              {a === 'All' ? 'All actions' : a}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={limit}
-          onChange={(e) => setLimit(Number(e.target.value))}
-          className="h-9 px-3 rounded-md border border-border-subtle bg-bg-primary text-sm text-fg-primary focus:outline-none focus:border-accent-primary"
-        >
-          {LIMITS.map((l) => (
-            <option key={l} value={l}>
-              {l} rows
-            </option>
-          ))}
-        </select>
-
-        {(entityType !== 'All' || action !== 'All') && (
-          <button
-            onClick={() => {
-              setEntityType('All');
-              setAction('All');
-            }}
-            className="text-xs text-fg-secondary hover:text-accent-primary underline-offset-2 hover:underline"
+          <select
+            value={entityType}
+            onChange={(e) => setEntityType(e.target.value)}
+            className="h-9 px-3 rounded-md border border-border-subtle bg-bg-primary text-sm text-fg-primary focus:outline-none focus:border-accent-primary"
           >
-            Clear filters
-          </button>
+            {ENTITY_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t === 'All' ? 'All entities' : t.replace(/([A-Z])/g, ' $1').trim()}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={action}
+            onChange={(e) => setAction(e.target.value as AuditAction | 'All')}
+            className="h-9 px-3 rounded-md border border-border-subtle bg-bg-primary text-sm text-fg-primary focus:outline-none focus:border-accent-primary"
+          >
+            {ACTIONS.map((a) => (
+              <option key={a} value={a}>
+                {a === 'All' ? 'All actions' : a}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={limit}
+            onChange={(e) => setLimit(Number(e.target.value))}
+            className="h-9 px-3 rounded-md border border-border-subtle bg-bg-primary text-sm text-fg-primary focus:outline-none focus:border-accent-primary"
+          >
+            {LIMITS.map((l) => (
+              <option key={l} value={l}>
+                {l} rows
+              </option>
+            ))}
+          </select>
+
+          {(entityType !== 'All' || action !== 'All') && (
+            <button
+              onClick={() => {
+                setEntityType('All');
+                setAction('All');
+              }}
+              className="text-xs text-fg-secondary hover:text-accent-primary underline-offset-2 hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : entries && entries.items.length > 0 ? (
+          <div className="border border-border-subtle rounded-lg overflow-hidden">
+            {entries.items.map((entry, i) => (
+              <AuditRow
+                key={entry.id}
+                entry={entry}
+                isExpanded={expanded.has(entry.id)}
+                onToggle={() => toggleExpanded(entry.id)}
+                isFirst={i === 0}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Database}
+            title="No audit entries"
+            description="No changes match these filters. Try widening the date range or clearing filters."
+          />
         )}
       </div>
-
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      ) : entries && entries.items.length > 0 ? (
-        <div className="border border-border-subtle rounded-lg overflow-hidden">
-          {entries.items.map((entry, i) => (
-            <AuditRow
-              key={entry.id}
-              entry={entry}
-              isExpanded={expanded.has(entry.id)}
-              onToggle={() => toggleExpanded(entry.id)}
-              isFirst={i === 0}
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={Database}
-          title="No audit entries"
-          description="No changes match these filters. Try widening the date range or clearing filters."
-        />
-      )}
     </div>
   );
 }
