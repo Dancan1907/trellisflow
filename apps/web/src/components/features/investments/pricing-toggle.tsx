@@ -18,9 +18,9 @@ interface Props {
     id: string;
     assetClass: string;
     pricingMode: 'MANUAL' | 'AUTO';
-    providerSymbol: string | null;
-    priceProvider: string | null;
-    lastPricedAt: string | null;
+    providerSymbol?: string | null;
+    priceProvider?: string | null;
+    lastPricedAt?: string | null;
   };
 }
 
