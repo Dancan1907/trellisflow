@@ -4,6 +4,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { ClsModule } from 'nestjs-cls';
 
@@ -44,6 +45,7 @@ import { DebtsModule } from './modules/debts/debts.module';
       global: true,
       middleware: { mount: true },
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     ContainersModule,
