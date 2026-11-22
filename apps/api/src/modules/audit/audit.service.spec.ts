@@ -7,6 +7,9 @@ const prismaMock = {
     findMany: jest.fn(),
     count: jest.fn(),
   },
+  // The service calls findMany + count inside a single $transaction.
+  // Resolve both, return the array of results in order.
+  $transaction: jest.fn().mockImplementation(async (ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
 describe('AuditService', () => {
@@ -14,11 +17,9 @@ describe('AuditService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-
-    // `count` is called inside a $transaction with `findMany`, so it needs
-    // a resolved value in every test.
-    prismaMock.auditLog.count.mockResolvedValue(1);
     prismaMock.auditLog.findMany.mockResolvedValue([]);
+    prismaMock.auditLog.count.mockResolvedValue(0);
+    prismaMock.$transaction.mockImplementation(async (ops: Promise<unknown>[]) => Promise.all(ops));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [AuditService, { provide: PrismaService, useValue: prismaMock }],
@@ -28,6 +29,9 @@ describe('AuditService', () => {
   });
 
   it('uses the default limit of 50 when no query is given', async () => {
+    prismaMock.auditLog.findMany.mockResolvedValue([]);
+    prismaMock.auditLog.count.mockResolvedValue(0);
+
     await service.findAllForUser('user-1');
 
     expect(prismaMock.auditLog.findMany).toHaveBeenCalledWith({
@@ -39,6 +43,9 @@ describe('AuditService', () => {
   });
 
   it('respects a custom limit', async () => {
+    prismaMock.auditLog.findMany.mockResolvedValue([]);
+    prismaMock.auditLog.count.mockResolvedValue(0);
+
     await service.findAllForUser('user-1', { limit: 10 });
 
     expect(prismaMock.auditLog.findMany).toHaveBeenCalledWith(
@@ -47,6 +54,9 @@ describe('AuditService', () => {
   });
 
   it('applies the entityType filter', async () => {
+    prismaMock.auditLog.findMany.mockResolvedValue([]);
+    prismaMock.auditLog.count.mockResolvedValue(0);
+
     await service.findAllForUser('user-1', { entityType: 'Transaction' });
 
     expect(prismaMock.auditLog.findMany).toHaveBeenCalledWith(
@@ -57,6 +67,9 @@ describe('AuditService', () => {
   });
 
   it('applies the action filter', async () => {
+    prismaMock.auditLog.findMany.mockResolvedValue([]);
+    prismaMock.auditLog.count.mockResolvedValue(0);
+
     await service.findAllForUser('user-1', { action: 'DELETE' });
 
     expect(prismaMock.auditLog.findMany).toHaveBeenCalledWith(
@@ -67,6 +80,9 @@ describe('AuditService', () => {
   });
 
   it('applies both filters together', async () => {
+    prismaMock.auditLog.findMany.mockResolvedValue([]);
+    prismaMock.auditLog.count.mockResolvedValue(0);
+
     await service.findAllForUser('user-1', {
       entityType: 'Account',
       action: 'UPDATE',
