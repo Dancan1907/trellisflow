@@ -3,6 +3,7 @@ import { apiFetch } from '@/lib/api/api-client';
 
 export interface Holding {
   id: string;
+  userId: string;
   containerId: string;
   accountId: string;
   name: string;
@@ -12,10 +13,18 @@ export interface Holding {
   costBasisTotal: string;
   currentValueTotal: string;
   currency: string;
-  status: 'OPEN' | 'CLOSED' | 'DELETED';
   acquiredDate: string | null;
-  pricingMode: string;
+  pricingMode: 'MANUAL' | 'AUTO';
+  priceProvider: string | null;
+  providerSymbol: string | null;
+  lastPricedAt: string | null;
   notes: string | null;
+  status: string;
+  closedAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  container?: { name: string };
 }
 
 export interface QueryHoldingsFilters {
