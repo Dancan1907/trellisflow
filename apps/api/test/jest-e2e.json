@@ -6,7 +6,7 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "transformIgnorePatterns": ["node_modules/(?!.*(@nestjs/jwt)/)"],
+  "transformIgnorePatterns": ["node_modules/(?!(@nestjs/schedule|@nestjs/jwt)/)"],
   "setupFiles": ["<rootDir>/setup.ts"],
   "globalSetup": "<rootDir>/global-setup.ts",
   "testTimeout": 60000

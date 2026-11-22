@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { showToast } from '@/components/ui/toast';
 import { CreateEventModal } from '@/components/features/investments/create-event-modal';
+import { PricingToggle } from '@/components/features/investments/pricing-toggle';
 
 export default function HoldingDetailPage() {
   const params = useParams();
@@ -112,6 +113,12 @@ export default function HoldingDetailPage() {
           </p>
         </div>
       </div>
+
+      {/* Auto-pricing toggle */}
+      <section>
+        <h2 className="text-lg font-medium text-fg-primary mb-4">Pricing</h2>
+        <PricingToggle holding={holding} />
+      </section>
 
       {/* Events timeline */}
       <div>

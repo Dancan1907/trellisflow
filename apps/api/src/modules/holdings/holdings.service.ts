@@ -4,6 +4,7 @@ import { CreateHoldingDto } from './dto/create-holding.dto';
 import { randomUUID } from 'crypto';
 import { QueryHoldingsDto } from './dto/query-holdings.dto';
 import { UpdateHoldingDto } from './dto/update-holding.dto';
+import { SetPricingDto } from './dto/set-pricing.dto';
 
 /*
 @nestjs/common: Brings in tools we need to throw errors ie "Not Found" & mark the class as Injectable
@@ -303,5 +304,38 @@ export class HoldingsService {
       investmentsValue: Number(snapshot.investmentsNetWorth),
       totalValue: Number(snapshot.totalNetWorth),
     }));
+  }
+
+  // ==========================================================================
+  // Wave 5.7 — Auto-pricing
+  // ==========================================================================
+
+  /**
+   * Flip a holding between MANUAL and AUTO pricing.
+   * Only asset classes with a price provider are allowed to go AUTO.
+   */
+  async setPricing(userId: string, id: string, dto: SetPricingDto) {
+    const holding = await this.findOne(userId, id);
+
+    const autoAllowed = ['STOCK', 'ETF', 'CRYPTO'].includes(holding.assetClass);
+
+    if (dto.pricingMode === 'AUTO' && !autoAllowed) {
+      throw new BadRequestException(
+        `Auto-pricing is not available for ${holding.assetClass}. Use MANUAL.`,
+      );
+    }
+
+    if (dto.pricingMode === 'AUTO' && !dto.providerSymbol) {
+      throw new BadRequestException('providerSymbol is required when enabling auto-pricing.');
+    }
+
+    return this.prisma.holding.update({
+      where: { id },
+      data: {
+        pricingMode: dto.pricingMode,
+        providerSymbol: dto.pricingMode === 'AUTO' ? dto.providerSymbol : null,
+        priceProvider: dto.pricingMode === 'AUTO' ? (dto.priceProvider ?? null) : null,
+      },
+    });
   }
 }
