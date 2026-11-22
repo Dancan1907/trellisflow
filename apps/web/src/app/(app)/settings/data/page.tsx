@@ -139,9 +139,9 @@ export default function AuditDataPage() {
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
-      ) : entries && entries.length > 0 ? (
+      ) : entries && entries.items.length > 0 ? (
         <div className="border border-border-subtle rounded-lg overflow-hidden">
-          {entries.map((entry, i) => (
+          {entries.items.map((entry, i) => (
             <AuditRow
               key={entry.id}
               entry={entry}
