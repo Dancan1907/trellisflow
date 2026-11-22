@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '../api/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api/api-client';
 
 export interface Holding {
   id: string;
@@ -46,5 +46,47 @@ export function useHolding(id: string) {
     queryKey: ['holdings', id],
     queryFn: () => apiFetch<Holding>(`/api/holdings/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useSetHoldingPricing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      pricingMode,
+      providerSymbol,
+      priceProvider,
+    }: {
+      id: string;
+      pricingMode: 'MANUAL' | 'AUTO';
+      providerSymbol?: string;
+      priceProvider?: string;
+    }) =>
+      apiFetch(`/api/holdings/${id}/pricing`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pricingMode, providerSymbol, priceProvider }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['holdings'] });
+      qc.invalidateQueries({ queryKey: ['allocation'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useRefreshHoldingPrice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ updated: boolean; price?: number; provider?: string; error?: string }>(
+        `/api/holdings/${id}/refresh-price`,
+        { method: 'POST' },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['holdings'] });
+      qc.invalidateQueries({ queryKey: ['holding'] });
+      qc.invalidateQueries({ queryKey: ['allocation'] });
+    },
   });
 }
