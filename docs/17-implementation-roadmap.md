@@ -592,9 +592,13 @@ full design (limits, feature gates, architecture, Stripe plan, checklist).
 
 ### 5.10 — Data Export
 
-- ☐ JSON export
-- ☐ CSV export
-- ☐ PDF export
+**Status:** ☑ complete
+
+- ☑ JSON export — complete account backup (containers, accounts, transactions, budgets, goals, holdings)
+- ☑ CSV export — transaction ledger with date filters (`from` / `to` query params)
+- ☑ PDF export — Net Worth statement generated via `pdfkit`
+- ☑ UI — Export buttons added to `/settings/data` with direct file downloads
+- ☑ Tests — 3 E2E tests verifying JSON payload, CSV headers, and PDF magic bytes (`%PDF`)
 
 ### 5.11 — Release
 
