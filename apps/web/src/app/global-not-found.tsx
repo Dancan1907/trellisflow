@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function GlobalNotFound() {
   return (
     <html lang="en">
@@ -5,7 +7,7 @@ export default function GlobalNotFound() {
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           <h1>404 - Page Not Found</h1>
           <p>The page you are looking for does not exist.</p>
-          <a href="/">Go back home</a>
+          <Link href="/">Go back home</Link>
         </div>
       </body>
     </html>
