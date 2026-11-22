@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { RequestMethod } from '@nestjs/common';
+import { INestApplication, RequestMethod, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -53,7 +52,7 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
   });
 
   it('2. creates an internal business with accounts and an income transaction', async () => {
-    // Create the business
+    // Create the business — `type` defaults to INTERNAL_BUSINESS
     const businessRes = await request(app.getHttpServer())
       .post('/api/businesses')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -67,7 +66,7 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
     businessId = businessRes.body.id;
     expect(businessRes.body.type).toBe('INTERNAL_BUSINESS');
 
-    // Asset account — note: `initialBalance`, not `currentBalance`
+    // Asset account — `initialBalance` per CreateAccountDto
     const assetRes = await request(app.getHttpServer())
       .post('/api/accounts')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -96,7 +95,7 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
       })
       .expect(201);
 
-    // Income transaction — derive containerId from the account (wave-1-flow style)
+    // Income transaction — containerId is derived from the account
     await request(app.getHttpServer())
       .post('/api/transactions')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -109,7 +108,7 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
       })
       .expect(201);
 
-    // Sanity: 120000 + 5000 = 125000 asset, 30000 liability → 95000 net worth
+    // Sanity: 120k + 5k = 125k assets, 30k liabilities → 95k net worth
     const nwRes = await request(app.getHttpServer())
       .get(`/api/businesses/${businessId}/net-worth`)
       .set('Authorization', `Bearer ${accessToken}`)
@@ -127,26 +126,21 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
     expect(convertRes.body.type).toBe('EXTERNAL_BUSINESS');
     expect(convertRes.body.seedSummary.netWorth).toBe(95000);
 
-    // Container flipped, id preserved
     const container = await prisma.container.findUniqueOrThrow({ where: { id: businessId } });
     expect(container.type).toBe('EXTERNAL_BUSINESS');
 
-    // ExternalBusinessSource exists
     const source = await prisma.externalBusinessSource.findUniqueOrThrow({
       where: { containerId: businessId },
     });
     expect(source.sourceType).toBe('MANUAL');
 
-    // Accounts archived
     const accounts = await prisma.account.findMany({ where: { containerId: businessId } });
     expect(accounts).toHaveLength(2);
     expect(accounts.every((a) => a.status === 'ARCHIVED')).toBe(true);
 
-    // Transactions preserved
     const txCount = await prisma.transaction.count({ where: { containerId: businessId } });
     expect(txCount).toBe(1);
 
-    // Seed summary for today: assets 125k, liabilities 30k
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
     const seed = await prisma.summary.findFirstOrThrow({
@@ -155,7 +149,6 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
     expect(Number(seed.assetsValue)).toBe(125000);
     expect(Number(seed.liabilitiesValue)).toBe(30000);
 
-    // Audit row written
     const audit = await prisma.auditLog.findFirst({
       where: { entityType: 'container', entityId: businessId, action: 'UPDATE' },
       orderBy: { createdAt: 'desc' },
@@ -163,13 +156,13 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
     expect(audit).not.toBeNull();
     expect(audit!.changedFields).toContain('type');
 
-    // P&L now rejects external businesses
+    // P&L rejects external businesses
     await request(app.getHttpServer())
       .get(`/api/businesses/${businessId}/pnl`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(400);
 
-    // Idempotency: second convert is rejected
+    // Idempotency: second convert rejected
     await request(app.getHttpServer())
       .post(`/api/businesses/${businessId}/convert-to-external`)
       .set('Authorization', `Bearer ${accessToken}`)
@@ -178,7 +171,7 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
   });
 
   it('4. keeps trend continuity in the daily snapshot after conversion', async () => {
-    // Trigger the daily snapshot for all users (as the cron job would)
+    // Run the daily snapshot for all users
     await request(app.getHttpServer())
       .post('/api/snapshots/process-daily')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -189,9 +182,9 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
       orderBy: { date: 'desc' },
     });
 
-    // businessesNetWorth should reflect the seed summary — 125k assets − 30k liabilities = 95k.
-    // If conversion broke continuity, this would be 0 because external businesses with no
-    // summary contribute nothing, and this asserts the seed prevented that.
+    // businessesNetWorth = 125k assets − 30k liabilities = 95k.
+    // If continuity broke, external business with no summary contributes 0
+    // and this would fail — that's the regression guard.
     expect(Number(snapshot.businessesNetWorth)).toBe(95000);
   });
 });
