@@ -533,11 +533,12 @@
 - ☐ Finnhub (stocks, ETFs) — deferred, API key not obtained
 - ☐ CoinGecko (crypto) — deferred, API key not obtained
 - ☑ Fallback logic (per-provider try/catch, chain continues on failure)
-- ☑ Refresh job (30-min cron, idempotent running guard, batched concurrency)
-- ☑ UI toggle (Alpha Vantage selectable; crypto shows "coming soon" until CoinGecko key added)
+- ☑ Refresh job (30-min cron, idempotent running guard)
+- ☑ UI toggle (Alpha Vantage selectable; crypto shows "coming soon")
 - ☐ Multi-currency FX conversion (USD prices written as-is)
-- ☐ NSE equities (`.NR` symbols not covered by free tiers — manual-only)
+- ☐ NSE equities (manual-only)
 - ☑ Unit tests (4/4 passing)
+- ☑ Integration + E2E green (downgraded @nestjs/schedule to 6.1.3, @nestjs/jwt to 10.2.0 — ESM-only v12 broke Jest)
 
 ### 5.8 — Audit Log UI
 
