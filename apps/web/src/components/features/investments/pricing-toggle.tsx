@@ -8,15 +8,9 @@ import { showToast } from '@/components/ui/toast';
 const AUTO_ALLOWED = new Set(['STOCK', 'ETF', 'CRYPTO']);
 
 const PROVIDERS_BY_CLASS: Record<string, { value: string; label: string }[]> = {
-  STOCK: [
-    { value: 'alpha_vantage', label: 'Alpha Vantage' },
-    { value: 'finnhub', label: 'Finnhub' },
-  ],
-  ETF: [
-    { value: 'alpha_vantage', label: 'Alpha Vantage' },
-    { value: 'finnhub', label: 'Finnhub' },
-  ],
-  CRYPTO: [{ value: 'coingecko', label: 'CoinGecko' }],
+  STOCK: [{ value: 'alpha_vantage', label: 'Alpha Vantage' }],
+  ETF: [{ value: 'alpha_vantage', label: 'Alpha Vantage' }],
+  CRYPTO: [], // no provider configured yet — auto-pricing disabled below
 };
 
 interface Props {
@@ -32,6 +26,8 @@ interface Props {
 
 export function PricingToggle({ holding }: Props) {
   const enabled = AUTO_ALLOWED.has(holding.assetClass);
+  const hasProvider = (PROVIDERS_BY_CLASS[holding.assetClass]?.length ?? 0) > 0;
+
   const [mode, setMode] = useState(holding.pricingMode);
   const [providerSymbol, setProviderSymbol] = useState(holding.providerSymbol ?? '');
   const [priceProvider, setPriceProvider] = useState(holding.priceProvider ?? '');
@@ -39,11 +35,12 @@ export function PricingToggle({ holding }: Props) {
   const setPricing = useSetHoldingPricing();
   const refresh = useRefreshHoldingPrice();
 
-  if (!enabled) {
+  if (!enabled || !hasProvider) {
     return (
       <div className="rounded-md border border-border-subtle p-3 text-xs text-fg-secondary">
-        Auto-pricing is not available for {holding.assetClass.replace(/_/g, ' ').toLowerCase()}.
-        Update the value manually.
+        {enabled
+          ? `Auto-pricing for ${holding.assetClass.replace(/_/g, ' ').toLowerCase()} is coming soon. Update the value manually.`
+          : `Auto-pricing is not available for ${holding.assetClass.replace(/_/g, ' ').toLowerCase()}. Update the value manually.`}
       </div>
     );
   }
