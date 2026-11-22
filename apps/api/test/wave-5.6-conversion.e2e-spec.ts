@@ -3,6 +3,7 @@ import { INestApplication, RequestMethod, ValidationPipe } from '@nestjs/common'
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { SnapshotsService } from '../src/modules/snapshots/snapshots.service';
 
 describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
   let app: INestApplication;
@@ -171,11 +172,8 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
   });
 
   it('4. keeps trend continuity in the daily snapshot after conversion', async () => {
-    // Run the daily snapshot for all users
-    await request(app.getHttpServer())
-      .post('/api/snapshots/process-daily')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201);
+    const snapshotsService = app.get(SnapshotsService);
+    await snapshotsService.computeAndSaveForUser(userId);
 
     const snapshot = await prisma.netWorthSnapshot.findFirstOrThrow({
       where: { userId },
