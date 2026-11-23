@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 
 const isTest = () => process.env.NODE_ENV === 'test';
 
@@ -33,6 +34,22 @@ async function verifyPassword(hashStr: string, pw: string): Promise<boolean> {
   return argon2.verify(hashStr, pw);
 }
 
+// Shared select object to avoid repetition
+const userProfileSelect = {
+  id: true,
+  email: true,
+  name: true,
+  emailVerifiedAt: true,
+  timezone: true,
+  reportingCurrency: true,
+  tier: true,
+  personaHint: true,
+  createdAt: true,
+  hasSeenWelcome: true,
+  quickTourCompleted: true,
+  quickTourSkipped: true,
+} as const;
+
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -40,17 +57,7 @@ export class UsersService {
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        emailVerifiedAt: true,
-        timezone: true,
-        reportingCurrency: true,
-        tier: true,
-        personaHint: true,
-        createdAt: true,
-      },
+      select: userProfileSelect,
     });
 
     if (!user) {
@@ -67,17 +74,19 @@ export class UsersService {
         ...dto,
         personaHint: dto.personaHint as never,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        emailVerifiedAt: true,
-        timezone: true,
-        reportingCurrency: true,
-        tier: true,
-        personaHint: true,
-        createdAt: true,
+      select: userProfileSelect,
+    });
+  }
+
+  async updateOnboarding(userId: string, dto: UpdateOnboardingDto) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasSeenWelcome: dto.hasSeenWelcome,
+        quickTourCompleted: dto.quickTourCompleted,
+        quickTourSkipped: dto.quickTourSkipped,
       },
+      select: userProfileSelect,
     });
   }
 
