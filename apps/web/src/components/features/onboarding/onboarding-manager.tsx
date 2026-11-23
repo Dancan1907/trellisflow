@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// v3 uses a Named Export for Joyride and the EventData type
+// Import the named exports for v3
 import { Joyride, STATUS, Step } from 'react-joyride';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProfile, useUpdateOnboarding } from '@/lib/hooks/use-profile';
@@ -17,15 +17,12 @@ export function OnboardingManager() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    // Check if the user explicitly asked to restart the tour via URL (?tour=true)
     if (searchParams.get('tour') === 'true') {
       setRunTour(true);
-      // Clean up the URL so refreshing doesn't restart it forever
       router.replace('/dashboard');
       return;
     }
 
-    // Otherwise, check if they are a new user who hasn't seen the welcome modal
     if (!isLoading && user && !user.hasSeenWelcome) {
       setShowWelcome(true);
     }
@@ -48,7 +45,6 @@ export function OnboardingManager() {
     router.push('/help');
   };
 
-  // v3 passes the data as 'any' if we don't strictly type it, which prevents build errors
   const handleJoyrideCallback = (data: any) => {
     const { status } = data;
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
@@ -60,7 +56,6 @@ export function OnboardingManager() {
     }
   };
 
-  // Define the 6 steps of the tour
   const steps: Step[] = [
     {
       target: '#tour-dashboard',
@@ -100,7 +95,6 @@ export function OnboardingManager() {
     },
   ];
 
-  // Don't render anything until the user profile is loaded
   if (isLoading) return null;
 
   return (
@@ -116,7 +110,6 @@ export function OnboardingManager() {
         steps={steps}
         run={runTour}
         continuous
-        showProgress
         showSkipButton
         callback={handleJoyrideCallback}
       />
