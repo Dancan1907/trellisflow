@@ -43,7 +43,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
     items: [
       { label: 'Budgets', href: '/budgets', icon: Wallet },
       { label: 'Goals', href: '/goals', icon: Target },
-      { label: 'Debt', href: '/debt', icon: CreditCard },
+      { label: 'Debt', href: '/debts', icon: CreditCard },
     ],
   },
   {
