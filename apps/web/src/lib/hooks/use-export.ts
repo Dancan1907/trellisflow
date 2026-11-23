@@ -41,7 +41,10 @@ function getAuthToken(): string | null {
   const cookieKeys = ['token', 'access_token', 'accessToken', 'jwt'];
   for (const key of cookieKeys) {
     const match = document.cookie.match(new RegExp('(^| )' + key + '=([^;]+)'));
-    if (match) return match[2].replace(/^Bearer\s+/i, '');
+    // FIX: Added `&& match[2]` so TS knows the string definitely exists
+    if (match && match[2]) {
+      return match[2].replace(/^Bearer\s+/i, '');
+    }
   }
 
   return null;
@@ -53,9 +56,6 @@ export async function downloadFile(endpoint: string, filename: string) {
   if (!token) {
     throw new Error('Authentication token not found. Please log in again.');
   }
-
-  // Debugging: Log the token to the console so you can see what is being sent
-  console.log('Downloading with token:', token.slice(0, 15) + '...');
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
 
