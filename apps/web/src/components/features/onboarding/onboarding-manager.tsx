@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// Import the named exports for v3
 import { Joyride, STATUS, Step } from 'react-joyride';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProfile, useUpdateOnboarding } from '@/lib/hooks/use-profile';
@@ -62,36 +61,42 @@ export function OnboardingManager() {
       content:
         'This is your Dashboard. Here you get a unified snapshot of your total net worth, cash flow, and recent activity.',
       placement: 'right',
+      skipBeacon: true,
     },
     {
       target: '#tour-personal',
       content:
         'The Personal section is where you track your everyday money. Add your bank accounts, mobile money, and record daily transactions here.',
       placement: 'right',
+      skipBeacon: true,
     },
     {
       target: '#tour-investments',
       content:
         'In Investments, you can track your portfolio. Add stocks, crypto, or real estate, and monitor your unrealized gains.',
       placement: 'right',
+      skipBeacon: true,
     },
     {
       target: '#tour-businesses',
       content:
         'Managing a business? Use this section to track business accounts, calculate P&L, and monitor cash runway.',
       placement: 'right',
+      skipBeacon: true,
     },
     {
       target: '#tour-plan',
       content:
         'The Plan section helps you look forward. Set up budgets, create savings goals, and simulate debt payoff strategies.',
       placement: 'right',
+      skipBeacon: true,
     },
     {
       target: '#tour-analyze',
       content:
         'Finally, the Analyze section gives you deep reports and automated insights to help you make better financial decisions.',
       placement: 'right',
+      skipBeacon: true,
     },
   ];
 
@@ -106,13 +111,7 @@ export function OnboardingManager() {
         onOpenGuide={handleOpenGuide}
       />
 
-      <Joyride
-        steps={steps}
-        run={runTour}
-        continuous
-        showSkipButton
-        callback={handleJoyrideCallback}
-      />
+      <Joyride steps={steps} run={runTour} continuous callback={handleJoyrideCallback} />
     </>
   );
 }
