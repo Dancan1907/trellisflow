@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { BookOpen, PlayCircle } from 'lucide-react';
 import { useProfile, useUpdateProfile } from '@/lib/hooks/use-profile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showToast } from '@/components/ui/toast';
@@ -49,7 +51,8 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
+    <div className="space-y-12 max-w-lg">
+      {/* Profile Form */}
       <div>
         <h2 className="text-lg font-medium text-fg-primary mb-1">Profile</h2>
         <p className="text-xs text-fg-secondary mb-6">Manage your personal information.</p>
@@ -93,6 +96,56 @@ export default function ProfileSettingsPage() {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Help & Guides Section */}
+      <div className="pt-8 border-t border-border-subtle">
+        <h2 className="text-lg font-medium text-fg-primary mb-1">Help & Guides</h2>
+        <p className="text-xs text-fg-secondary mb-6">
+          Refresh your memory or explore new features.
+        </p>
+
+        <div className="bg-bg-secondary border border-border-subtle rounded-xl p-6 space-y-6">
+          {/* Full User Guide Link */}
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-accent-primary/10 rounded-lg shrink-0">
+              <BookOpen className="text-accent-primary" size={24} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-fg-primary mb-1">Full User Guide</h3>
+              <p className="text-xs text-fg-secondary mb-3">
+                Read detailed documentation on every feature in TrellisFlow.
+              </p>
+              <Link
+                href="/help"
+                className="inline-flex items-center gap-2 text-sm font-medium text-accent-primary hover:text-accent-hover transition-colors"
+              >
+                Open Help Center &rarr;
+              </Link>
+            </div>
+          </div>
+
+          <div className="h-px w-full bg-border-subtle" />
+
+          {/* Quick Tour Link */}
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-bg-tertiary rounded-lg shrink-0">
+              <PlayCircle className="text-fg-primary" size={24} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-fg-primary mb-1">Quick Tour</h3>
+              <p className="text-xs text-fg-secondary mb-3">
+                Take a 2-minute interactive tour of the platform.
+              </p>
+              <Link
+                href="/dashboard?tour=true"
+                className="inline-flex items-center gap-2 text-sm font-medium text-fg-primary hover:text-accent-primary transition-colors"
+              >
+                Restart Tour &rarr;
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
