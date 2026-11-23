@@ -14,6 +14,9 @@ import {
   ShieldCheck,
   PlayCircle,
   HelpCircle,
+  Box,
+  PieChart,
+  Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -164,6 +167,35 @@ export default function HelpPage() {
 
         <hr className="border-border-subtle" />
 
+        {/* Containers (MISSING PREVIOUSLY) */}
+        <section id="containers" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <Box className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">
+              Understanding Containers
+            </h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            A <strong>Container</strong> is simply a bucket that holds a specific type of financial
+            data. By keeping your Personal money, Investments, and Business finances in separate
+            containers, TrellisFlow can give you distinct reports for each while still rolling them
+            all up into a single Net Worth figure.
+          </p>
+          <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
+            <li>
+              <strong>Personal:</strong> For your everyday accounts, expenses, and income.
+            </li>
+            <li>
+              <strong>Investments:</strong> For tracking assets, portfolios, and market value.
+            </li>
+            <li>
+              <strong>Businesses:</strong> For tracking company revenue, expenses, and runway.
+            </li>
+          </ul>
+        </section>
+
+        <hr className="border-border-subtle" />
+
         {/* Personal Finance */}
         <section id="personal" className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-4">
@@ -219,7 +251,9 @@ export default function HelpPage() {
           </ul>
         </section>
 
-        {/* Businesses (Shortened for brevity, follows same pattern) */}
+        <hr className="border-border-subtle" />
+
+        {/* Businesses */}
         <section id="businesses" className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-4">
             <Building2 className="text-accent-primary" size={24} />
@@ -238,27 +272,24 @@ export default function HelpPage() {
 
         <hr className="border-border-subtle" />
 
-        {/* Planning & Analyze (Shortened) */}
+        {/* Planning & Budgets */}
         <section id="budgets" className="scroll-mt-24">
-          <h2 className="text-xl font-display font-semibold text-fg-primary mb-4">
-            Planning Your Finances
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-bold text-fg-primary mb-1">Budgets</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <Wallet className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">
+              Planning Your Finances
+            </h2>
+          </div>
+          <div className="space-y-6">
+            <div id="goals" className="scroll-mt-24">
+              <h3 className="text-sm font-bold text-fg-primary mb-1">Budgets & Savings Goals</h3>
               <p className="text-sm text-fg-secondary">
-                Set monthly spending limits for specific categories. TrellisFlow will alert you as
-                you approach your limit.
+                Set monthly spending limits for specific categories. Create savings goals (e.g., an
+                Emergency Fund) and link them to an account. TrellisFlow will project your
+                completion date based on your recent savings pace.
               </p>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-fg-primary mb-1">Savings Goals</h3>
-              <p className="text-sm text-fg-secondary">
-                Set a target amount (e.g., an Emergency Fund). Link it to an account, and we will
-                project your completion date based on your recent savings pace.
-              </p>
-            </div>
-            <div>
+            <div id="debt" className="scroll-mt-24">
               <h3 className="text-sm font-bold text-fg-primary mb-1">Debt Payoff</h3>
               <p className="text-sm text-fg-secondary">
                 Simulate Snowball and Avalanche strategies to see exactly when you will be debt-free
@@ -266,6 +297,59 @@ export default function HelpPage() {
               </p>
             </div>
           </div>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        {/* Reports & Insights (MISSING PREVIOUSLY) */}
+        <section id="reports" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <PieChart className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">
+              Reports & Insights
+            </h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            The <strong>Reports</strong> section gives you deep, historical views of your financial
+            life. You can generate Net Worth statements, view Cash Flow trends, and analyze your
+            Asset Allocation.
+          </p>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            Meanwhile, the <strong>Insights</strong> engine runs silently in the background,
+            scanning your data to alert you to unusual spending, budget overruns, or opportunities
+            to optimize your wealth.
+          </p>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        {/* Security & Privacy (MISSING PREVIOUSLY) */}
+        <section id="security" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <Lock className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">
+              Security & Privacy
+            </h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            Your financial data is highly sensitive. TrellisFlow is built with security at its core.
+          </p>
+          <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
+            <li>
+              <strong>Security Settings:</strong> You can change your password and review all active
+              sessions (devices) logged into your account from the Settings page. If you see a
+              device you don't recognize, you can revoke it instantly.
+            </li>
+            <li>
+              <strong>Data Export:</strong> You own your data. At any time, you can go to Settings
+              &gt; Data & Audit to download a complete JSON backup, a CSV of your transactions, or a
+              PDF Net Worth statement.
+            </li>
+            <li>
+              <strong>Audit Logs:</strong> Every single change (create, update, delete) is logged.
+              You can view this history to see exactly when a transaction or account was modified.
+            </li>
+          </ul>
         </section>
       </main>
     </div>
