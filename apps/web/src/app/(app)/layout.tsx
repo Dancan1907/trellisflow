@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { MarketingFooter } from '@/components/layout/marketing-footer';
@@ -16,7 +16,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} />
         <main className="flex-1 overflow-y-auto flex flex-col">
           <div className="flex-1 p-4 md:p-8">
-            <OnboardingManager />
+            {/* Wrapping this in Suspense fixes the Next.js useSearchParams error */}
+            <Suspense fallback={null}>
+              <OnboardingManager />
+            </Suspense>
             {children}
           </div>
           <MarketingFooter />
