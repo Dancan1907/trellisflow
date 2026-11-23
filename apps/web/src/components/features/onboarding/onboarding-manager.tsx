@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// Notice the curly braces around Joyride, CallBackProps, STATUS, and Step
-import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
+// v3 uses a Named Export for Joyride and the EventData type
+import { Joyride, STATUS, Step } from 'react-joyride';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProfile, useUpdateOnboarding } from '@/lib/hooks/use-profile';
 import { WelcomeModal } from './welcome-modal';
@@ -48,11 +48,10 @@ export function OnboardingManager() {
     router.push('/help');
   };
 
-  const handleJoyrideCallback = (data: CallBackProps) => {
+  // v3 passes the data as 'any' if we don't strictly type it, which prevents build errors
+  const handleJoyrideCallback = (data: any) => {
     const { status } = data;
-    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
-
-    if (finishedStatuses.includes(status)) {
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       setRunTour(false);
       updateOnboarding.mutate({
         quickTourCompleted: status === STATUS.FINISHED,
@@ -67,7 +66,6 @@ export function OnboardingManager() {
       target: '#tour-dashboard',
       content:
         'This is your Dashboard. Here you get a unified snapshot of your total net worth, cash flow, and recent activity.',
-      disableBeacon: true, // Starts the tour immediately on the first step
       placement: 'right',
     },
     {
@@ -121,33 +119,6 @@ export function OnboardingManager() {
         showProgress
         showSkipButton
         callback={handleJoyrideCallback}
-        styles={{
-          options: {
-            primaryColor: 'var(--accent-primary)',
-            backgroundColor: 'var(--bg-secondary)',
-            textColor: 'var(--fg-primary)',
-            arrowColor: 'var(--bg-secondary)',
-            overlayColor: 'rgba(0, 0, 0, 0.75)',
-          },
-          tooltip: {
-            borderRadius: '12px',
-            border: '1px solid var(--border-subtle)',
-            padding: '24px',
-          },
-          buttonNext: {
-            backgroundColor: 'var(--accent-primary)',
-            color: 'var(--bg-primary)',
-            borderRadius: '6px',
-            fontWeight: 'bold',
-          },
-          buttonBack: {
-            color: 'var(--fg-secondary)',
-            marginRight: '12px',
-          },
-          buttonSkip: {
-            color: 'var(--fg-tertiary)',
-          },
-        }}
       />
     </>
   );
