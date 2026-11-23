@@ -37,12 +37,14 @@ module.exports = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'sans-serif'],
+        display: ['var(--font-jakarta)', 'sans-serif'],
         mono: ['var(--font-jetbrains)', 'monospace'],
       },
       borderRadius: {
-        sm: '4px',
-        md: '6px',
-        lg: '8px',
+        sm: '6px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
       },
     },
   },
