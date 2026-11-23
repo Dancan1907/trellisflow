@@ -3,30 +3,52 @@
 @tailwind utilities;
 
 :root {
-  /* Backgrounds */
-  --bg-primary: #0b1220;
-  --bg-secondary: #111a2e;
-  --bg-tertiary: #1a2540;
+  /* ========================================================================
+     🎨 BRAND COLOR PALETTE SELECTOR
+     To test different brand vibes, change the 3 variables below.
+     ======================================================================== */
+
+  /* OPTION 1: WARM SAGE GREEN (Default - Trust, Wealth, Calm) */
+  --accent-primary: #8fa89b;
+  --accent-primary-hover: #a3b8ac;
+  --accent-primary-subtle: #1e2622;
+
+  /* OPTION 2: MUTED GOLD / BRONZE (Old Money, Premium) */
+  /* --accent-primary: #d4a373; */
+  /* --accent-primary-hover: #e0b48b; */
+  /* --accent-primary-subtle: #2c2319; */
+
+  /* OPTION 3: TERRACOTTA / COPPER (Warm, Modern) */
+  /* --accent-primary: #c8795b; */
+  /* --accent-primary-hover: #d98c6e; */
+  /* --accent-primary-subtle: #2b1a15; */
+
+  /* OPTION 4: MONOCHROME / CREAM (Ultra-minimalist, Stark) */
+  /* --accent-primary: #e5e5e5; */
+  /* --accent-primary-hover: #ffffff; */
+  /* --accent-primary-subtle: #262626; */
+
+  /* ======================================================================== */
+
+  /* Warm Dark Mode Backgrounds */
+  --bg-primary: #0f0f0f; /* Deep warm charcoal */
+  --bg-secondary: #171717; /* Card background */
+  --bg-tertiary: #262626; /* Hover states / inputs */
 
   /* Borders */
-  --border-subtle: #1e293b;
-  --border-strong: #334155;
+  --border-subtle: #2e2e2e;
+  --border-strong: #404040;
 
-  /* Foregrounds */
-  --fg-primary: #f1f5f9;
-  --fg-secondary: #94a3b8;
-  --fg-tertiary: #64748b;
-
-  /* Accents */
-  --accent-primary: #2563eb;
-  --accent-primary-hover: #3b82f6;
-  --accent-primary-subtle: #1e3a8a;
+  /* Foregrounds (Text) */
+  --fg-primary: #ededed; /* Soft white */
+  --fg-secondary: #a3a3a3; /* Muted grey */
+  --fg-tertiary: #737373; /* Dark grey */
 
   /* Status */
-  --positive: #10b981;
-  --negative: #ef4444;
-  --warning: #f59e0b;
-  --info: #38bdf8;
+  --positive: #6ea37c;
+  --negative: #d97373;
+  --warning: #d4a373;
+  --info: #8fa89b;
 }
 
 body {
