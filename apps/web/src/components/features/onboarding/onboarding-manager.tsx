@@ -44,7 +44,8 @@ export function OnboardingManager() {
     router.push('/help');
   };
 
-  const handleJoyrideCallback = (data: any) => {
+  // v3 uses onEvent instead of callback
+  const handleJoyrideEvent = (data: any) => {
     const { status } = data;
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       setRunTour(false);
@@ -111,7 +112,7 @@ export function OnboardingManager() {
         onOpenGuide={handleOpenGuide}
       />
 
-      <Joyride steps={steps} run={runTour} continuous callback={handleJoyrideCallback} />
+      <Joyride steps={steps} run={runTour} continuous onEvent={handleJoyrideEvent} />
     </>
   );
 }
