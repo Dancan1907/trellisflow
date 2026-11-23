@@ -1,7 +1,5 @@
-import { Building2, TrendingUp, User, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
-import { AmountDisplay } from '@/components/shared/amount-display';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AmountDisplay } from '@/components/shared/amount-display';
 
 interface ContainerCard {
   id: string;
@@ -10,9 +8,6 @@ interface ContainerCard {
   currency: string;
   accountCount: number;
   netWorth: number;
-  latestSummary?: {
-    createdAt: string;
-  };
 }
 
 interface ContainerCardsProps {
@@ -23,72 +18,95 @@ interface ContainerCardsProps {
 export function ContainerCards({ isLoading, containers }: ContainerCardsProps) {
   if (isLoading || !containers) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-bg-secondary border border-border-subtle rounded-lg p-6 h-48">
-            <Skeleton className="h-6 w-24 mb-6" />
-            <Skeleton className="h-8 w-32 mb-4" />
-            <Skeleton className="h-4 w-20" />
+      <div className="bg-bg-secondary border border-border-subtle rounded-xl p-6 h-80">
+        <Skeleton className="h-6 w-32 mb-8" />
+        <div className="flex items-center gap-8">
+          <Skeleton className="w-32 h-32 rounded-full" />
+          <div className="space-y-4 flex-1">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
           </div>
-        ))}
+        </div>
       </div>
     );
   }
 
-  const getIcon = (type: string) => {
-    if (type === 'INVESTMENT') return TrendingUp;
-    if (type === 'INTERNAL_BUSINESS' || type === 'EXTERNAL_BUSINESS') return Building2;
-    return User;
-  };
+  const total = containers.reduce((sum, c) => sum + c.netWorth, 0);
 
-  const getHref = (type: string, id: string) => {
-    if (type === 'INVESTMENT') return '/investments';
-    if (type === 'INTERNAL_BUSINESS' || type === 'EXTERNAL_BUSINESS') return `/businesses/${id}`;
-    return '/personal';
-  };
+  // Calculate percentages for the donut chart
+  const getPercent = (value: number) => (total === 0 ? 0 : Math.round((value / total) * 100));
+
+  const personal = containers
+    .filter((c) => c.type === 'PERSONAL')
+    .reduce((s, c) => s + c.netWorth, 0);
+  const investments = containers
+    .filter((c) => c.type === 'INVESTMENT')
+    .reduce((s, c) => s + c.netWorth, 0);
+  const businesses = containers
+    .filter((c) => c.type.includes('BUSINESS'))
+    .reduce((s, c) => s + c.netWorth, 0);
+
+  // Hardcoded segments for CSS conic-gradient to match the design
+  const p1 = getPercent(personal);
+  const p2 = p1 + getPercent(investments);
+
+  // If all are zero, show a flat grey ring
+  const conicGradient =
+    total === 0
+      ? 'conic-gradient(var(--border-strong) 0% 100%)'
+      : `conic-gradient(
+        var(--accent-primary) 0% ${p1}%, 
+        var(--accent-purple) ${p1}% ${p2}%, 
+        var(--accent-gold) ${p2}% 100%
+      )`;
+
+  const currency = containers[0]?.currency || 'KES';
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {containers.map((card) => {
-        const Icon = getIcon(card.type);
-        const isExternal = card.type === 'EXTERNAL_BUSINESS';
-        const isStale =
-          isExternal &&
-          (!card.latestSummary ||
-            new Date().getTime() - new Date(card.latestSummary.createdAt).getTime() >
-              30 * 24 * 60 * 60 * 1000);
+    <div className="bg-bg-secondary border border-border-subtle rounded-xl p-6">
+      <h2 className="text-base font-semibold text-fg-primary mb-6">Your Portfolio Overview</h2>
 
-        return (
-          <Link
-            key={card.id}
-            href={getHref(card.type, card.id)}
-            className="group bg-bg-secondary border border-border-subtle rounded-lg p-6 hover:border-border-strong hover:bg-bg-tertiary transition-all"
-          >
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-md bg-bg-tertiary group-hover:bg-bg-secondary transition-colors">
-                  <Icon size={20} className="text-accent-primary" />
-                </div>
-                <h3 className="font-medium text-fg-primary">{card.name}</h3>
-              </div>
-              {isStale && (
-                <span className="bg-status-warning/10 text-status-warning text-xs px-2 py-1 rounded font-medium">
-                  Needs Update
-                </span>
-              )}
+      <div className="flex flex-col sm:flex-row items-center gap-8">
+        {/* Donut Chart */}
+        <div
+          className="relative w-36 h-36 shrink-0 rounded-full flex items-center justify-center"
+          style={{ background: conicGradient }}
+        >
+          {/* Inner circle to make it a donut */}
+          <div className="absolute inset-0 m-auto w-24 h-24 bg-bg-secondary rounded-full flex flex-col items-center justify-center">
+            <span className="text-xs text-fg-secondary">Total</span>
+            <span className="text-sm font-bold text-fg-primary">
+              <AmountDisplay value={total} currency={currency} />
+            </span>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex-1 w-full space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-accent-primary" />
+              <span className="text-sm text-fg-secondary">Personal</span>
             </div>
-
-            <p className="text-2xl font-semibold text-fg-primary mb-1">
-              <AmountDisplay value={card.netWorth} currency={card.currency} />
-            </p>
-            <p className="text-xs text-fg-secondary mb-4">{card.accountCount} accounts</p>
-
-            <div className="flex items-center text-xs font-medium text-accent-primary group-hover:translate-x-1 transition-transform">
-              View details <ArrowRight size={14} className="ml-1" />
+            <span className="text-sm font-medium text-fg-primary">{getPercent(personal)}%</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-accent-purple" />
+              <span className="text-sm text-fg-secondary">Investments</span>
             </div>
-          </Link>
-        );
-      })}
+            <span className="text-sm font-medium text-fg-primary">{getPercent(investments)}%</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-accent-gold" />
+              <span className="text-sm text-fg-secondary">Businesses</span>
+            </div>
+            <span className="text-sm font-medium text-fg-primary">{getPercent(businesses)}%</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
