@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Joyride, Step, CallBackProps, STATUS } from 'react-joyride';
+import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProfile, useUpdateOnboarding } from '@/lib/hooks/use-profile';
 import { WelcomeModal } from './welcome-modal';
