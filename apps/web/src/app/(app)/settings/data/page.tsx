@@ -82,6 +82,7 @@ export default function AuditDataPage() {
       if (type === 'pdf') await exportPdf();
       showToast('success', 'Export downloaded successfully');
     } catch (err) {
+      console.error('Export Error Details:', err);
       showToast('error', 'Export failed', err instanceof Error ? err.message : 'Unknown error');
     }
   };
