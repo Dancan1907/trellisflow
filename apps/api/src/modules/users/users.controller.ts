@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -23,6 +24,12 @@ export class UsersController {
   @ApiOperation({ summary: 'Update the current user profile' })
   async updateProfile(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(user.id, dto);
+  }
+
+  @Patch('me/onboarding')
+  @ApiOperation({ summary: 'Update onboarding progress (welcome modal, tours)' })
+  async updateOnboarding(@CurrentUser() user: any, @Body() dto: UpdateOnboardingDto) {
+    return this.usersService.updateOnboarding(user.id, dto);
   }
 
   @Post('me/change-password')
