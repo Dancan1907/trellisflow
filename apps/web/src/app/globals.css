@@ -3,30 +3,34 @@
 @tailwind utilities;
 
 :root {
-  /* Backgrounds */
-  --bg-primary: #0b1220;
-  --bg-secondary: #111a2e;
-  --bg-tertiary: #1a2540;
+  /* Backgrounds (Deep Black-Green from image 3) */
+  --bg-primary: #090b0a;
+  --bg-secondary: #121614;
+  --bg-tertiary: #1a211e;
 
   /* Borders */
-  --border-subtle: #1e293b;
-  --border-strong: #334155;
+  --border-subtle: #2a302d;
+  --border-strong: #3f4743;
 
   /* Foregrounds */
-  --fg-primary: #f1f5f9;
-  --fg-secondary: #94a3b8;
-  --fg-tertiary: #64748b;
+  --fg-primary: #f1f3f2;
+  --fg-secondary: #9ca6a1;
+  --fg-tertiary: #6b7570;
 
-  /* Accents */
-  --accent-primary: #2563eb;
-  --accent-primary-hover: #3b82f6;
-  --accent-primary-subtle: #1e3a8a;
+  /* Accents (Vibrant Emerald) */
+  --accent-primary: #34d399;
+  --accent-primary-hover: #10b981;
+  --accent-primary-subtle: rgba(52, 211, 153, 0.15);
+
+  /* Secondary Accents (For charts/cards in image 3) */
+  --accent-purple: #a78bfa;
+  --accent-gold: #fbbf24;
 
   /* Status */
-  --positive: #10b981;
-  --negative: #ef4444;
-  --warning: #f59e0b;
-  --info: #38bdf8;
+  --positive: #34d399;
+  --negative: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
 }
 
 body {
@@ -34,4 +38,9 @@ body {
   color: var(--fg-primary);
   font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Glow Utility */
+.glow-effect {
+  box-shadow: 0 0 40px -10px var(--accent-primary);
 }
