@@ -602,11 +602,11 @@ full design (limits, feature gates, architecture, Stripe plan, checklist).
 
 ### 5.11 — Release
 
-- ☐ Full regression
-- ☐ Load test
-- ☐ Security audit
-- ☐ Deploy production
-- ☐ Tag `v1.0.0`
+- ☑ Full regression
+- ☑ Load test
+- ☑ Security audit
+- ☑ Deploy production
+- ☑ Tag `v1.0.0`
 
 **Deliverable:** MVP complete.
 
