@@ -104,7 +104,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        {...(item.tourId ? { id: item.tourId } : {})}
+                        id={
+                          item.href === '/dashboard'
+                            ? 'tour-dashboard'
+                            : item.href === '/personal'
+                              ? 'tour-personal'
+                              : item.href === '/investments'
+                                ? 'tour-investments'
+                                : item.href === '/businesses'
+                                  ? 'tour-businesses'
+                                  : undefined
+                        }
                         onClick={() => {
                           if (window.innerWidth < 768) onClose();
                         }}
