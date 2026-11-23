@@ -1,24 +1,40 @@
 import Link from 'next/link';
-import { ArrowRight, Wallet, TrendingUp, Building2 } from 'lucide-react';
+import { ArrowRight, Play, CheckCircle2 } from 'lucide-react';
 
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-bg-primary flex flex-col relative overflow-hidden">
-      {/* Background Glow Effect */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-accent-primary/10 blur-[120px] rounded-full pointer-events-none" />
+      {/* Background Glows */}
+      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-accent-primary/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-accent-primary/5 blur-[150px] rounded-full pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border-subtle bg-bg-primary/70 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-border-subtle bg-bg-primary/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {/* Simple Logo Mark */}
-            <div className="w-8 h-8 rounded-md bg-accent-primary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-accent-primary flex items-center justify-center glow-effect">
               <span className="text-bg-primary font-display font-bold text-lg">T</span>
             </div>
             <span className="text-xl font-display font-semibold tracking-tight text-fg-primary">
               TrellisFlow
             </span>
           </div>
+
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-fg-secondary">
+            <Link href="#features" className="hover:text-fg-primary transition-colors">
+              Features
+            </Link>
+            <Link href="#how-it-works" className="hover:text-fg-primary transition-colors">
+              How It Works
+            </Link>
+            <Link href="#pricing" className="hover:text-fg-primary transition-colors">
+              Pricing
+            </Link>
+            <Link href="#about" className="hover:text-fg-primary transition-colors">
+              About
+            </Link>
+          </nav>
+
           <div className="flex items-center gap-4">
             <Link
               href="/login"
@@ -28,7 +44,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/signup"
-              className="px-4 py-2 rounded-md bg-fg-primary text-bg-primary text-sm font-medium hover:bg-white transition-colors"
+              className="px-4 py-2 rounded-full bg-accent-primary text-bg-primary text-sm font-bold hover:bg-accent-hover transition-colors"
             >
               Sign up
             </Link>
@@ -37,63 +53,92 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 flex flex-col items-center justify-center px-6 pt-24 pb-16 text-center">
-        <h1 className="text-5xl md:text-7xl font-display font-semibold tracking-tight text-fg-primary mb-6 leading-[1.1]">
-          See all your money <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-primary to-fg-secondary">
-            in one place.
-          </span>
-        </h1>
-        <p className="text-lg text-fg-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
-          TrellisFlow brings your personal finances, investments, and businesses together in a
-          single, beautifully unified dashboard. Track what you have, watch what it becomes.
-        </p>
+      <section className="relative z-10 pt-24 pb-32 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
+          {/* Left: Copy */}
+          <div className="flex-1 text-center lg:text-left">
+            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-fg-primary mb-6 leading-[1.05]">
+              See all your money <br />
+              <span className="text-accent-primary">in one place.</span>
+            </h1>
+            <p className="text-lg text-fg-secondary max-w-xl mx-auto lg:mx-0 mb-10 leading-relaxed">
+              TrellisFlow brings your personal finances, investments, and businesses together in a
+              single, beautifully unified dashboard. Track what you have, watch what it becomes.
+            </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20 w-full sm:w-auto">
-          <Link
-            href="/signup"
-            className="group w-full sm:w-auto px-6 py-3 rounded-md bg-accent-primary text-bg-primary text-base font-medium hover:bg-accent-hover transition-all inline-flex items-center justify-center gap-2"
-          >
-            Get started — it&apos;s free
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link
-            href="/login"
-            className="w-full sm:w-auto px-6 py-3 rounded-md bg-bg-secondary border border-border-subtle text-fg-primary text-base font-medium hover:bg-bg-tertiary transition-colors text-center"
-          >
-            View Demo
-          </Link>
-        </div>
-
-        {/* App Mockup (Pure CSS) */}
-        <div className="relative w-full max-w-4xl mx-auto rounded-xl border border-border-subtle bg-bg-secondary/50 backdrop-blur-xl p-2 shadow-2xl">
-          <div className="rounded-lg bg-bg-primary border border-border-subtle overflow-hidden flex text-left">
-            {/* Fake Sidebar */}
-            <div className="w-48 border-r border-border-subtle bg-bg-secondary p-4 hidden md:block">
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded bg-border-strong" />
-                    <div className="h-3 w-24 bg-border-strong rounded" />
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+              <Link
+                href="/signup"
+                className="group px-8 py-4 rounded-full bg-accent-primary text-bg-primary text-base font-bold hover:bg-accent-hover transition-all inline-flex items-center gap-2 glow-effect"
+              >
+                Get started — it&apos;s free
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="/login"
+                className="px-8 py-4 rounded-full border border-border-strong text-fg-primary text-base font-semibold hover:bg-bg-secondary transition-colors inline-flex items-center gap-2"
+              >
+                <Play size={18} fill="currentColor" /> View Demo
+              </Link>
             </div>
+          </div>
 
-            {/* Fake Main Content */}
-            <div className="flex-1 p-8">
-              <div className="mb-8">
-                <div className="h-4 w-24 bg-border-strong rounded mb-2" />
-                <div className="h-10 w-64 bg-fg-primary/90 rounded" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="h-32 rounded-lg bg-bg-secondary border border-border-subtle p-4">
-                  <div className="h-3 w-16 bg-border-strong rounded mb-4" />
-                  <div className="h-8 w-32 bg-accent-primary/20 rounded" />
-                </div>
-                <div className="h-32 rounded-lg bg-bg-secondary border border-border-subtle p-4">
-                  <div className="h-3 w-16 bg-border-strong rounded mb-4" />
-                  <div className="h-8 w-32 bg-accent-primary/20 rounded" />
+          {/* Right: 3D App Mockup (Pure CSS) */}
+          <div className="flex-1 relative perspective-1000">
+            <div className="relative transform lg:rotate-y-[-10deg] lg:rotate-x-[5deg] transition-transform duration-500 hover:rotate-0">
+              {/* Glowing Chart behind phone */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[80%] bg-accent-primary/20 blur-[80px] rounded-full pointer-events-none" />
+
+              {/* Fake Phone/Dashboard Window */}
+              <div className="relative bg-bg-secondary border border-border-strong rounded-2xl p-2 shadow-2xl backdrop-blur-xl">
+                <div className="bg-bg-primary rounded-xl overflow-hidden border border-border-subtle p-6">
+                  {/* Dashboard Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-accent-primary" />
+                      <div className="h-2 w-20 bg-border-strong rounded" />
+                    </div>
+                    <div className="h-6 w-6 rounded-full bg-border-strong" />
+                  </div>
+
+                  {/* Main Chart Area */}
+                  <div className="h-40 bg-gradient-to-t from-accent-primary/20 to-transparent rounded-lg border border-border-subtle relative overflow-hidden mb-6 flex items-end">
+                    <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                      <path
+                        d="M0,100 L0,80 Q20,70 30,50 T60,40 T100,10 L100,100 Z"
+                        fill="url(#grad)"
+                        opacity="0.2"
+                      />
+                      <path
+                        d="M0,80 Q20,70 30,50 T60,40 T100,10"
+                        fill="none"
+                        stroke="var(--accent-primary)"
+                        strokeWidth="2"
+                      />
+                      <defs>
+                        <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--accent-primary)" />
+                          <stop offset="100%" stopColor="transparent" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute top-4 left-4 bg-bg-secondary/80 backdrop-blur px-3 py-1 rounded-md border border-border-subtle">
+                      <p className="text-xs text-fg-secondary">Total Balance</p>
+                      <p className="text-lg font-bold text-fg-primary">KES 245,750</p>
+                    </div>
+                  </div>
+
+                  {/* Mini Cards */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-bg-tertiary p-3 rounded-lg border border-border-subtle">
+                      <p className="text-xs text-fg-secondary mb-1">Income</p>
+                      <p className="text-sm font-bold text-accent-primary">+ KES 15,000</p>
+                    </div>
+                    <div className="bg-bg-tertiary p-3 rounded-lg border border-border-subtle">
+                      <p className="text-xs text-fg-secondary mb-1">Expenses</p>
+                      <p className="text-sm font-bold text-negative">- KES 5,200</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -101,46 +146,24 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Feature highlights */}
-      <section className="relative z-10 border-t border-border-subtle bg-bg-secondary/30">
-        <div className="max-w-6xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-3 gap-12">
-          <Feature
-            icon={<Wallet size={24} className="text-accent-primary" />}
-            title="Personal finances"
-            description="Accounts, transactions, budgets, and savings goals — everything for your day-to-day money, cleanly organized."
-          />
-          <Feature
-            icon={<TrendingUp size={24} className="text-accent-primary" />}
-            title="Investments"
-            description="Track stocks, crypto, real estate, and other holdings with realized and unrealized gains."
-          />
-          <Feature
-            icon={<Building2 size={24} className="text-accent-primary" />}
-            title="Businesses"
-            description="Manage your businesses alongside your personal wealth — with P&L, runway, and cross-business views."
-          />
+      {/* Benefits Banner */}
+      <section className="relative z-10 border-t border-border-subtle bg-bg-secondary/40 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              'Modern, clean design with consistent green theme',
+              'Clearer data visualization (charts & graphs)',
+              'Personalized greeting & date filters',
+              'Mobile-friendly layout',
+            ].map((text, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <CheckCircle2 className="text-accent-primary shrink-0 mt-0.5" size={20} />
+                <p className="text-sm text-fg-primary font-medium">{text}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </main>
-  );
-}
-
-function Feature({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex flex-col group">
-      <div className="w-12 h-12 rounded-lg bg-bg-primary border border-border-subtle flex items-center justify-center mb-6 group-hover:border-accent-primary/50 transition-colors">
-        {icon}
-      </div>
-      <h3 className="text-lg font-display font-semibold text-fg-primary mb-2">{title}</h3>
-      <p className="text-sm text-fg-secondary leading-relaxed">{description}</p>
-    </div>
   );
 }
