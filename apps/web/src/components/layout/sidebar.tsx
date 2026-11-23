@@ -23,23 +23,27 @@ interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  tourId?: string;
 }
 
-const navSections: { title: string; items: NavItem[] }[] = [
+const navSections: { title: string; tourId?: string; items: NavItem[] }[] = [
   {
     title: 'Overview',
-    items: [{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, tourId: 'tour-dashboard' },
+    ],
   },
   {
     title: 'Money',
     items: [
-      { label: 'Personal', href: '/personal', icon: User },
-      { label: 'Investments', href: '/investments', icon: TrendingUp },
-      { label: 'Businesses', href: '/businesses', icon: Building2 },
+      { label: 'Personal', href: '/personal', icon: User, tourId: 'tour-personal' },
+      { label: 'Investments', href: '/investments', icon: TrendingUp, tourId: 'tour-investments' },
+      { label: 'Businesses', href: '/businesses', icon: Building2, tourId: 'tour-businesses' },
     ],
   },
   {
     title: 'Plan',
+    tourId: 'tour-plan',
     items: [
       { label: 'Budgets', href: '/budgets', icon: Wallet },
       { label: 'Goals', href: '/goals', icon: Target },
@@ -48,6 +52,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
   },
   {
     title: 'Analyze',
+    tourId: 'tour-analyze',
     items: [
       { label: 'Reports', href: '/reports', icon: BarChart3 },
       { label: 'Insights', href: '/insights', icon: Lightbulb },
@@ -87,7 +92,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-6">
           {navSections.map((section) => (
-            <div key={section.title}>
+            <div key={section.title} {...(section.tourId ? { id: section.tourId } : {})}>
               <h3 className="px-3 mb-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider">
                 {section.title}
               </h3>
@@ -99,6 +104,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
+                        {...(item.tourId ? { id: item.tourId } : {})}
                         onClick={() => {
                           if (window.innerWidth < 768) onClose();
                         }}
