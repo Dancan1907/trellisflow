@@ -1,19 +1,35 @@
-import { apiFetch } from '../api/api-client';
+export async function downloadFile(endpoint: string, filename: string) {
+  // 1. Try to get the token from localStorage, then fallback to cookies
+  let token = localStorage.getItem('access_token') || localStorage.getItem('token');
 
-// Helper to trigger browser download from binary response
-async function downloadFile(endpoint: string, filename: string) {
-  // We use fetch directly here because our apiFetch wrapper might assume JSON
-  const token = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith('access_token='))
-    ?.split('=')[1];
+  if (!token) {
+    token = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('access_token=') || row.startsWith('token='))
+      ?.split('=')[1];
+  }
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+  if (!token) {
+    throw new Error('Authentication token not found. Please log in again.');
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  if (!baseUrl) {
+    console.warn('NEXT_PUBLIC_API_URL is not set. Falling back to relative path.');
+  }
+
+  // 2. Fetch the file
+  const res = await fetch(`${baseUrl}${endpoint}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!res.ok) throw new Error('Export failed');
+  if (!res.ok) {
+    // Try to read the error message from the backend (e.g., 401 Unauthorized)
+    const errorText = await res.text();
+    throw new Error(`Export failed (${res.status}): ${errorText || res.statusText}`);
+  }
 
+  // 3. Trigger the browser download
   const blob = await res.blob();
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -21,6 +37,8 @@ async function downloadFile(endpoint: string, filename: string) {
   a.download = filename;
   document.body.appendChild(a);
   a.click();
+
+  // Cleanup
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
 }
