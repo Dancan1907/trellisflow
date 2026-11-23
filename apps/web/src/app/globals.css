@@ -3,52 +3,34 @@
 @tailwind utilities;
 
 :root {
-  /* ========================================================================
-     🎨 BRAND COLOR PALETTE SELECTOR
-     To test different brand vibes, change the 3 variables below.
-     ======================================================================== */
-
-  /* OPTION 1: WARM SAGE GREEN (Default - Trust, Wealth, Calm) */
-  --accent-primary: #8fa89b;
-  --accent-primary-hover: #a3b8ac;
-  --accent-primary-subtle: #1e2622;
-
-  /* OPTION 2: MUTED GOLD / BRONZE (Old Money, Premium) */
-  /* --accent-primary: #d4a373; */
-  /* --accent-primary-hover: #e0b48b; */
-  /* --accent-primary-subtle: #2c2319; */
-
-  /* OPTION 3: TERRACOTTA / COPPER (Warm, Modern) */
-  /* --accent-primary: #c8795b; */
-  /* --accent-primary-hover: #d98c6e; */
-  /* --accent-primary-subtle: #2b1a15; */
-
-  /* OPTION 4: MONOCHROME / CREAM (Ultra-minimalist, Stark) */
-  /* --accent-primary: #e5e5e5; */
-  /* --accent-primary-hover: #ffffff; */
-  /* --accent-primary-subtle: #262626; */
-
-  /* ======================================================================== */
-
-  /* Warm Dark Mode Backgrounds */
-  --bg-primary: #0f0f0f; /* Deep warm charcoal */
-  --bg-secondary: #171717; /* Card background */
-  --bg-tertiary: #262626; /* Hover states / inputs */
+  /* Backgrounds (Deep Black-Green from image 3) */
+  --bg-primary: #090b0a;
+  --bg-secondary: #121614;
+  --bg-tertiary: #1a211e;
 
   /* Borders */
-  --border-subtle: #2e2e2e;
-  --border-strong: #404040;
+  --border-subtle: #2a302d;
+  --border-strong: #3f4743;
 
-  /* Foregrounds (Text) */
-  --fg-primary: #ededed; /* Soft white */
-  --fg-secondary: #a3a3a3; /* Muted grey */
-  --fg-tertiary: #737373; /* Dark grey */
+  /* Foregrounds */
+  --fg-primary: #f1f3f2;
+  --fg-secondary: #9ca6a1;
+  --fg-tertiary: #6b7570;
+
+  /* Accents (Vibrant Emerald) */
+  --accent-primary: #34d399;
+  --accent-primary-hover: #10b981;
+  --accent-primary-subtle: rgba(52, 211, 153, 0.15);
+
+  /* Secondary Accents (For charts/cards in image 3) */
+  --accent-purple: #a78bfa;
+  --accent-gold: #fbbf24;
 
   /* Status */
-  --positive: #6ea37c;
-  --negative: #d97373;
-  --warning: #d4a373;
-  --info: #8fa89b;
+  --positive: #34d399;
+  --negative: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
 }
 
 body {
@@ -56,4 +38,9 @@ body {
   color: var(--fg-primary);
   font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Glow Utility */
+.glow-effect {
+  box-shadow: 0 0 40px -10px var(--accent-primary);
 }
