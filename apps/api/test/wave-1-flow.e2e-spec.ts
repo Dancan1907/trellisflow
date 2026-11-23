@@ -244,10 +244,11 @@ describe('Wave 1 — Golden Path (E2E)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBeGreaterThanOrEqual(2);
+    expect(Array.isArray(res.body.items)).toBe(true);
+    expect(res.body.items.length).toBeGreaterThanOrEqual(2);
+    expect(res.body.total).toBeGreaterThanOrEqual(2);
 
-    const entityTypes = new Set(res.body.map((e: any) => e.entityType));
+    const entityTypes = new Set(res.body.items.map((e: any) => e.entityType));
     expect(entityTypes.has('Transaction')).toBe(true);
   });
 

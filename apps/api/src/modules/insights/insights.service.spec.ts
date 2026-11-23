@@ -1,13 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InsightsService } from './insights.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GoalsService } from '../goals/goals.service';
 
 const mockPrisma = {
+  insight: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
   budget: { findMany: jest.fn() },
-  savingsGoal: { findMany: jest.fn() },
+  savingsGoal: { findMany: jest.fn(), findUnique: jest.fn() },
+  debtPayoffPlan: { findMany: jest.fn() },
+  account: { findUnique: jest.fn(), findMany: jest.fn() },
   transaction: { findMany: jest.fn() },
-  account: { findUnique: jest.fn() },
-  insight: { findFirst: jest.fn(), create: jest.fn() },
+  // NEW for Wave 5.5:
+  apiToken: { findMany: jest.fn() },
+  netWorthSnapshot: { findFirst: jest.fn() },
+  category: { findUnique: jest.fn() },
+  holding: { findMany: jest.fn() },
+  container: { findMany: jest.fn() },
 };
 
 describe('InsightsService (Unit)', () => {
@@ -15,10 +28,27 @@ describe('InsightsService (Unit)', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [InsightsService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        InsightsService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: GoalsService, useValue: { findAll: jest.fn().mockResolvedValue([]) } },
+      ],
     }).compile();
 
     service = module.get<InsightsService>(InsightsService);
+
+    // Default: safe mock resolutions so generateForUser() doesn't crash
+    mockPrisma.debtPayoffPlan.findMany.mockResolvedValue([]);
+    mockPrisma.savingsGoal.findMany.mockResolvedValue([]);
+    mockPrisma.budget.findMany.mockResolvedValue([]);
+    mockPrisma.insight.findFirst.mockResolvedValue(null);
+    mockPrisma.insight.findMany.mockResolvedValue([]);
+    mockPrisma.apiToken.findMany.mockResolvedValue([]);
+    mockPrisma.netWorthSnapshot.findFirst.mockResolvedValue(null);
+    mockPrisma.category.findUnique.mockResolvedValue(null);
+    mockPrisma.holding.findMany.mockResolvedValue([]);
+    mockPrisma.container.findMany.mockResolvedValue([]);
+    mockPrisma.account.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => jest.clearAllMocks());

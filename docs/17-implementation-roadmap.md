@@ -463,77 +463,142 @@
 
 ### 5.1 — External Business API
 
-- ☐ `POST /v1/summary` (single + bulk)
-- ☐ `GET /v1/business`
-- ☐ `GET /v1/summary/latest`
-- ☐ API token module (create/rotate/revoke)
-- ☐ Rotating token expiry + warnings
-- ☐ Payload validation
-- ☐ Rate limiting per token
-- ☐ Idempotency keys
-- ☐ Public API docs
-- ☐ Tests
+- ☑ `POST /v1/summary` (single + bulk, bulk at `/v1/summary/bulk`)
+- ☑ `GET /v1/business`
+- ☑ `GET /v1/summary/latest`
+- ☑ API token module (create/rotate/revoke)
+- ☑ Rotating token expiry + warnings
+- ☑ Payload validation
+- ☑ Rate limiting per token
+- ☑ Idempotency keys
+- ☑ Public API docs
+- ☑ Tests (unit + integration + e2e written; new rotate / idempotency / per-token-limit e2e awaiting a run)
 
 ### 5.2 — Advanced Budgets
 
-- ☐ Rollover budgets
-- ☐ Budget alerts
-- ☐ Envelope method
-- ☐ Copy previous month UI
-- ☐ Business budgets UI
-- ☐ Unbudgeted spending report
+- ☑ Rollover budgets
+- ☑ Budget alerts
+- ☑ Envelope method
+- ☑ Copy previous month UI
+- ☑ Business budgets UI
+- ☑ Unbudgeted spending report
 
 ### 5.3 — Savings Goals Advanced
 
-- ☐ Projected completion
-- ☐ Milestone alerts
-- ☐ Progress charts
+- ☑ Projected completion (recent-pace projection, required monthly amount, on-track/behind status)
+- ☑ Milestone alerts (25/50/75/90%, one per crossing, dismissals respected)
+- ☑ Progress charts (history, projection line, deadline marker)
+- ☑ Manual goal contributions (`GoalContribution`, add/withdraw)
+- ☑ Behind-schedule alerts (14-day throttle)
+- ☑ Tests (unit + integration written; E2E pending)
 
 ### 5.4 — Debt Payoff Planner
 
-- ☐ DebtPayoffPlan module
-- ☐ Snowball / avalanche
-- ☐ Projections
-- ☐ Cross-debt strategy view
-- ☐ Screens
-- ☐ Completion alerts
+- ☑ DebtPayoffPlan module
+- ☑ Snowball / avalanche
+- ☑ Projections
+- ☑ Cross-debt strategy view
+- ☑ Screens
+- ☑ Completion alerts
+- ☑ Unit + Integration tests
+- ☑ E2E test
 
 ### 5.5 — Insights Expansion
 
-- ☐ 7 additional rules
+- ☑ 7 additional rules
+- ☑ (1)TOKEN_EXPIRING API token expires in ≤ 7 days
+- ☑ (2)NET_WORTH_MILESTONE Crossed a round number (100k, 250k, 500k, 1M…)
+- ☑ (3)UNUSUAL_SPENDING Category spend > 150% of 3-month average
+- ☑ (4)OPTIMIZATION_OPPORTUNITY Savings ≥ 50k AND high-interest debt (≥ 15% APR)
+- ☑ (5)REBALANCE_SUGGESTED One asset class > 60% of portfolio
+- ☑ (6)PROFIT_DECLINE Business income dropped > 25% MoM
+- ☑ (7)RUNWAY_LOW Business cash runway < 3 months
 
 ### 5.6 — Internal → External Conversion
 
-- ☐ Conversion flow
-- ☐ Continuity in trend
-- ☐ UI
+**Status:** ☑ complete
+
+- ☑ Conversion flow
+- ☑ Continuity in trend
+- ☑ UI
+- ☑ Tests
+  - Unit: `businesses.service.convert.spec.ts` — 404, 400, happy path
+  - E2E: `test/wave-5.6-conversion.e2e-spec.ts` — signup → business → convert → seed summary → snapshot continuity → 400 on re-convert
 
 ### 5.7 — Auto-Pricing
 
-- ☐ Alpha Vantage + Finnhub (stocks)
-- ☐ CoinGecko (crypto)
-- ☐ Fallback logic
-- ☐ Refresh job
-- ☐ UI toggle
+**Status:** ☑ complete (Alpha Vantage only)
+
+- ☑ Alpha Vantage (stocks, ETFs)
+- ☐ Finnhub (stocks, ETFs) — deferred, API key not obtained
+- ☐ CoinGecko (crypto) — deferred, API key not obtained
+- ☑ Fallback logic (per-provider try/catch, chain continues on failure)
+- ☑ Refresh job (30-min cron, idempotent running guard)
+- ☑ UI toggle (Alpha Vantage selectable; crypto shows "coming soon")
+- ☐ Multi-currency FX conversion (USD prices written as-is)
+- ☐ NSE equities (manual-only)
+- ☑ Unit tests (4/4 passing)
+- ☑ Integration + E2E green (downgraded @nestjs/schedule to 6.1.3, @nestjs/jwt to 10.2.0 — ESM-only v12 broke Jest)
 
 ### 5.8 — Audit Log UI
 
-- ☐ Audit screen
-- ☐ Entity history viewer
-- ☐ Filters
+**Status:** ☑ complete (MVP — entity history wired into businesses only)
+
+- ☑ Audit screen
+  - `GET /api/audit` now returns paginated envelope: `{ items, total, limit, offset }`
+  - Filters: `entityType`, `entityId`, `action`, `from`, `to` (all server-side)
+  - `/settings/audit` page — filters bar, table, pagination, detail drawer
+- ☑ Entity history viewer
+  - `EntityHistory` reusable component (embeds a scoped audit table + detail drawer)
+  - Wired into `/businesses/[id]` as proof of concept
+  - Follow-up: embed into `/personal/accounts/[id]`, `/investments/[id]`, transaction drawer
+- ☑ Filters
+  - Dropdowns for entity type and action
+  - Date range pickers (from / to)
+  - Pagination via `limit` / `offset`
+- ☑ Detail drawer
+  - Field-by-field diff (using `changedFields[]`) with a "Show raw JSON" toggle
+- ☑ Tests
+  - `audit.service.spec.ts` — 6 unit tests updated for paginated response + `$transaction`
+  - `audit-filters.e2e-spec.ts` — 5 E2E tests covering envelope, all filters, and empty date range
+- ☐ CSV/JSON export of audit rows — deferred to 5.10 (Data Export)
 
 ### 5.9 — Tier & Billing Structure
 
-- ☐ Tier enforcement
-- ☐ Limit checks
-- ☐ Upgrade/downgrade screens
-- ☐ Stripe (optional)
+**Status:** ☐ Deferred — design captured in `docs/19-tier-and-billing.md`
+
+**Reason:** Testing coverage of Waves 5.1–5.8 and the MVP release (5.11)
+take priority. A half-implemented billing layer adds 403s at unexpected
+moments, complicates E2E testing, and requires product decisions (limit
+values, Stripe pricing) that haven't been validated with real users yet.
+
+**What's already in place:**
+
+- ☑ `UserTier` enum (`FREE | PAID`) on `User` — schema ready, unused
+- ☐ No limit enforcement
+- ☐ No upgrade/downgrade UI
+- ☐ No Stripe integration
+
+**What ships when 5.9 resumes:** see `docs/19-tier-and-billing.md` for the
+full design (limits, feature gates, architecture, Stripe plan, checklist).
+
+**Next steps for the eventual session:**
+
+- ☐ Validate FREE limits against real usage
+- ☐ Decide pricing (see §6 of the design doc)
+- ☐ Implement backend enforcement (guard + decorator + admin endpoint)
+- ☐ Implement frontend (billing page + upgrade banner)
+- ☐ Stripe Checkout + Customer Portal (separate PR)
 
 ### 5.10 — Data Export
 
-- ☐ JSON export
-- ☐ CSV export
-- ☐ PDF export
+**Status:** ☑ complete
+
+- ☑ JSON export — complete account backup (containers, accounts, transactions, budgets, goals, holdings)
+- ☑ CSV export — transaction ledger with date filters (`from` / `to` query params)
+- ☑ PDF export — Net Worth statement generated via `pdfkit`
+- ☑ UI — Export buttons added to `/settings/data` with direct file downloads
+- ☑ Tests — 3 E2E tests verifying JSON payload, CSV headers, and PDF magic bytes (`%PDF`)
 
 ### 5.11 — Release
 

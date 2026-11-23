@@ -1,9 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Target, Edit, Trash2 } from 'lucide-react';
-import { useGoals, useUpdateGoal, useDeleteGoal } from '@/lib/hooks/use-goals';
+import {
+  Plus,
+  Target,
+  Edit,
+  Trash2,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  PiggyBank,
+} from 'lucide-react';
+import { useGoals, useUpdateGoal, useDeleteGoal, type Goal } from '@/lib/hooks/use-goals';
 import { CreateGoalModal } from '@/components/features/goals/create-goal-modal';
+import { GoalProgressChart } from '@/components/features/goals/goal-progress-chart';
+import { AddContributionModal } from '@/components/features/goals/add-contribution-modal';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { ProgressBar } from '@/components/shared/progress-bar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,10 +22,72 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { Modal } from '@/components/ui/modal';
 import { showToast } from '@/components/ui/toast';
 
+const monthYear = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' });
+
+function ProjectionBadge({ goal }: { goal: Goal }) {
+  const p = goal.projection;
+  if (p.status === 'ACHIEVED') return null;
+
+  const base = 'mt-4 flex items-start gap-2 text-xs px-3 py-2 rounded';
+  const neutral = `${base} bg-bg-tertiary text-fg-secondary`;
+  const warn = `${base} bg-status-warning/10 text-status-warning`;
+
+  if (p.status === 'NO_DATA') {
+    return (
+      <div className={neutral}>
+        <Clock size={14} className="mt-0.5 shrink-0" />
+        <span>
+          {goal.linkedAccountId
+            ? 'Not enough savings activity yet to project a completion date.'
+            : 'Add a contribution to see a projected completion date.'}
+        </span>
+      </div>
+    );
+  }
+
+  if (p.status === 'BEHIND') {
+    return (
+      <div className={warn}>
+        <TrendingDown size={14} className="mt-0.5 shrink-0" />
+        <span>
+          At your current pace: <strong>{monthYear(p.projectedCompletionDate!)}</strong> (
+          {Math.abs(p.daysAhead ?? 0)} days late).
+          {p.requiredMonthly ? (
+            <>
+              {' '}
+              Save about{' '}
+              <strong>
+                {goal.currency} {Math.round(p.requiredMonthly).toLocaleString()}
+              </strong>{' '}
+              per month to hit your date.
+            </>
+          ) : null}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={neutral}>
+      <TrendingUp size={14} className="mt-0.5 shrink-0" />
+      <span>
+        {p.status === 'ON_TRACK' ? 'On track: ' : 'At your current pace: '}
+        <strong>{monthYear(p.projectedCompletionDate!)}</strong>
+        {p.status === 'ON_TRACK' && p.daysAhead ? (
+          <span className="ml-1 opacity-75">({p.daysAhead} days early)</span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 export default function GoalsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [editAmount, setEditAmount] = useState('');
+  const [contributionGoal, setContributionGoal] = useState<Goal | null>(null);
+  const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
 
   const { data: goals, isLoading } = useGoals();
   const updateGoal = useUpdateGoal();
@@ -59,11 +132,11 @@ export default function GoalsPage() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
         </div>
       ) : goals && goals.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {goals.map((goal) => (
             <div
               key={goal.id}
@@ -93,6 +166,9 @@ export default function GoalsPage() {
                   </div>
                   <p className="text-xs text-fg-secondary">
                     Target: <AmountDisplay value={goal.targetAmount} currency={goal.currency} />
+                    {goal.targetDate && (
+                      <span className="ml-2">by {monthYear(goal.targetDate)}</span>
+                    )}
                   </p>
                 </div>
                 <span className="text-xs font-medium px-2 py-1 rounded bg-bg-tertiary text-fg-secondary">
@@ -115,6 +191,33 @@ export default function GoalsPage() {
                 </div>
                 <ProgressBar percentage={goal.percentage} className="mt-4" />
               </div>
+
+              <ProjectionBadge goal={goal} />
+
+              <div className="mt-3 flex items-center gap-4">
+                <button
+                  onClick={() => setExpandedGoalId(expandedGoalId === goal.id ? null : goal.id)}
+                  className="text-xs text-accent-primary hover:text-accent-hover font-medium"
+                >
+                  {expandedGoalId === goal.id ? 'Hide progress' : 'Show progress'}
+                </button>
+                {!goal.linkedAccountId && (
+                  <button
+                    onClick={() => setContributionGoal(goal)}
+                    className="flex items-center gap-1 text-xs text-accent-primary hover:text-accent-hover font-medium"
+                  >
+                    <PiggyBank size={14} /> Add money
+                  </button>
+                )}
+              </div>
+
+              {expandedGoalId === goal.id && (
+                <GoalProgressChart
+                  goalId={goal.id}
+                  currency={goal.currency}
+                  targetDate={goal.targetDate}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -136,11 +239,13 @@ export default function GoalsPage() {
 
       <CreateGoalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
+      <AddContributionModal goal={contributionGoal} onClose={() => setContributionGoal(null)} />
+
       <Modal isOpen={!!editingGoal} onClose={() => setEditingGoal(null)} title="Edit Goal Target">
         <form onSubmit={handleEditSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-fg-primary mb-2">
-              Target Amount (KES)
+              Target Amount ({editingGoal?.currency ?? 'KES'})
             </label>
             <input
               type="number"

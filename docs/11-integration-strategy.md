@@ -55,6 +55,8 @@ This chapter defines how external businesses (systems running outside TrellisFlo
 
 ## The API Contract (v1)
 
+> **Note:** This section is the original design-time contract. The implemented contract (paths under `/api/v1`, camelCase fields, 60 requests/minute per token, standard error shape) is documented in [`docs/integrations/external-api.md`](integrations/external-api.md).
+
 ### Authentication
 
 ```

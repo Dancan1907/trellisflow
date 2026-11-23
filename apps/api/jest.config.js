@@ -27,7 +27,7 @@ module.exports = {
     },
   },
   testEnvironment: 'node',
-  transformIgnorePatterns: ['node_modules/(?!.*(@nestjs/jwt)/)'],
+  transformIgnorePatterns: ['node_modules/(?!(@nestjs/schedule|@nestjs/jwt)/)'],
   setupFiles: ['<rootDir>/test/setup.ts'],
   globalSetup: '<rootDir>/test/global-setup.ts',
   testTimeout: 30000,

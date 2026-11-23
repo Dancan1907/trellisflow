@@ -10,6 +10,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { BudgetPeriod } from '@prisma/client';
+import { BudgetMethod } from '@prisma/client';
 
 export class CreateBudgetDto {
   @ApiProperty({
@@ -50,4 +51,9 @@ export class CreateBudgetDto {
   @IsBoolean()
   @IsOptional()
   rollover?: boolean;
+
+  @ApiPropertyOptional({ enum: BudgetMethod, example: 'TARGET' })
+  @IsEnum(BudgetMethod)
+  @IsOptional()
+  method?: BudgetMethod;
 }

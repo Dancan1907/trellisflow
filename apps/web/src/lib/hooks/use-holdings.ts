@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '../api/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api/api-client';
 
 export interface Holding {
   id: string;
+  userId: string;
   containerId: string;
   accountId: string;
   name: string;
@@ -12,10 +13,18 @@ export interface Holding {
   costBasisTotal: string;
   currentValueTotal: string;
   currency: string;
-  status: 'OPEN' | 'CLOSED' | 'DELETED';
   acquiredDate: string | null;
-  pricingMode: string;
+  pricingMode: 'MANUAL' | 'AUTO';
+  priceProvider: string | null;
+  providerSymbol: string | null;
+  lastPricedAt: string | null;
   notes: string | null;
+  status: string;
+  closedAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  container?: { name: string };
 }
 
 export interface QueryHoldingsFilters {
@@ -46,5 +55,47 @@ export function useHolding(id: string) {
     queryKey: ['holdings', id],
     queryFn: () => apiFetch<Holding>(`/api/holdings/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useSetHoldingPricing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      pricingMode,
+      providerSymbol,
+      priceProvider,
+    }: {
+      id: string;
+      pricingMode: 'MANUAL' | 'AUTO';
+      providerSymbol?: string;
+      priceProvider?: string;
+    }) =>
+      apiFetch(`/api/holdings/${id}/pricing`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pricingMode, providerSymbol, priceProvider }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['holdings'] });
+      qc.invalidateQueries({ queryKey: ['allocation'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useRefreshHoldingPrice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ updated: boolean; price?: number; provider?: string; error?: string }>(
+        `/api/holdings/${id}/refresh-price`,
+        { method: 'POST' },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['holdings'] });
+      qc.invalidateQueries({ queryKey: ['holding'] });
+      qc.invalidateQueries({ queryKey: ['allocation'] });
+    },
   });
 }

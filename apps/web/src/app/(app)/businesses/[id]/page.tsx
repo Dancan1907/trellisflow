@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  ArrowRightLeft,
   Archive,
   Building2,
   Plus,
@@ -26,6 +27,8 @@ import { CreateAccountModal } from '@/components/features/personal/create-accoun
 import { AddTransactionModal } from '@/components/features/transactions/add-transaction-modal';
 import { AddSummaryModal } from '@/components/features/businesses/add-summary-modal';
 import { CorrectSummaryModal } from '@/components/features/businesses/correct-summary-modal';
+import { ConvertToExternalModal } from '@/components/features/businesses/convert-to-external-modal';
+import { EntityHistory } from '@/components/features/audit/entity-history';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -70,6 +73,7 @@ export default function BusinessDetailPage() {
 
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState<SerializedSummary | null>(null);
   const [transactionAccount, setTransactionAccount] = useState<BusinessAccount | null>(null);
 
@@ -172,6 +176,15 @@ export default function BusinessDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {!isExternal && (
+            <button
+              onClick={() => setIsConvertOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-md border border-border-subtle text-sm font-medium text-fg-secondary hover:text-fg-primary hover:border-accent-primary transition-colors"
+            >
+              <ArrowRightLeft size={16} />
+              Convert to External
+            </button>
+          )}
           <button
             onClick={handleArchive}
             disabled={archiveBusiness.isPending}
@@ -504,6 +517,9 @@ export default function BusinessDetailPage() {
         </section>
       )}
 
+      {/* Audit history for this business container */}
+      <EntityHistory entityType="container" entityId={business.id} title="Business History" />
+
       {/* Modals */}
       <CreateAccountModal
         isOpen={isAccountModalOpen}
@@ -517,6 +533,14 @@ export default function BusinessDetailPage() {
         onClose={() => setIsSummaryModalOpen(false)}
         businessId={business.id}
         currency={business.currency}
+      />
+
+      <ConvertToExternalModal
+        isOpen={isConvertOpen}
+        onClose={() => setIsConvertOpen(false)}
+        businessId={business.id}
+        businessName={business.name}
+        onConverted={() => router.refresh()}
       />
 
       {editingSummary && (

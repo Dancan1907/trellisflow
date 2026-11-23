@@ -4,6 +4,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { ClsModule } from 'nestjs-cls';
 
@@ -29,6 +30,11 @@ import { HoldingsModule } from './modules/holdings/holdings.module';
 import { InvestmentEventsModule } from './modules/investment-events/investment-events.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { SummariesModule } from './modules/summaries/summaries.module';
+import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
+import { ExternalApiModule } from './modules/external-api/external-api.module';
+import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
+import { DebtsModule } from './modules/debts/debts.module';
+import { ExportModule } from './modules/export/export.module';
 
 @Module({
   imports: [
@@ -40,6 +46,7 @@ import { SummariesModule } from './modules/summaries/summaries.module';
       global: true,
       middleware: { mount: true },
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     ContainersModule,
@@ -47,8 +54,10 @@ import { SummariesModule } from './modules/summaries/summaries.module';
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 10,
+        limit: 100,
       },
+      // Per-IP backstop for the public API (the per-token limit lives on ExternalApiController)
+      apiIpThrottler,
     ]),
     CategoriesModule,
     AccountsModule,
@@ -64,6 +73,10 @@ import { SummariesModule } from './modules/summaries/summaries.module';
     InvestmentEventsModule,
     BusinessesModule,
     SummariesModule,
+    ApiTokensModule,
+    ExternalApiModule,
+    DebtsModule,
+    ExportModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
