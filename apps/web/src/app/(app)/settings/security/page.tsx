@@ -1,7 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { KeyRound, Monitor, Smartphone, Globe, Trash2, LogOut, ShieldCheck } from 'lucide-react';
+import {
+  KeyRound,
+  Monitor,
+  Smartphone,
+  Globe,
+  Trash2,
+  LogOut,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import {
   useSessions,
   useRevokeSession,
@@ -105,49 +115,31 @@ export default function SecuritySettingsPage() {
           onSubmit={handleChangePassword}
           className="space-y-4 bg-bg-tertiary/40 border border-border-subtle rounded-lg p-6"
         >
-          <div>
-            <label className="block text-sm font-medium text-fg-secondary mb-1">
-              Current password
-            </label>
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <PasswordInput
+            label="Current password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-fg-secondary mb-1">
-                New password
-              </label>
-              <input
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-fg-secondary mb-1">
-                Confirm new password
-              </label>
-              <input
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary"
-              />
-            </div>
+            <PasswordInput
+              label="New password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={8}
+            />
+            <PasswordInput
+              label="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={8}
+            />
           </div>
 
           {passwordError && <p className="text-sm text-status-negative">{passwordError}</p>}
@@ -270,6 +262,36 @@ export default function SecuritySettingsPage() {
 // ============================================================================
 // Sub-components
 // ============================================================================
+
+// 1. Reusable Password Input with Eye Toggle
+interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+}
+
+function PasswordInput({ label, ...props }: PasswordInputProps) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-fg-secondary mb-1">{label}</label>
+      <div className="relative">
+        <input
+          {...props}
+          type={show ? 'text' : 'password'}
+          className="w-full h-10 pl-3 pr-10 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary"
+        />
+        <button
+          type="button"
+          onClick={() => setShow(!show)}
+          aria-label={show ? 'Hide password' : 'Show password'}
+          className="absolute right-0 top-0 h-10 px-3 flex items-center justify-center text-fg-tertiary hover:text-fg-secondary focus:outline-none transition-colors"
+        >
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function SessionRow({
   session,
