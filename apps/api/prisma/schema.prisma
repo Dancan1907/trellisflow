@@ -62,6 +62,12 @@ model User {
   tier              UserTier       @default(FREE)
   personaHint       PersonaHint?   @map("persona_hint")
   status            UserStatus     @default(ACTIVE)
+
+  // Onboarding State
+  hasSeenWelcome      Boolean      @default(false) @map("has_seen_welcome")
+  quickTourCompleted  Boolean      @default(false) @map("quick_tour_completed")
+  quickTourSkipped    Boolean      @default(false) @map("quick_tour_skipped")
+
   deletedAt         DateTime?      @map("deleted_at") @db.Timestamptz(6)
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)

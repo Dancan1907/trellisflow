@@ -14,7 +14,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../api/api-client';
 import { useAuthStore } from '../auth/auth-store';
 
-//Fetching User Details
 export interface Profile {
   id: string;
   email: string;
@@ -25,6 +24,9 @@ export interface Profile {
   tier: 'FREE' | 'PAID';
   personaHint: 'EMPLOYEE' | 'INVESTOR' | 'BUSINESS_OWNER' | 'MULTI_BUSINESS_OWNER' | null;
   createdAt: string;
+  hasSeenWelcome: boolean;
+  quickTourCompleted: boolean;
+  quickTourSkipped: boolean;
 }
 
 export function useProfile() {
@@ -34,7 +36,6 @@ export function useProfile() {
   });
 }
 
-//Updating User Information & Zustand Sync
 export interface UpdateProfileInput {
   name?: string;
   timezone?: string;
@@ -55,7 +56,6 @@ export function useUpdateProfile() {
       }),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
-      // Keep the Zustand user in sync so topbar shows the new name
       if (token) {
         setAuth(token, {
           id: updated.id,
@@ -72,7 +72,6 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
-//Password Rotation Mutation
 export function useChangePassword() {
   return useMutation({
     mutationFn: (input: ChangePasswordInput) =>
@@ -80,5 +79,26 @@ export function useChangePassword() {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+  });
+}
+
+// --- NEW: Onboarding Mutation ---
+export interface UpdateOnboardingInput {
+  hasSeenWelcome?: boolean;
+  quickTourCompleted?: boolean;
+  quickTourSkipped?: boolean;
+}
+
+export function useUpdateOnboarding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateOnboardingInput) =>
+      apiFetch<Profile>('/api/users/me/onboarding', {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
+    },
   });
 }
