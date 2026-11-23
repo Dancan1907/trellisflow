@@ -1,7 +1,12 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Play, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Play, CheckCircle2, Menu, X } from 'lucide-react';
 
 export default function LandingPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <main className="min-h-screen bg-bg-primary flex flex-col relative overflow-hidden">
       {/* Background Glows */}
@@ -20,22 +25,23 @@ export default function LandingPage() {
             </span>
           </div>
 
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-fg-secondary">
-            <Link href="#features" className="hover:text-fg-primary transition-colors">
+            <Link href="/features" className="hover:text-fg-primary transition-colors">
               Features
             </Link>
-            <Link href="#how-it-works" className="hover:text-fg-primary transition-colors">
+            <Link href="/how-it-works" className="hover:text-fg-primary transition-colors">
               How It Works
             </Link>
-            <Link href="#pricing" className="hover:text-fg-primary transition-colors">
+            <Link href="/pricing" className="hover:text-fg-primary transition-colors">
               Pricing
             </Link>
-            <Link href="#about" className="hover:text-fg-primary transition-colors">
+            <Link href="/about" className="hover:text-fg-primary transition-colors">
               About
             </Link>
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4">
             <Link
               href="/login"
               className="text-sm font-medium text-fg-secondary hover:text-fg-primary transition-colors"
@@ -49,13 +55,69 @@ export default function LandingPage() {
               Sign up
             </Link>
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden p-2 text-fg-primary"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
+
+        {/* Mobile Navigation Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden absolute top-16 left-0 w-full bg-bg-secondary border-b border-border-subtle py-4 px-6 flex flex-col gap-4 shadow-xl">
+            <Link
+              href="/features"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-fg-primary"
+            >
+              Features
+            </Link>
+            <Link
+              href="/how-it-works"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-fg-primary"
+            >
+              How It Works
+            </Link>
+            <Link
+              href="/pricing"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-fg-primary"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/about"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-fg-primary"
+            >
+              About
+            </Link>
+            <div className="h-px w-full bg-border-subtle my-2" />
+            <Link
+              href="/login"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-fg-secondary"
+            >
+              Log in
+            </Link>
+            <Link
+              href="/signup"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-bold text-accent-primary"
+            >
+              Sign up
+            </Link>
+          </div>
+        )}
       </header>
 
-      {/* Hero Section */}
+      {/* ... Keep the rest of your Hero Section, Benefits Banner exactly the same ... */}
       <section className="relative z-10 pt-24 pb-32 px-6">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
-          {/* Left: Copy */}
           <div className="flex-1 text-center lg:text-left">
             <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-fg-primary mb-6 leading-[1.05]">
               See all your money <br />
@@ -83,16 +145,11 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right: 3D App Mockup (Pure CSS) */}
           <div className="flex-1 relative perspective-1000">
             <div className="relative transform lg:rotate-y-[-10deg] lg:rotate-x-[5deg] transition-transform duration-500 hover:rotate-0">
-              {/* Glowing Chart behind phone */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[80%] bg-accent-primary/20 blur-[80px] rounded-full pointer-events-none" />
-
-              {/* Fake Phone/Dashboard Window */}
               <div className="relative bg-bg-secondary border border-border-strong rounded-2xl p-2 shadow-2xl backdrop-blur-xl">
                 <div className="bg-bg-primary rounded-xl overflow-hidden border border-border-subtle p-6">
-                  {/* Dashboard Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-accent-primary" />
@@ -100,8 +157,6 @@ export default function LandingPage() {
                     </div>
                     <div className="h-6 w-6 rounded-full bg-border-strong" />
                   </div>
-
-                  {/* Main Chart Area */}
                   <div className="h-40 bg-gradient-to-t from-accent-primary/20 to-transparent rounded-lg border border-border-subtle relative overflow-hidden mb-6 flex items-end">
                     <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
                       <path
@@ -127,8 +182,6 @@ export default function LandingPage() {
                       <p className="text-lg font-bold text-fg-primary">KES 245,750</p>
                     </div>
                   </div>
-
-                  {/* Mini Cards */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-bg-tertiary p-3 rounded-lg border border-border-subtle">
                       <p className="text-xs text-fg-secondary mb-1">Income</p>
@@ -146,7 +199,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Benefits Banner */}
       <section className="relative z-10 border-t border-border-subtle bg-bg-secondary/40 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
