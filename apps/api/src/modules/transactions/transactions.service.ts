@@ -62,7 +62,8 @@ export class TransactionsService {
           description: dto.description,
           categoryId: dto.categoryId,
           notes: dto.notes,
-          source: 'MANUAL',
+          mpesaReference: dto.mpesaReference,
+          source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL',
           status: 'POSTED',
         },
       });
