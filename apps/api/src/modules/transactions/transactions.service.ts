@@ -10,7 +10,7 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { QueryTransactionsDto } from './dto/query-transactions.dto';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { AuditLogService } from '../../common/services/audit.service';
-import { AuditAction } from '@prisma/client';
+import { AuditAction, TransactionSource } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { SnapshotsService } from '../snapshots/snapshots.service';
 
@@ -26,7 +26,11 @@ export class TransactionsService {
   /**
    * Create a new transaction (income or expense).
    */
-  async create(userId: string, dto: CreateTransactionDto) {
+  async create(
+    userId: string,
+    dto: CreateTransactionDto,
+    source: TransactionSource = 'MANUAL',
+  ) {
     // 1. Verify the account exists and belongs to the user
     const account = await this.prisma.account.findFirst({
       where: { id: dto.accountId, userId, status: 'ACTIVE' },
@@ -63,7 +67,7 @@ export class TransactionsService {
           categoryId: dto.categoryId,
           notes: dto.notes,
           mpesaReference: dto.mpesaReference,
-          source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL',
+          source,
           status: 'POSTED',
         },
       });
