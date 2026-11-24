@@ -31,6 +31,16 @@ describe('MpesaExtractionSchema', () => {
     expect(result.mpesaReference).toBeNull();
   });
 
+  it('preserves unsupported events instead of forcing an income or expense classification', () => {
+    const result = MpesaExtractionSchema.parse({
+      ...validDraft,
+      type: 'UNSUPPORTED',
+      uncertainties: ['This appears to be a balance inquiry.'],
+    });
+
+    expect(result.type).toBe('UNSUPPORTED');
+  });
+
   it('rejects zero or negative amounts', () => {
     expect(
       MpesaExtractionSchema.safeParse({ ...validDraft, amount: 0 }).success,
