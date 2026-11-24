@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { memoryStorage } from 'multer';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -35,7 +34,6 @@ export class MpesaImportController {
   @Throttle({ default: { limit: 8, ttl: 60000 } })
   @UseInterceptors(
     FileInterceptor('receipt', {
-      storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024, files: 1 },
       fileFilter: (_request, file, callback) => {
         const supported = ['image/jpeg', 'image/png', 'image/webp'];
