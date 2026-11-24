@@ -66,6 +66,26 @@ describe('AnthropicProvider', () => {
     );
   });
 
+  it('returns provider model and token usage through the neutral metering contract', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        model: 'claude-test-model',
+        content: [{ type: 'text', text: '{"type":"INCOME"}' }],
+        usage: { input_tokens: 145, output_tokens: 39 },
+      }),
+    }) as unknown as typeof fetch;
+
+    await expect(
+      provider.generateWithUsage({ systemPrompt: 'system', userPrompt: 'hello' }),
+    ).resolves.toEqual({
+      text: '{"type":"INCOME"}',
+      inputTokens: 145,
+      outputTokens: 39,
+      model: 'claude-test-model',
+    });
+  });
+
   it('rejects an empty text response', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
