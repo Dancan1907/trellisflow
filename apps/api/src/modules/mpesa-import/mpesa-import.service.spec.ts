@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { MpesaImportService } from './mpesa-import.service';
+import { MPESA_GOLDEN_FIXTURES } from './mpesa-golden-fixtures';
 
 describe('MpesaImportService', () => {
   const extraction = {
@@ -107,4 +108,21 @@ describe('MpesaImportService', () => {
 
     expect(transactionsService.create).not.toHaveBeenCalled();
   });
+});
+
+
+describe('M-Pesa golden SMS extraction contracts', () => {
+  it.each(MPESA_GOLDEN_FIXTURES)(
+    'returns the expected reviewed draft for $id',
+    async ({ sms, expected }) => {
+      aiProvider.generate.mockResolvedValueOnce(JSON.stringify(expected));
+
+      const result = await service.parse({ text: sms }, 'user-id');
+
+      expect(result.draft).toEqual(expected);
+      expect(result.requiresReview).toBe(true);
+      expect(result.canAutoSave).toBe(false);
+      expect(transactionsService.create).not.toHaveBeenCalled();
+    },
+  );
 });
