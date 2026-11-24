@@ -114,7 +114,7 @@ async function main(): Promise<void> {
       .trim()
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```$/, '');
-    let candidate: unknown;
+    let candidate: unknown = undefined;
     try {
       candidate = JSON.parse(normalized);
     } catch {
