@@ -115,14 +115,30 @@ describe('M-Pesa golden SMS extraction contracts', () => {
   it.each(MPESA_GOLDEN_FIXTURES)(
     'returns the expected reviewed draft for $id',
     async ({ sms, expected }) => {
-      aiProvider.generate.mockResolvedValueOnce(JSON.stringify(expected));
+      const provider = { generate: jest.fn().mockResolvedValue(JSON.stringify(expected)) };
+      const database = {
+        transaction: { findFirst: jest.fn().mockResolvedValue(null) },
+        account: { findFirst: jest.fn() },
+      };
+      const transactionWriter = { create: jest.fn() };
+      const settings = {
+        get: jest.fn((_key: string, fallback?: string) =>
+          _key === 'AI_MPESA_PARSE_ENABLED' ? 'true' : fallback,
+        ),
+      };
+      const parser = new MpesaImportService(
+        provider as any,
+        database as any,
+        settings as any,
+        transactionWriter as any,
+      );
 
-      const result = await service.parse({ text: sms }, 'user-id');
+      const result = await parser.parse({ text: sms }, 'user-id');
 
       expect(result.draft).toEqual(expected);
       expect(result.requiresReview).toBe(true);
       expect(result.canAutoSave).toBe(false);
-      expect(transactionsService.create).not.toHaveBeenCalled();
+      expect(transactionWriter.create).not.toHaveBeenCalled();
     },
   );
 });
