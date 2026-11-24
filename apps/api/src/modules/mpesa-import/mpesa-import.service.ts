@@ -71,7 +71,7 @@ export class MpesaImportService {
       throw new ServiceUnavailableException('Could not read this M-Pesa item. Please try again.');
     }
 
-    const normalized = raw.trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
+    const normalized = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
     let candidate: unknown;
     try {
       candidate = JSON.parse(normalized);
