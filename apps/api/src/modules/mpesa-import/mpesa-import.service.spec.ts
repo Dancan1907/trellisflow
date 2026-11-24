@@ -16,7 +16,7 @@ describe('MpesaImportService', () => {
   };
 
   let service: MpesaImportService;
-  let aiProvider: { generate: jest.Mock };
+  let aiProvider: { generate: jest.Mock; generateWithUsage?: jest.Mock };
   let prisma: { transaction: { findFirst: jest.Mock }; account: { findFirst: jest.Mock } };
   let transactionsService: { create: jest.Mock };
   let config: { get: jest.Mock };
