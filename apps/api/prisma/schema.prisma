@@ -926,6 +926,7 @@ model AiUsageEvent {
   model            String   @db.VarChar(128)
   inputTokens      Int      @default(0) @map("input_tokens")
   outputTokens     Int      @default(0) @map("output_tokens")
+  succeeded        Boolean  @default(true)
   estimatedCostUsd Decimal? @map("estimated_cost_usd") @db.Decimal(14, 8)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
