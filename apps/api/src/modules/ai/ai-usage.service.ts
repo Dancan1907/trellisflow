@@ -14,6 +14,7 @@ export interface AiUsageRecord {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  succeeded: boolean;
 }
 
 /**
@@ -117,6 +118,7 @@ export class AiUsageService {
           model: usage.model.slice(0, 128),
           inputTokens,
           outputTokens,
+          succeeded: usage.succeeded,
           estimatedCostUsd,
         },
       });
