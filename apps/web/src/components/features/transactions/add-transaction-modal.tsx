@@ -118,6 +118,7 @@ export function AddTransactionModal({
     try {
       await confirmMpesa.mutateAsync({
         type,
+        currency: parsed.draft.currency,
         amount: Number(amount),
         date,
         description,
