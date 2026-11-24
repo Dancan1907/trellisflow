@@ -115,7 +115,7 @@ export function AddTransactionModal({
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!parsed || hasDuplicate || isTransfer || !parsedCurrencyMatches) return;
+    if (!parsed || hasDuplicate || isTransfer || isUnsupported || !parsedCurrencyMatches) return;
     try {
       await confirmMpesa.mutateAsync({
         type,
