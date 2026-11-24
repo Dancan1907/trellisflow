@@ -36,6 +36,7 @@ import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
 import { DebtsModule } from './modules/debts/debts.module';
 import { ExportModule } from './modules/export/export.module';
 import { AiModule } from './modules/ai/ai.module';
+import { MpesaImportModule } from './modules/mpesa-import/mpesa-import.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AiModule } from './modules/ai/ai.module';
     PrismaModule,
     AuthModule,
     AiModule,
+    MpesaImportModule,
     ContainersModule,
     UsersModule,
     ThrottlerModule.forRoot([
