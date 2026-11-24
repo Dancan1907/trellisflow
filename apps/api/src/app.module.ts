@@ -35,6 +35,7 @@ import { ExternalApiModule } from './modules/external-api/external-api.module';
 import { apiIpThrottler } from './modules/api-tokens/api-token-throttle';
 import { DebtsModule } from './modules/debts/debts.module';
 import { ExportModule } from './modules/export/export.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { ExportModule } from './modules/export/export.module';
     ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
+    AiModule,
     ContainersModule,
     UsersModule,
     ThrottlerModule.forRoot([
