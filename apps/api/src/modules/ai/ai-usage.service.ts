@@ -1,8 +1,9 @@
 import {
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   ServiceUnavailableException,
-  TooManyRequestsException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
@@ -66,8 +67,9 @@ export class AiUsageService {
     }
 
     if (reservation.length === 0) {
-      throw new TooManyRequestsException(
+      throw new HttpException(
         `You have reached today's M-Pesa parsing limit of ${limit}. Try again tomorrow.`,
+        HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
