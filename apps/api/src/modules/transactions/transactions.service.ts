@@ -66,7 +66,7 @@ export class TransactionsService {
           description: dto.description,
           categoryId: dto.categoryId,
           notes: dto.notes,
-          mpesaReference: dto.mpesaReference,
+          mpesaReference: dto.mpesaReference?.trim().toUpperCase(),
           source,
           status: 'POSTED',
         },
