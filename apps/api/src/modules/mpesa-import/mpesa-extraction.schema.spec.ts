@@ -1,4 +1,5 @@
 import { MpesaExtractionSchema } from './mpesa-extraction.schema';
+import { MPESA_GOLDEN_FIXTURES } from './mpesa-golden-fixtures';
 
 describe('MpesaExtractionSchema', () => {
   const validDraft = {
@@ -61,4 +62,14 @@ describe('MpesaExtractionSchema', () => {
       MpesaExtractionSchema.safeParse({ ...validDraft, confidence: 1.5 }).success,
     ).toBe(false);
   });
+});
+
+
+describe('M-Pesa golden SMS fixtures', () => {
+  it.each(MPESA_GOLDEN_FIXTURES)(
+    'validates the expected extraction for $id ($description)',
+    ({ expected }) => {
+      expect(MpesaExtractionSchema.parse(expected)).toEqual(expected);
+    },
+  );
 });
