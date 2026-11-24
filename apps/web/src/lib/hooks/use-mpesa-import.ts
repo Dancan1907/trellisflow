@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../api/api-client';
 
 export interface MpesaExtractionDraft {
-  type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'UNSUPPORTED';
   amount: number;
   currency: string;
   date: string;
