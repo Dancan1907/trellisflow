@@ -6,18 +6,20 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AiGenerationRequest, AiProvider } from './ai-provider.interface';
+import { AiGenerationRequest, AiGenerationResult, AiProvider } from './ai-provider.interface';
 
 interface AnthropicMessageResponse {
   content?: Array<{ type: string; text?: string }>;
+  model?: string;
+  usage?: { input_tokens?: number; output_tokens?: number };
   error?: { message?: string };
 }
 
 /**
  * Anthropic Messages API adapter.
  *
- * Uses Node's built-in fetch so the API package does not need a vendor SDK
- * dependency. The rest of the application only sees the AiProvider contract.
+ * Uses Node's built-in fetch so the API package does not need a vendor SDK.
+ * Provider-specific response metadata is translated into the neutral AI contract.
  */
 @Injectable()
 export class AnthropicProvider implements AiProvider {
@@ -26,11 +28,15 @@ export class AnthropicProvider implements AiProvider {
   constructor(private readonly config: ConfigService) {}
 
   async generate(request: AiGenerationRequest): Promise<string> {
+    return (await this.generateWithUsage(request)).text;
+  }
+
+  async generateWithUsage(request: AiGenerationRequest): Promise<AiGenerationResult> {
     const apiKey = this.config.get<string>('ANTHROPIC_API_KEY');
-    const model = this.config.get<string>('ANTHROPIC_MODEL');
+    const configuredModel = this.config.get<string>('ANTHROPIC_MODEL');
     const timeoutMs = Number(this.config.get<string>('AI_REQUEST_TIMEOUT_MS', '20000'));
 
-    if (!apiKey || !model) {
+    if (!apiKey || !configuredModel) {
       throw new ServiceUnavailableException(
         'AI provider is not configured. Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL.',
       );
@@ -58,7 +64,7 @@ export class AnthropicProvider implements AiProvider {
           'anthropic-version': '2026-10-21',
         },
         body: JSON.stringify({
-          model,
+          model: configuredModel,
           max_tokens: request.maxOutputTokens ?? 1200,
           system: request.systemPrompt,
           messages: [{ role: 'user', content }],
@@ -90,6 +96,15 @@ export class AnthropicProvider implements AiProvider {
       throw new BadGatewayException('AI provider returned an empty response.');
     }
 
-    return text;
+    return {
+      text,
+      inputTokens: Number.isInteger(payload.usage?.input_tokens)
+        ? Math.max(0, payload.usage!.input_tokens!)
+        : 0,
+      outputTokens: Number.isInteger(payload.usage?.output_tokens)
+        ? Math.max(0, payload.usage!.output_tokens!)
+        : 0,
+      model: payload.model || configuredModel,
+    };
   }
 }
