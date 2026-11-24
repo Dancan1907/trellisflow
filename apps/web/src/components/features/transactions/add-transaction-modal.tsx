@@ -36,7 +36,7 @@ export function AddTransactionModal({
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [mode, setMode] = useState<'manual' | 'mpesa'>('manual');
   const [sourceMode, setSourceMode] = useState<'sms' | 'receipt'>('sms');
   const [smsText, setSmsText] = useState('');
