@@ -9,14 +9,18 @@ describe('AiUsageService', () => {
   };
   let config: { get: jest.Mock };
   let service: AiUsageService;
+  let dailyUpdate: jest.Mock;
+  let eventCreate: jest.Mock;
 
   beforeEach(() => {
+    dailyUpdate = jest.fn().mockResolvedValue({});
+    eventCreate = jest.fn().mockResolvedValue({});
     prisma = {
       $queryRaw: jest.fn().mockResolvedValue([{ id: 'reservation-id' }]),
       $transaction: jest.fn(async (callback: (tx: any) => Promise<void>) =>
         callback({
-          aiUsageDaily: { update: jest.fn().mockResolvedValue({}) },
-          aiUsageEvent: { create: jest.fn().mockResolvedValue({}) },
+          aiUsageDaily: { update: dailyUpdate },
+          aiUsageEvent: { create: eventCreate },
         }),
       ),
     };
@@ -77,13 +81,6 @@ describe('AiUsageService', () => {
     );
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    const transactionCallback = prisma.$transaction.mock.calls[0][0];
-    const dailyUpdate = jest.fn().mockResolvedValue({});
-    const eventCreate = jest.fn().mockResolvedValue({});
-    await transactionCallback({
-      aiUsageDaily: { update: dailyUpdate },
-      aiUsageEvent: { create: eventCreate },
-    });
 
     expect(dailyUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
