@@ -98,6 +98,8 @@ export class MpesaImportService {
         })
       : null;
 
+    this.logger.log(`M-Pesa extraction completed (source: ${input.image ? 'receipt' : 'sms'}).`);
+
     return {
       draft,
       duplicate: duplicate
@@ -151,10 +153,14 @@ export class MpesaImportService {
     }
 
     try {
-      return await this.transactionsService.create(userId, {
-        ...dto,
-        mpesaReference: dto.mpesaReference,
-      });
+      return await this.transactionsService.create(
+        userId,
+        {
+          ...dto,
+          mpesaReference: dto.mpesaReference,
+        },
+        'IMPORTED',
+      );
     } catch (error) {
       if (
         typeof error === 'object' &&
