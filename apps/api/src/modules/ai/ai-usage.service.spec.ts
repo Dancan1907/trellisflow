@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
+import { HttpStatus, ServiceUnavailableException } from '@nestjs/common';
 import { AiUsageService } from './ai-usage.service';
 
 describe('AiUsageService', () => {
