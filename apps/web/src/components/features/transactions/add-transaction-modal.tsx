@@ -49,6 +49,7 @@ export function AddTransactionModal({
   const parsedCurrencyMatches = parsed?.draft.currency === currency;
   const hasDuplicate = parsed?.duplicate.detected === true;
   const isTransfer = parsed?.draft.type === 'TRANSFER';
+  const isUnsupported = parsed?.draft.type === 'UNSUPPORTED';
 
   const handleClose = () => {
     setParsed(null);
@@ -252,6 +253,11 @@ export function AddTransactionModal({
                     This appears to be a transfer. To keep both account balances correct, record it through the dedicated transfer form with both accounts selected.
                   </div>
                 )}
+                {isUnsupported && (
+                  <div className="rounded-md border border-status-warning/40 bg-status-warning/5 p-3 text-sm text-fg-primary">
+                    This item could be a reversal, loan/overdraft event, balance message, or another unsupported transaction type. It cannot be imported as income or expense automatically. Please verify it and use manual entry if appropriate.
+                  </div>
+                )}
                 {!parsedCurrencyMatches && (
                   <div className="rounded-md border border-status-warning/40 bg-status-warning/5 p-3 text-sm text-fg-primary">
                     The receipt currency ({parsed.draft.currency}) does not match this account ({currency}). Choose an account with the matching currency before importing.
@@ -283,7 +289,7 @@ export function AddTransactionModal({
                 </div>
                 <div className="flex justify-between gap-3 pt-2">
                   <button type="button" onClick={() => setParsed(null)} className="px-3 py-2 rounded-md text-sm text-fg-secondary hover:bg-bg-tertiary">Try another item</button>
-                  <button type="submit" disabled={confirmMpesa.isPending || hasDuplicate || isTransfer || !parsedCurrencyMatches} className="px-4 py-2 rounded-md text-sm font-medium bg-accent-primary text-white disabled:opacity-50">{confirmMpesa.isPending ? 'Saving...' : 'Confirm and save'}</button>
+                  <button type="submit" disabled={confirmMpesa.isPending || hasDuplicate || isTransfer || isUnsupported || !parsedCurrencyMatches} className="px-4 py-2 rounded-md text-sm font-medium bg-accent-primary text-white disabled:opacity-50">{confirmMpesa.isPending ? 'Saving...' : 'Confirm and save'}</button>
                 </div>
               </form>
             )}
