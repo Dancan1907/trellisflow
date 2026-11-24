@@ -20,6 +20,7 @@ describe('MpesaImportService', () => {
   let prisma: { transaction: { findFirst: jest.Mock }; account: { findFirst: jest.Mock } };
   let transactionsService: { create: jest.Mock };
   let config: { get: jest.Mock };
+  let aiUsage: { reserveMpesaParse: jest.Mock; recordMpesaParse: jest.Mock };
 
   beforeEach(() => {
     aiProvider = { generate: jest.fn().mockResolvedValue(JSON.stringify(extraction)) };
@@ -28,6 +29,10 @@ describe('MpesaImportService', () => {
       account: { findFirst: jest.fn().mockResolvedValue({ currency: 'KES' }) },
     };
     transactionsService = { create: jest.fn().mockResolvedValue({ id: 'created-id' }) };
+    aiUsage = {
+      reserveMpesaParse: jest.fn().mockResolvedValue(new Date('2026-11-24T00:00:00.000Z')),
+      recordMpesaParse: jest.fn().mockResolvedValue(undefined),
+    };
     config = {
       get: jest.fn((key: string, fallback?: string) =>
         key === 'AI_MPESA_PARSE_ENABLED' ? 'true' : fallback,
@@ -38,6 +43,7 @@ describe('MpesaImportService', () => {
       prisma as any,
       config as any,
       transactionsService as any,
+      aiUsage as any,
     );
   });
 
@@ -50,6 +56,44 @@ describe('MpesaImportService', () => {
     expect(transactionsService.create).not.toHaveBeenCalled();
     expect(prisma.transaction.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ userId: 'user-id' }) }),
+    );
+  });
+
+  it('reserves one daily parse and records token usage returned by the provider', async () => {
+    aiProvider.generateWithUsage = jest.fn().mockResolvedValue({
+      text: JSON.stringify(extraction),
+      inputTokens: 321,
+      outputTokens: 87,
+      model: 'claude-test-model',
+    });
+
+    await service.parse({ text: 'Confirmed. Ksh1,250 sent to merchant.' }, 'user-id');
+
+    expect(aiUsage.reserveMpesaParse).toHaveBeenCalledWith('user-id');
+    expect(aiUsage.recordMpesaParse).toHaveBeenCalledWith(
+      'user-id',
+      new Date('2026-11-24T00:00:00.000Z'),
+      {
+        provider: 'anthropic',
+        model: 'claude-test-model',
+        inputTokens: 321,
+        outputTokens: 87,
+      },
+    );
+  });
+
+  it('records a failed provider attempt against the reserved daily quota', async () => {
+    aiProvider.generate.mockRejectedValue(new Error('provider unavailable'));
+
+    await expect(
+      service.parse({ text: 'Confirmed. Ksh1,250 sent to merchant.' }, 'user-id'),
+    ).rejects.toThrow();
+
+    expect(aiUsage.reserveMpesaParse).toHaveBeenCalledWith('user-id');
+    expect(aiUsage.recordMpesaParse).toHaveBeenCalledWith(
+      'user-id',
+      new Date('2026-11-24T00:00:00.000Z'),
+      expect.objectContaining({ inputTokens: 0, outputTokens: 0 }),
     );
   });
 
@@ -131,6 +175,10 @@ describe('M-Pesa golden SMS extraction contracts', () => {
         database as any,
         settings as any,
         transactionWriter as any,
+        {
+          reserveMpesaParse: jest.fn().mockResolvedValue(new Date('2026-11-24T00:00:00.000Z')),
+          recordMpesaParse: jest.fn().mockResolvedValue(undefined),
+        } as any,
       );
 
       const result = await parser.parse({ text: sms }, 'user-id');
