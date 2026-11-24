@@ -382,6 +382,7 @@ model Transaction {
   recurringRuleId  String?           @map("recurring_rule_id") @db.Uuid
   source           TransactionSource @default(MANUAL)
   idempotencyKey   String?           @map("idempotency_key")
+  mpesaReference   String?           @map("mpesa_reference") @db.VarChar(32)
   status           TransactionStatus @default(POSTED)
   deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(6)
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -400,6 +401,7 @@ model Transaction {
   @@index([categoryId, date])
   @@index([transferPairId])
   @@index([userId, idempotencyKey])
+  @@unique([userId, mpesaReference])
   @@map("transactions")
 }
 
