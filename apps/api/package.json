@@ -16,7 +16,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
-    "test:integration": "jest --config jest.config.js --testPathPattern=integration.spec.ts"
+    "test:integration": "jest --config jest.config.js --testPathPattern=integration.spec.ts",
+    "evaluate:mpesa": "ts-node src/scripts/evaluate-mpesa.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
