@@ -881,6 +881,26 @@ duplicate their business rules.
 
 ### 13.1 Feature 1: M-Pesa SMS and receipt parsing (P0)
 
+**Implementation status — 2026-11-24**
+
+The first implementation is available on `feature/mpesa-sms-parser` with draft PR #50 targeting `develop`. The latest GitHub Actions CI run passed unit tests, typecheck, lint, build, integration tests and E2E tests.
+
+Implemented in this increment:
+- Anthropic Claude is the initial provider, behind a provider-agnostic internal interface. The model and API key are server-configured; the adapter uses the Anthropic Messages API.
+- Authenticated parsing accepts one pasted SMS or one JPG, PNG or WebP receipt image (maximum 5 MB).
+- Structured output is validated with Zod. Missing values remain unknown, confidence and uncertainty are returned, and unsupported events are not forced into income/expense.
+- Duplicate M-Pesa references are checked and protected by a user-scoped unique database constraint.
+- Users review and edit a draft before confirmation. Confirmation reuses the existing transaction service; extraction itself never creates a transaction.
+- Raw SMS and receipt bytes are not persisted by TrellisFlow. The UI discloses that input is sent to Anthropic for extraction.
+
+Still required before enabling this for users:
+- Configure an Anthropic API key and select/verify the production model in the target environment; the feature flag remains off by default.
+- Run live-provider evaluations against representative Safaricom SMS and receipt fixtures, including OCR quality and field-level accuracy.
+- Add durable usage/cost telemetry and enforce the planned per-user daily quota. Current protection is an 8-requests-per-minute endpoint throttle plus non-content usage event logging.
+- Complete product/privacy review of Anthropic API data handling and manual UI verification with real receipts.
+- Transfer drafts are currently identified but must be recorded through the dedicated paired-account transfer workflow; ordinary confirmation is blocked to protect account balances.
+
+
 **User flow** 1. User opens the transaction page. 2. User selects Scan
 or Import M-Pesa. 3. User pastes an SMS or provides a supported receipt. 4. User requests parsing. 5. Backend validates input and calls the
 extraction service. 6. AI returns structured data. 7. Backend validates
@@ -1999,7 +2019,7 @@ These decisions materially affect scope and architecture.
 
 ### AI
 
-9.  Which model provider should be the initial production provider?
+9.  Resolved: Anthropic Claude is the initial provider, isolated behind the internal AI provider abstraction. The model remains environment-configurable.
 10. What monthly AI budget is acceptable?
 11. Should the copilot be available to all users or only selected plans?
 12. How much conversation history should be retained?
@@ -2056,14 +2076,16 @@ a short, dependency-aware sequence.
 
 ### Sprint 3 --- AI infrastructure and M-Pesa parsing
 
-- [ ] Select and verify provider and SDK versions.
-- [ ] Add server-side provider configuration.
-- [ ] Add Zod schemas.
-- [ ] Add usage logging and rate limits.
-- [ ] Build representative parsing fixtures.
-- [ ] Implement parse endpoint.
-- [ ] Build review and confirmation UI.
-- [ ] Verify no automatic transaction creation.
+- [x] Select the initial provider (Anthropic Claude) and isolate it behind a provider abstraction.
+- [x] Add server-side provider configuration and feature flags.
+- [x] Add Zod extraction validation schemas.
+- [x] Implement authenticated SMS and receipt-image parse endpoint.
+- [x] Build review and explicit confirmation UI using the existing transaction service.
+- [x] Verify extraction does not automatically create transactions; add unit tests.
+- [x] Add an initial endpoint rate limit and safe usage event logging.
+- [ ] Add durable token/cost telemetry and enforce a per-user daily quota.
+- [ ] Build representative golden parsing fixtures and live-provider evaluation.
+- [ ] Complete manual UI verification and production provider/privacy review.
 
 ### Sprint 4 --- Read-only copilot
 
