@@ -57,6 +57,7 @@ export class MpesaImportService {
       model: this.config.get<string>('ANTHROPIC_MODEL', 'unknown'),
       inputTokens: 0,
       outputTokens: 0,
+      succeeded: true,
     };
 
     const request = {
@@ -82,6 +83,7 @@ export class MpesaImportService {
         raw = await this.aiProvider.generate(request);
       }
     } catch (error) {
+      usage.succeeded = false;
       await this.recordUsageSafely(userId, usageDate, usage);
       if (error instanceof GatewayTimeoutException || error instanceof ServiceUnavailableException) {
         throw error;
@@ -148,7 +150,13 @@ export class MpesaImportService {
   private async recordUsageSafely(
     userId: string,
     usageDate: Date,
-    usage: { provider: string; model: string; inputTokens: number; outputTokens: number },
+    usage: {
+      provider: string;
+      model: string;
+      inputTokens: number;
+      outputTokens: number;
+      succeeded: boolean;
+    },
   ): Promise<void> {
     try {
       await this.aiUsage.recordMpesaParse(userId, usageDate, usage);
