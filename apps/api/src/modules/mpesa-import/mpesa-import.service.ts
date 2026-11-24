@@ -126,6 +126,16 @@ export class MpesaImportService {
       );
     }
 
+    const account = await this.prisma.account.findFirst({
+      where: { id: dto.accountId, userId, status: 'ACTIVE' },
+      select: { currency: true },
+    });
+    if (account && account.currency.toUpperCase() !== dto.currency.toUpperCase()) {
+      throw new BadRequestException(
+        `The selected account uses ${account.currency}; this M-Pesa item is ${dto.currency}.`,
+      );
+    }
+
     if (dto.mpesaReference) {
       const existing = await this.prisma.transaction.findFirst({
         where: {
