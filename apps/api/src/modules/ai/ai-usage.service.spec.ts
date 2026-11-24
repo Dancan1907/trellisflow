@@ -77,6 +77,7 @@ describe('AiUsageService', () => {
         model: 'claude-test-model',
         inputTokens: 1000,
         outputTokens: 200,
+        succeeded: true,
       },
     );
 
@@ -94,6 +95,7 @@ describe('AiUsageService', () => {
           model: 'claude-test-model',
           inputTokens: 1000,
           outputTokens: 200,
+          succeeded: true,
           estimatedCostUsd: '0.00600000',
         }),
       }),
