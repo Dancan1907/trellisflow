@@ -78,6 +78,7 @@ describe('MpesaImportService', () => {
         model: 'claude-test-model',
         inputTokens: 321,
         outputTokens: 87,
+        succeeded: true,
       },
     );
   });
@@ -93,7 +94,7 @@ describe('MpesaImportService', () => {
     expect(aiUsage.recordMpesaParse).toHaveBeenCalledWith(
       'user-id',
       new Date('2026-11-24T00:00:00.000Z'),
-      expect.objectContaining({ inputTokens: 0, outputTokens: 0 }),
+      expect.objectContaining({ inputTokens: 0, outputTokens: 0, succeeded: false }),
     );
   });
 
