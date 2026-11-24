@@ -128,6 +128,10 @@ export class MpesaImportService {
    * creating one ordinary transaction would corrupt paired account balances.
    */
   async confirm(userId: string, dto: ConfirmMpesaTransactionDto) {
+    if (this.config.get<string>('AI_MPESA_PARSE_ENABLED', 'false') !== 'true') {
+      throw new ServiceUnavailableException('M-Pesa parsing is not enabled yet.');
+    }
+
     if (dto.type === 'TRANSFER') {
       throw new BadRequestException(
         'M-Pesa transfers need both source and destination accounts. Record this using the transfer form.',
