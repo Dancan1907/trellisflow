@@ -92,7 +92,6 @@ export class MpesaImportService {
           where: {
             userId,
             mpesaReference: draft.mpesaReference,
-            deletedAt: null,
           },
           select: { id: true, date: true, amount: true, description: true },
         })
@@ -143,7 +142,6 @@ export class MpesaImportService {
         where: {
           userId,
           mpesaReference: dto.mpesaReference,
-          deletedAt: null,
         },
         select: { id: true },
       });
