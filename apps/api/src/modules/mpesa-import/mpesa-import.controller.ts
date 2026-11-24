@@ -12,6 +12,7 @@ import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagg
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AiImageInput } from '../ai/ai-provider.interface';
 import { MpesaImportService } from './mpesa-import.service';
 import { ConfirmMpesaTransactionDto } from './dto/confirm-mpesa-transaction.dto';
 
@@ -50,7 +51,7 @@ export class MpesaImportController {
     @Body('text') text?: string,
     @UploadedFile() receipt?: UploadedReceipt,
   ) {
-    let image;
+    let image: AiImageInput | undefined;
     if (receipt) {
       const bytes = receipt.buffer;
       const isJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -69,7 +70,7 @@ export class MpesaImportController {
       image = {
         mediaType: isJpeg ? 'image/jpeg' : isPng ? 'image/png' : 'image/webp',
         data: bytes.toString('base64'),
-      } as const;
+      };
     }
 
     return this.mpesaImportService.parse({ text, image }, user.id);
