@@ -5,7 +5,7 @@ import { z } from 'zod';
  * Missing or ambiguous values stay null; they are never guessed from context.
  */
 export const MpesaExtractionSchema = z.object({
-  type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
+  type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER', 'UNSUPPORTED']),
   amount: z.number().positive().finite(),
   currency: z.string().regex(/^[A-Za-z]{3}$/).transform((value) => value.toUpperCase()),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
