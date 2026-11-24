@@ -38,7 +38,14 @@ export class MpesaImportService {
       throw new ServiceUnavailableException('M-Pesa parsing is not enabled yet.');
     }
 
+    if (input.text !== undefined && typeof input.text !== 'string') {
+      throw new BadRequestException('M-Pesa message must be plain text.');
+    }
+
     const text = input.text?.trim();
+    if (text && input.image) {
+      throw new BadRequestException('Submit either an M-Pesa message or a receipt image, not both.');
+    }
     if (!text && !input.image) {
       throw new BadRequestException('Paste an M-Pesa message or attach a receipt image.');
     }
