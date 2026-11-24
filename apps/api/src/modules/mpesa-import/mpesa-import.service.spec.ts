@@ -89,6 +89,7 @@ describe('MpesaImportService', () => {
     expect(transactionsService.create).toHaveBeenCalledWith(
       'user-id',
       expect.objectContaining({ mpesaReference: 'ABC123XYZ' }),
+      'IMPORTED',
     );
   });
 
