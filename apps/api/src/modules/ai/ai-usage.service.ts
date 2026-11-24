@@ -58,7 +58,7 @@ export class AiUsageService {
         WHERE "ai_usage_daily"."request_count" < ${limit}
         RETURNING "id"
       `;
-    } catch (error) {
+    } catch {
       this.logger.error('Could not reserve M-Pesa AI usage capacity.');
       throw new ServiceUnavailableException(
         'M-Pesa parsing is temporarily unavailable. Please try again shortly.',
