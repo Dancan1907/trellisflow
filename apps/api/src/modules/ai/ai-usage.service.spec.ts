@@ -1,4 +1,4 @@
-import { ServiceUnavailableException, TooManyRequestsException } from '@nestjs/common';
+import { HttpException, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
 import { AiUsageService } from './ai-usage.service';
 
 describe('AiUsageService', () => {
@@ -49,7 +49,7 @@ describe('AiUsageService', () => {
 
     await expect(
       service.reserveMpesaParse('00000000-0000-4000-8000-000000000001'),
-    ).rejects.toBeInstanceOf(TooManyRequestsException);
+    ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
   });
 
   it('fails closed when the usage database cannot reserve capacity', async () => {
