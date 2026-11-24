@@ -30,6 +30,7 @@ export interface MpesaParseResult {
 
 export interface ConfirmMpesaTransaction {
   type: 'INCOME' | 'EXPENSE';
+  currency: string;
   amount: number;
   date: string;
   description: string;
