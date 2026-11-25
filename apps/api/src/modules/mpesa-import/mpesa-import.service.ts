@@ -211,7 +211,10 @@ export class MpesaImportService {
       const existing = await this.prisma.transaction.findFirst({
         where: {
           userId,
-          mpesaReference: dto.mpesaReference,
+          OR: [
+            ...(dto.mpesaReference ? [{ mpesaReference: dto.mpesaReference }] : []),
+            ...(dto.receiptImageHash ? [{ receiptImageHash: dto.receiptImageHash }] : []),
+          ],
         },
         select: { id: true },
       });
