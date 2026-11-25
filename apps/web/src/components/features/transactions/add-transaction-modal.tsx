@@ -253,7 +253,7 @@ export function AddTransactionModal({
 
                 {hasDuplicate && (
                   <div className="rounded-md border border-status-negative/40 bg-status-negative/5 p-3 text-sm text-status-negative">
-                    This M-Pesa reference already exists in your transactions. Review the existing transaction instead of importing it again.
+                    This M-Pesa item has already been imported (matching M-Pesa reference or identical receipt image). Review the existing transaction instead of importing it again.
                   </div>
                 )}
                 {isTransfer && (
