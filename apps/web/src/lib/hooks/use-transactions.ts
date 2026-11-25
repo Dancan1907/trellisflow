@@ -57,6 +57,7 @@ export interface CreateTransferInput {
   notes?: string;
   mpesaReference?: string;
   mpesaReferenceAccountId?: string;
+  receiptImageHash?: string;
 }
 
 export function useCreateTransfer() {
