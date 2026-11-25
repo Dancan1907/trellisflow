@@ -1,10 +1,11 @@
 import {
   BadGatewayException,
   GatewayTimeoutException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   ServiceUnavailableException,
-  TooManyRequestsException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -92,8 +93,9 @@ export class OpenRouterProvider implements AiProvider {
     if (!response.ok) {
       this.logger.warn(`OpenRouter returned HTTP ${response.status}.`);
       if (response.status === 429) {
-        throw new TooManyRequestsException(
+        throw new HttpException(
           'The AI provider is busy or its free-tier limit has been reached. Please try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
         );
       }
       if (response.status === 401 || response.status === 402 || response.status === 403) {
