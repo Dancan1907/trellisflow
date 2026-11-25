@@ -385,6 +385,7 @@ model Transaction {
   source           TransactionSource @default(MANUAL)
   idempotencyKey   String?           @map("idempotency_key")
   mpesaReference   String?           @map("mpesa_reference") @db.VarChar(32)
+  receiptImageHash String?           @map("receipt_image_hash") @db.Char(64)
   status           TransactionStatus @default(POSTED)
   deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(6)
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -404,6 +405,7 @@ model Transaction {
   @@index([transferPairId])
   @@index([userId, idempotencyKey])
   @@unique([userId, mpesaReference])
+  @@unique([userId, receiptImageHash])
   @@map("transactions")
 }
 
