@@ -69,35 +69,49 @@ export class GeminiProvider implements AiProvider {
       })),
     ];
 
-    let response: Response;
-    try {
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(configuredModel)}:generateContent`,
-        {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(configuredModel)}:generateContent`;
+    const body = JSON.stringify({
+      systemInstruction: { parts: [{ text: request.systemPrompt }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        maxOutputTokens: request.maxOutputTokens ?? 1200,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    let response: Response | undefined;
+    let lastNetworkError: unknown;
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
             'x-goog-api-key': apiKey,
           },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: request.systemPrompt }],
-            },
-            contents: [{ role: 'user', parts }],
-            generationConfig: {
-              maxOutputTokens: request.maxOutputTokens ?? 1200,
-              responseMimeType: 'application/json',
-            },
-          }),
+          body,
           signal: AbortSignal.timeout(timeoutMs),
-        },
-      );
-    } catch (error) {
-      if (error instanceof Error && error.name === 'TimeoutError') {
-        throw new GatewayTimeoutException('AI provider request timed out.');
+        });
+        if (response.ok || (response.status !== 429 && response.status < 500)) break;
+        if (attempt < maxAttempts) {
+          this.logger.warn(`Gemini temporarily returned HTTP ${response.status}; retrying attempt ${attempt + 1}/${maxAttempts}.`);
+          await new Promise((resolve) => setTimeout(resolve, attempt * 350));
+        }
+      } catch (error) {
+        lastNetworkError = error;
+        if (attempt === maxAttempts) break;
+        this.logger.warn(`Gemini request failed on attempt ${attempt}; retrying.`);
+        await new Promise((resolve) => setTimeout(resolve, attempt * 350));
       }
-      this.logger.warn('Gemini request failed before receiving a response.');
-      throw new ServiceUnavailableException('AI provider is temporarily unavailable.');
+    }
+
+    if (!response) {
+      if (lastNetworkError instanceof Error && lastNetworkError.name === 'TimeoutError') {
+        throw new GatewayTimeoutException('AI provider request timed out after retries.');
+      }
+      this.logger.warn('Gemini request failed before receiving a response after retries.');
+      throw new ServiceUnavailableException('AI provider is temporarily unavailable. Please try again.');
     }
 
     const payload = (await response.json().catch(() => ({}))) as GeminiResponse;
