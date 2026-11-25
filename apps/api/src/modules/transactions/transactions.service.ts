@@ -325,7 +325,13 @@ export class TransactionsService {
         throw new BadRequestException('The M-Pesa reference must be attached to one of the selected transfer accounts.');
       }
       const existingReference = await this.prisma.transaction.findFirst({
-        where: { userId, mpesaReference: dto.mpesaReference.trim().toUpperCase() },
+        where: {
+          userId,
+          OR: [
+            ...(dto.mpesaReference ? [{ mpesaReference: dto.mpesaReference.trim().toUpperCase() }] : []),
+            ...(dto.receiptImageHash ? [{ receiptImageHash: dto.receiptImageHash }] : []),
+          ],
+        },
         select: { id: true },
       });
       if (existingReference) {
