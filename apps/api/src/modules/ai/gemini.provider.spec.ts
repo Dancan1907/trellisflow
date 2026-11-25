@@ -88,6 +88,29 @@ describe('GeminiProvider', () => {
     ).rejects.toMatchObject({ status: 429 });
   });
 
+  it('retries a transient Gemini server error and succeeds on the next attempt', async () => {
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({ error: { status: 'UNAVAILABLE' } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: '{"type":"EXPENSE"}' }] } }],
+          usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 },
+        }),
+      });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(
+      provider.generate({ systemPrompt: 'system', userPrompt: 'hello' }),
+    ).resolves.toBe('{"type":"EXPENSE"}');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects an empty provider response', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
