@@ -44,12 +44,16 @@ export class NaturalLanguageDraftsService {
     const timezone = user?.timezone || 'UTC';
     let localDate: string;
     try {
-      localDate = new Intl.DateTimeFormat('en-CA', {
+      const dateParts = new Intl.DateTimeFormat('en', {
         timeZone: timezone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
-      }).format(new Date());
+      }).formatToParts(new Date());
+      const dateValues = Object.fromEntries(
+        dateParts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]),
+      );
+      localDate = `${dateValues.year}-${dateValues.month}-${dateValues.day}`;
     } catch {
       localDate = new Date().toISOString().slice(0, 10);
     }
