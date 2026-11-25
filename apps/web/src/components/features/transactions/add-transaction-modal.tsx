@@ -346,6 +346,7 @@ export function AddTransactionModal({
           mpesaReferenceAccountId={accountId}
           receiptImageHash={parsed.receiptImageHash}
           title="Record M-Pesa Transfer"
+          allowAiEntry={false}
         />
       )}
     </>
