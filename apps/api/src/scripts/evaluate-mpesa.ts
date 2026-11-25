@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   let provider: AnthropicProvider | GeminiProvider | OpenRouterProvider;
   let model: string;
   if (providerName === 'gemini') {
-    model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite';
+    model = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('Set GEMINI_API_KEY in apps/api/.env.local.');
     }
