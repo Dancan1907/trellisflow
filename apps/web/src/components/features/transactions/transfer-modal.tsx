@@ -77,6 +77,7 @@ export function TransferModal({
         description: description.trim(),
         mpesaReference,
         mpesaReferenceAccountId,
+        receiptImageHash,
       });
       showToast('success', 'Transfer recorded', 'Both account balances have been updated.');
       if (onComplete) onComplete();
