@@ -29,7 +29,7 @@ export class MpesaImportService {
     private readonly aiUsage: AiUsageService,
   ) {}
 
-  async parse(input: { text?: string; image?: AiImageInput }, userId: string) {
+  async parse(input: { text?: string; image?: AiImageInput; receiptImageHash?: string }, userId: string) {
     if (this.config.get<string>('AI_MPESA_PARSE_ENABLED', 'false') !== 'true') {
       throw new ServiceUnavailableException('M-Pesa parsing is not enabled yet.');
     }
