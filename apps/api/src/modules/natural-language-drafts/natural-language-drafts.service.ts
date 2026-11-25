@@ -171,13 +171,16 @@ export class NaturalLanguageDraftsService {
     if (this.config.get<string>('AI_NL_DRAFT_ENABLED', 'false') !== 'true') {
       throw new ServiceUnavailableException('Natural-language transaction drafting is not enabled yet.');
     }
-    if (dto.type !== dto.transaction.type && dto.type !== 'TRANSFER') {
-      throw new BadRequestException('Transaction type does not match the confirmed draft.');
-    }
     if (dto.type === 'TRANSFER') {
-      return this.transactions.transfer(userId, dto.transaction as import('../transactions/dto/create-transfer.dto').CreateTransferDto);
+      return this.transactions.transfer(
+        userId,
+        dto.transaction as import('../transactions/dto/create-transfer.dto').CreateTransferDto,
+      );
     }
     const transaction = dto.transaction as import('../transactions/dto/create-transaction.dto').CreateTransactionDto;
+    if (transaction.type !== dto.type) {
+      throw new BadRequestException('Transaction type does not match the confirmed draft.');
+    }
     const account = await this.prisma.account.findFirst({
       where: { id: transaction.accountId, userId, status: 'ACTIVE' },
       select: { id: true, containerId: true, currency: true },
@@ -185,7 +188,7 @@ export class NaturalLanguageDraftsService {
     if (!account) throw new BadRequestException('Choose an active account belonging to your profile.');
     if (transaction.categoryId) {
       const category = await this.prisma.category.findFirst({
-        where: { id: transaction.categoryId, userId, status: 'ACTIVE', type: transaction.type },
+        where: { id: transaction.categoryId, userId, status: 'ACTIVE', type: dto.type },
         select: { id: true, containerId: true },
       });
       if (!category || (category.containerId && category.containerId !== account.containerId)) {
