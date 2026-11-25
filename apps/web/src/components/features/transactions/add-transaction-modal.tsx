@@ -10,6 +10,7 @@ import {
   useParseMpesa,
 } from '@/lib/hooks/use-mpesa-import';
 import { showToast } from '@/components/ui/toast';
+import { TransferModal } from '@/components/features/transactions/transfer-modal';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export function AddTransactionModal({
   const [smsText, setSmsText] = useState('');
   const [receipt, setReceipt] = useState<File | null>(null);
   const [parsed, setParsed] = useState<MpesaParseResult | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   const inputClass =
     'w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary placeholder:text-fg-tertiary focus:outline-none focus:border-accent-primary transition-colors';
@@ -50,9 +52,13 @@ export function AddTransactionModal({
   const hasDuplicate = parsed?.duplicate.detected === true;
   const isTransfer = parsed?.draft.type === 'TRANSFER';
   const isUnsupported = parsed?.draft.type === 'UNSUPPORTED';
+  const transferEvidence = parsed?.draft.uncertainties.join(' ').toLowerCase() ?? '';
+  const isCashWithdrawal = isTransfer && /cash withdrawal|withdrawn|withdrawal/.test(transferEvidence);
+  const isCashDeposit = isTransfer && /cash deposit|deposited|deposit/.test(transferEvidence);
 
   const handleClose = () => {
     setParsed(null);
+    setIsTransferModalOpen(false);
     setSmsText('');
     setReceipt(null);
     setMode('manual');
@@ -249,8 +255,18 @@ export function AddTransactionModal({
                   </div>
                 )}
                 {isTransfer && (
-                  <div className="rounded-md border border-status-warning/40 bg-status-warning/5 p-3 text-sm text-fg-primary">
-                    This appears to be a transfer. To keep both account balances correct, record it through the dedicated transfer form with both accounts selected.
+                  <div className="rounded-md border border-status-warning/40 bg-status-warning/5 p-3 text-sm text-fg-primary space-y-3">
+                    <p>This is a transfer, not income or an expense. Record both sides together so the two account balances stay correct.</p>
+                    {isCashWithdrawal && <p className="text-xs text-fg-secondary">Detected cash withdrawal: this M-Pesa wallet will be the source account.</p>}
+                    {isCashDeposit && <p className="text-xs text-fg-secondary">Detected cash deposit: this M-Pesa wallet will be the destination account.</p>}
+                    {!isCashWithdrawal && !isCashDeposit && <p className="text-xs text-fg-secondary">Select the source and destination accounts carefully in the transfer form.</p>}
+                    {containerId ? (
+                      <button type="button" onClick={() => setIsTransferModalOpen(true)} className="px-3 py-2 rounded-md text-sm font-medium bg-accent-primary text-white">
+                        Record this transfer
+                      </button>
+                    ) : (
+                      <p className="text-xs text-status-warning">Open M-Pesa import from a personal account to record this transfer.</p>
+                    )}
                   </div>
                 )}
                 {isUnsupported && (
@@ -297,5 +313,20 @@ export function AddTransactionModal({
         )}
       </div>
     </Modal>
+      {containerId && parsed && isTransfer && (
+        <TransferModal
+          isOpen={isTransferModalOpen}
+          onClose={() => setIsTransferModalOpen(false)}
+          onComplete={handleClose}
+          containerId={containerId}
+          currency={parsed.draft.currency}
+          preferredFromAccountId={isCashWithdrawal ? accountId : undefined}
+          preferredToAccountId={isCashDeposit ? accountId : undefined}
+          initialAmount={parsed.draft.amount}
+          initialDate={parsed.draft.date}
+          initialDescription={parsed.draft.description}
+          title="Record M-Pesa Transfer"
+        />
+      )}
   );
 }
