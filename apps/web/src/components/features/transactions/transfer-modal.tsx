@@ -17,6 +17,7 @@ interface TransferModalProps {
   initialDate?: string;
   initialDescription?: string;
   title?: string;
+  onComplete?: () => void;
 }
 
 export function TransferModal({
@@ -30,6 +31,7 @@ export function TransferModal({
   initialDate,
   initialDescription,
   title = 'Transfer Between Accounts',
+  onComplete,
 }: TransferModalProps) {
   const { data: accounts = [] } = useAccounts();
   const createTransfer = useCreateTransfer();
@@ -69,7 +71,8 @@ export function TransferModal({
         description: description.trim(),
       });
       showToast('success', 'Transfer recorded', 'Both account balances have been updated.');
-      onClose();
+      if (onComplete) onComplete();
+      else onClose();
     } catch (error) {
       showToast('error', 'Could not record transfer', error instanceof Error ? error.message : 'Please try again.');
     }
