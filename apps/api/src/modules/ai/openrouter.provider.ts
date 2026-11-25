@@ -15,7 +15,13 @@ import {
 } from './ai-provider.interface';
 
 interface OpenRouterResponse {
-  choices?: Array<{\n    finish_reason?: string | null;\n    message?: {\n      content?: string | Array<{ type?: string; text?: string }>;\n      refusal?: string | null;\n    };\n  }>;
+  choices?: Array<{
+    finish_reason?: string | null;
+    message?: {
+      content?: string | Array<{ type?: string; text?: string }>;
+      refusal?: string | null;
+    };
+  }>;
   model?: string;
   usage?: { prompt_tokens?: number; completion_tokens?: number };
   error?: { message?: string };
@@ -93,11 +99,9 @@ export class OpenRouterProvider implements AiProvider {
     if (!response.ok) {
       const providerMessage =
         typeof payload.error?.message === 'string'
-          ? payload.error.message.replace(/[\\r\\n\\t]+/g, ' ').slice(0, 240)
+          ? payload.error.message.replace(/[\r\n\t]+/g, ' ').slice(0, 240)
           : 'No provider error message was returned.';
-      this.logger.warn(
-        `OpenRouter returned HTTP ${response.status}: ${providerMessage}`,
-      );
+      this.logger.warn(`OpenRouter returned HTTP ${response.status}: ${providerMessage}`);
       if (response.status === 429) {
         throw new HttpException(
           'The AI provider is busy or its free-tier limit has been reached. Please try again later.',
@@ -112,7 +116,8 @@ export class OpenRouterProvider implements AiProvider {
       throw new BadGatewayException('AI extraction failed. Please try again.');
     }
 
-    const firstChoice = payload.choices?.[0];\n    const messageContent = firstChoice?.message?.content;
+    const firstChoice = payload.choices?.[0];
+    const messageContent = firstChoice?.message?.content;
     const text =
       typeof messageContent === 'string'
         ? messageContent.trim()
@@ -125,7 +130,14 @@ export class OpenRouterProvider implements AiProvider {
           : '';
 
     if (!text) {
-      throw new BadGatewayException('AI provider returned an empty response.');
+      const finishReason = firstChoice?.finish_reason ?? 'unknown';
+      const refusal = firstChoice?.message?.refusal
+        ? ' The provider marked the response as a refusal.'
+        : '';
+      this.logger.warn(`OpenRouter returned no message text (finish_reason=${finishReason}).`);
+      throw new BadGatewayException(
+        `AI provider returned no usable text (finish reason: ${finishReason}).${refusal}`,
+      );
     }
 
     return {
