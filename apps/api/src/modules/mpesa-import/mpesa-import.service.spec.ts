@@ -75,7 +75,7 @@ describe('MpesaImportService', () => {
       new Date('2026-11-24T00:00:00.000Z'),
       {
         provider: 'openrouter',
-        model: 'nvidia/nemotron-3.5-super-vl:free',
+        model: 'claude-test-model',
         inputTokens: 321,
         outputTokens: 87,
         succeeded: true,
