@@ -10,6 +10,7 @@
 import { config as loadEnv } from 'dotenv';
 import { ConfigService } from '@nestjs/config';
 import { AnthropicProvider } from '../modules/ai/anthropic.provider';
+import { GeminiProvider } from '../modules/ai/gemini.provider';
 import { OpenRouterProvider } from '../modules/ai/openrouter.provider';
 import { MPESA_GOLDEN_FIXTURES } from '../modules/mpesa-import/mpesa-golden-fixtures';
 import { MPESA_GOLDEN_RECEIPT_FIXTURE } from '../modules/mpesa-import/mpesa-golden-receipt';
@@ -50,10 +51,16 @@ async function main(): Promise<void> {
   const providerConfig = {
     get: (key: string, fallback?: string) => process.env[key] ?? fallback,
   } as unknown as ConfigService;
-  const providerName = process.env.AI_PROVIDER ?? 'openrouter';
-  let provider: AnthropicProvider | OpenRouterProvider;
+  const providerName = process.env.AI_PROVIDER ?? 'gemini';
+  let provider: AnthropicProvider | GeminiProvider | OpenRouterProvider;
   let model: string;
-  if (providerName === 'openrouter') {
+  if (providerName === 'gemini') {
+    model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite';
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('Set GEMINI_API_KEY in apps/api/.env.local.');
+    }
+    provider = new GeminiProvider(providerConfig);
+  } else if (providerName === 'openrouter') {
     model =
       process.env.AI_MODEL ??
       process.env.OPENROUTER_MODEL ??
@@ -69,7 +76,7 @@ async function main(): Promise<void> {
     }
     provider = new AnthropicProvider(providerConfig);
   } else {
-    throw new Error(`Unsupported AI_PROVIDER "${providerName}". Use openrouter or anthropic.`);
+    throw new Error(`Unsupported AI_PROVIDER "${providerName}". Use gemini, openrouter, or anthropic.`);
   }
 
   let passed = 0;
