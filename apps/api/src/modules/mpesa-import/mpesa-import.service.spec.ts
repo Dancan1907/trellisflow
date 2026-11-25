@@ -118,6 +118,30 @@ describe('MpesaImportService', () => {
     expect(transactionsService.create).not.toHaveBeenCalled();
   });
 
+  it('detects an identical previously imported receipt image by fingerprint', async () => {
+    const receiptImageHash = 'a'.repeat(64);
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 'existing-transaction',
+      date: new Date('2026-11-24T00:00:00.000Z'),
+      amount: '1250',
+      description: 'Payment to merchant',
+      mpesaReference: null,
+      receiptImageHash,
+    });
+
+    const result = await service.parse(
+      { image: { mediaType: 'image/png', data: 'aGVsbG8=' }, receiptImageHash },
+      'user-id',
+    );
+
+    expect(result.duplicate).toEqual(expect.objectContaining({
+      detected: true,
+      transactionId: 'existing-transaction',
+    }));
+    expect(result.receiptImageHash).toBe(receiptImageHash);
+    expect(transactionsService.create).not.toHaveBeenCalled();
+  });
+
   it('rejects malformed model output', async () => {
     aiProvider.generate.mockResolvedValue('not-json');
 
@@ -141,6 +165,25 @@ describe('MpesaImportService', () => {
     expect(transactionsService.create).toHaveBeenCalledWith(
       'user-id',
       expect.objectContaining({ mpesaReference: 'ABC123XYZ' }),
+      'IMPORTED',
+    );
+  });
+
+  it('persists the receipt image fingerprint only after confirmation', async () => {
+    const receiptImageHash = 'b'.repeat(64);
+    await service.confirm('user-id', {
+      type: 'EXPENSE',
+      amount: 1250,
+      currency: 'KES',
+      date: '2026-11-24',
+      description: 'Payment to merchant',
+      accountId: 'account-id',
+      receiptImageHash,
+    } as any);
+
+    expect(transactionsService.create).toHaveBeenCalledWith(
+      'user-id',
+      expect.objectContaining({ receiptImageHash }),
       'IMPORTED',
     );
   });
