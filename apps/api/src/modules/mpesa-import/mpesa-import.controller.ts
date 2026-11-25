@@ -74,7 +74,8 @@ export class MpesaImportController {
       };
     }
 
-    return this.mpesaImportService.parse({ text, image }, user.id);
+    const receiptImageHash = receipt ? createHash('sha256').update(receipt.buffer).digest('hex') : undefined;
+    return this.mpesaImportService.parse({ text, image, receiptImageHash }, user.id);
   }
 
   @Post('confirm')
