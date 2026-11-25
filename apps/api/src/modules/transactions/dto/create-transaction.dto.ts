@@ -47,6 +47,12 @@ export class CreateTransactionDto {
   @IsOptional()
   mpesaReference?: string;
 
+  @ApiPropertyOptional({ description: 'SHA-256 fingerprint of a confirmed M-Pesa receipt image' })
+  @IsString()
+  @Length(64, 64)
+  @IsOptional()
+  receiptImageHash?: string;
+
   @ApiPropertyOptional({ example: 'Weekly shopping' })
   @IsString()
   @IsOptional()
