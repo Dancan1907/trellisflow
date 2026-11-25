@@ -45,7 +45,7 @@ export class OpenRouterProvider implements AiProvider {
     const apiKey = this.config.get<string>('OPENROUTER_API_KEY');
     const configuredModel =
       this.config.get<string>('AI_MODEL') ??
-      this.config.get<string>('OPENROUTER_MODEL', 'nvidia/nemotron-3.5-super-vl:free');
+      this.config.get<string>('OPENROUTER_MODEL', 'google/gemma-4-26b-a4b-it:free');
     const timeoutValue = Number(this.config.get<string>('AI_REQUEST_TIMEOUT_MS', '30000'));
     const timeoutMs = Number.isFinite(timeoutValue) && timeoutValue > 0 ? timeoutValue : 30000;
 
