@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   GatewayTimeoutException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -49,15 +50,18 @@ export class MpesaImportService {
       throw new BadRequestException('M-Pesa message is too long (maximum 5,000 characters).');
     }
 
-    // Reserve capacity before calling the paid provider. The database performs
+    // Reserve capacity before calling the external AI provider. The database performs
     // this increment atomically, so concurrent requests cannot exceed the limit.
     const usageDate = await this.aiUsage.reserveMpesaParse(userId);
     const usage = {
       provider: this.config.get<string>('AI_PROVIDER', 'openrouter'),
-      model: this.config.get<string>(
-        'AI_MODEL',
-        this.config.get<string>('OPENROUTER_MODEL', 'nvidia/nemotron-3.5-super-vl:free'),
-      ),
+      model:
+        this.config.get<string>('AI_PROVIDER', 'openrouter') === 'anthropic'
+          ? this.config.get<string>('ANTHROPIC_MODEL', 'unknown')
+          : this.config.get<string>(
+              'AI_MODEL',
+              this.config.get<string>('OPENROUTER_MODEL', 'nvidia/nemotron-3.5-super-vl:free'),
+            ),
       inputTokens: 0,
       outputTokens: 0,
       succeeded: true,
@@ -88,7 +92,7 @@ export class MpesaImportService {
     } catch (error) {
       usage.succeeded = false;
       await this.recordUsageSafely(userId, usageDate, usage);
-      if (error instanceof GatewayTimeoutException || error instanceof ServiceUnavailableException) {
+      if (error instanceof HttpException) {
         throw error;
       }
       this.logger.warn('M-Pesa extraction provider call failed.');
