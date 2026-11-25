@@ -37,6 +37,7 @@ import { DebtsModule } from './modules/debts/debts.module';
 import { ExportModule } from './modules/export/export.module';
 import { AiModule } from './modules/ai/ai.module';
 import { MpesaImportModule } from './modules/mpesa-import/mpesa-import.module';
+import { NaturalLanguageDraftsModule } from './modules/natural-language-drafts/natural-language-drafts.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { MpesaImportModule } from './modules/mpesa-import/mpesa-import.module';
     AuthModule,
     AiModule,
     MpesaImportModule,
+    NaturalLanguageDraftsModule,
     ContainersModule,
     UsersModule,
     ThrottlerModule.forRoot([
