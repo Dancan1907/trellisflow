@@ -143,7 +143,7 @@ export class NaturalLanguageDraftsService {
       ...(accountMatch && accountMatch.status !== 'matched' ? ['Select the account for this transaction.'] : []),
       ...(fromMatch && fromMatch.status !== 'matched' ? ['Select the source account for this transfer.'] : []),
       ...(toMatch && toMatch.status !== 'matched' ? ['Select the destination account for this transfer.'] : []),
-      ...(categoryMatch && categoryMatch.status === 'ambiguous' ? ['Choose the intended category or leave it blank.'] : []),
+      ...(categoryMatch && categoryMatch.status !== 'matched' && categoryMatch.status !== 'missing' ? ['Choose a matching category or leave it blank.'] : []),
     ];
 
     return {
