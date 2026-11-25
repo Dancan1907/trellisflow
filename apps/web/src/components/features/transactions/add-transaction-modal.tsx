@@ -148,6 +148,7 @@ export function AddTransactionModal({
   );
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={handleClose} title="Add Transaction">
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2 p-1 bg-bg-tertiary rounded-md">
@@ -330,5 +331,6 @@ export function AddTransactionModal({
           title="Record M-Pesa Transfer"
         />
       )}
+    </>
   );
 }
