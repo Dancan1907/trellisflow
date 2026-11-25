@@ -1,4 +1,4 @@
-import { IsString, Length, Matches, IsOptional } from 'class-validator';
+import { IsString, Length } from 'class-validator';
 import { CreateTransactionDto } from '../../transactions/dto/create-transaction.dto';
 
 /**
@@ -9,10 +9,4 @@ export class ConfirmMpesaTransactionDto extends CreateTransactionDto {
   @IsString()
   @Length(3, 3)
   currency: string;
-
-  @IsString()
-  @Length(64, 64)
-  @Matches(/^[a-f0-9]{64}$/i)
-  @IsOptional()
-  receiptImageHash?: string;
 }
