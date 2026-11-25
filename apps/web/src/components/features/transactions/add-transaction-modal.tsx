@@ -132,6 +132,7 @@ export function AddTransactionModal({
         accountId,
         categoryId: categoryId || undefined,
         mpesaReference: parsed.draft.mpesaReference ?? undefined,
+        receiptImageHash: parsed.receiptImageHash,
       });
       showToast('success', 'Transaction saved', 'The reviewed M-Pesa transaction was added.');
       handleClose();
