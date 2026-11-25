@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  GatewayTimeoutException,
   HttpException,
   Inject,
   Injectable,
