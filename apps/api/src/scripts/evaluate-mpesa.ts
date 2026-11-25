@@ -30,7 +30,7 @@ const CORE_FIELDS: Array<keyof MpesaExtractionDraft> = [
   'mpesaReference',
 ];
 
-async function main(): Promise<void> {
+function describeSafeError(error: unknown): string {\n  if (error instanceof Error) {\n    const status = 'getStatus' in error && typeof error.getStatus === 'function'\n      ? `HTTP ${error.getStatus()}: `\n      : '';\n    return `${status}${error.message.replace(/[\\r\\n\\t]+/g, ' ').slice(0, 220)}`;\n  }\n  return 'Unknown provider error.';\n}\n\nasync function main(): Promise<void> {
   if (process.env.MPESA_EVAL_ALLOW_PROVIDER_CALLS !== 'true') {
     throw new Error(
       'Live evaluation is opt-in. Set MPESA_EVAL_ALLOW_PROVIDER_CALLS=true to authorize external provider calls. Free-tier quotas and provider terms still apply.',
