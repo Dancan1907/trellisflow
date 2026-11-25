@@ -3,6 +3,7 @@ import { apiFetch } from '../api/api-client';
 
 export interface Account {
   id: string;
+  containerId: string;
   name: string;
   category: 'ASSET' | 'LIABILITY';
   accountType: string;

@@ -91,6 +91,8 @@ model User {
   netWorthSnapshots  NetWorthSnapshot[]
   insights           Insight[]
   auditLogs          AuditLog[]
+  aiUsageDaily       AiUsageDaily[]
+  aiUsageEvents      AiUsageEvent[]
 
   @@index([status])
   @@map("users")
@@ -382,6 +384,8 @@ model Transaction {
   recurringRuleId  String?           @map("recurring_rule_id") @db.Uuid
   source           TransactionSource @default(MANUAL)
   idempotencyKey   String?           @map("idempotency_key")
+  mpesaReference   String?           @map("mpesa_reference") @db.VarChar(32)
+  receiptImageHash String?           @map("receipt_image_hash") @db.Char(64)
   status           TransactionStatus @default(POSTED)
   deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(6)
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -400,6 +404,8 @@ model Transaction {
   @@index([categoryId, date])
   @@index([transferPairId])
   @@index([userId, idempotencyKey])
+  @@unique([userId, mpesaReference])
+  @@unique([userId, receiptImageHash])
   @@map("transactions")
 }
 
@@ -891,6 +897,46 @@ model Insight {
   @@index([userId, type])
   @@index([expiresAt])
   @@map("insights")
+}
+
+
+// AI usage accounting contains operational metadata only; never store prompts,
+// SMS bodies, receipt bytes, or extracted transaction details here.
+model AiUsageDaily {
+  id             String   @id @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  usageDate      DateTime @map("usage_date") @db.Date
+  feature        String   @db.VarChar(64)
+  requestCount   Int      @default(0) @map("request_count")
+  inputTokens    Int      @default(0) @map("input_tokens")
+  outputTokens   Int      @default(0) @map("output_tokens")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, usageDate, feature])
+  @@index([usageDate, feature])
+  @@map("ai_usage_daily")
+}
+
+model AiUsageEvent {
+  id               String   @id @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  feature          String   @db.VarChar(64)
+  provider         String   @db.VarChar(32)
+  model            String   @db.VarChar(128)
+  inputTokens      Int      @default(0) @map("input_tokens")
+  outputTokens     Int      @default(0) @map("output_tokens")
+  succeeded        Boolean  @default(true)
+  estimatedCostUsd Decimal? @map("estimated_cost_usd") @db.Decimal(14, 8)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([feature, createdAt(sort: Desc)])
+  @@map("ai_usage_events")
 }
 
 // ============================================================================

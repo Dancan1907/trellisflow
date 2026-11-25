@@ -8,6 +8,7 @@ import {
   IsOptional,
   Length,
   Min,
+  Matches,
 } from 'class-validator';
 import { TransactionType } from '@prisma/client';
 
@@ -40,6 +41,19 @@ export class CreateTransactionDto {
   @IsUUID()
   @IsOptional()
   categoryId?: string;
+
+  @ApiPropertyOptional({ description: 'M-Pesa receipt reference for duplicate detection' })
+  @IsString()
+  @Length(1, 32)
+  @IsOptional()
+  mpesaReference?: string;
+
+  @ApiPropertyOptional({ description: 'SHA-256 fingerprint of a confirmed M-Pesa receipt image' })
+  @IsString()
+  @Length(64, 64)
+  @Matches(/^[a-f0-9]{64}$/i)
+  @IsOptional()
+  receiptImageHash?: string;
 
   @ApiPropertyOptional({ example: 'Weekly shopping' })
   @IsString()

@@ -2,7 +2,7 @@
 // Transactions Service
 // ============================================================================
 
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BalanceService } from './balance.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -10,7 +10,7 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { QueryTransactionsDto } from './dto/query-transactions.dto';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { AuditLogService } from '../../common/services/audit.service';
-import { AuditAction } from '@prisma/client';
+import { AuditAction, TransactionSource } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { SnapshotsService } from '../snapshots/snapshots.service';
 
@@ -26,7 +26,11 @@ export class TransactionsService {
   /**
    * Create a new transaction (income or expense).
    */
-  async create(userId: string, dto: CreateTransactionDto) {
+  async create(
+    userId: string,
+    dto: CreateTransactionDto,
+    source: TransactionSource = 'MANUAL',
+  ) {
     // 1. Verify the account exists and belongs to the user
     const account = await this.prisma.account.findFirst({
       where: { id: dto.accountId, userId, status: 'ACTIVE' },
@@ -62,7 +66,9 @@ export class TransactionsService {
           description: dto.description,
           categoryId: dto.categoryId,
           notes: dto.notes,
-          source: 'MANUAL',
+          mpesaReference: dto.mpesaReference?.trim().toUpperCase(),
+          receiptImageHash: dto.receiptImageHash,
+          source,
           status: 'POSTED',
         },
       });
@@ -310,8 +316,31 @@ export class TransactionsService {
       throw new BadRequestException('Transfers must be between accounts of the same currency');
     }
 
+    if (dto.mpesaReference || dto.receiptImageHash) {
+      if (
+        dto.mpesaReference &&
+        dto.mpesaReferenceAccountId !== fromAccount.id &&
+        dto.mpesaReferenceAccountId !== toAccount.id
+      ) {
+        throw new BadRequestException('The M-Pesa reference must be attached to one of the selected transfer accounts.');
+      }
+      const existingReference = await this.prisma.transaction.findFirst({
+        where: {
+          userId,
+          OR: [
+            ...(dto.mpesaReference ? [{ mpesaReference: dto.mpesaReference.trim().toUpperCase() }] : []),
+            ...(dto.receiptImageHash ? [{ receiptImageHash: dto.receiptImageHash }] : []),
+          ],
+        },
+        select: { id: true },
+      });
+      if (existingReference) {
+        throw new ConflictException('This M-Pesa reference has already been imported.');
+      }
+    }
+
     // 2. Execute atomically
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const pairId = randomUUID();
 
       // a. Create the "OUT" transaction (from account)
@@ -328,7 +357,12 @@ export class TransactionsService {
           description: dto.description,
           notes: dto.notes,
           transferPairId: pairId,
-          source: 'MANUAL',
+          mpesaReference:
+            dto.mpesaReference && dto.mpesaReferenceAccountId === fromAccount.id
+              ? dto.mpesaReference.trim().toUpperCase()
+              : undefined,
+          receiptImageHash: dto.receiptImageHash && dto.mpesaReferenceAccountId === fromAccount.id ? dto.receiptImageHash : undefined,
+          source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL',
           status: 'POSTED',
         },
       });
@@ -347,7 +381,12 @@ export class TransactionsService {
           description: dto.description,
           notes: dto.notes,
           transferPairId: pairId,
-          source: 'MANUAL',
+          mpesaReference:
+            dto.mpesaReference && dto.mpesaReferenceAccountId === toAccount.id
+              ? dto.mpesaReference.trim().toUpperCase()
+              : undefined,
+          receiptImageHash: dto.receiptImageHash && dto.mpesaReferenceAccountId === toAccount.id ? dto.receiptImageHash : undefined,
+          source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL',
           status: 'POSTED',
         },
       });
@@ -364,5 +403,8 @@ export class TransactionsService {
 
       return { outTx, inTx };
     });
+
+    await this.snapshotsService.computeAndSaveForUser(userId);
+    return result;
   }
 }
