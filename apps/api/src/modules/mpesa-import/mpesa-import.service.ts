@@ -229,6 +229,7 @@ export class MpesaImportService {
         {
           ...dto,
           mpesaReference: dto.mpesaReference,
+          receiptImageHash: dto.receiptImageHash,
         },
         'IMPORTED',
       );
