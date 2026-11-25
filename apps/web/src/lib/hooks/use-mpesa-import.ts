@@ -38,6 +38,7 @@ export interface ConfirmMpesaTransaction {
   accountId: string;
   categoryId?: string;
   mpesaReference?: string;
+  receiptImageHash?: string;
 }
 
 export function useParseMpesa() {
