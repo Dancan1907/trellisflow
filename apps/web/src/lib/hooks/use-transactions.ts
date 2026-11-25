@@ -55,6 +55,8 @@ export interface CreateTransferInput {
   date: string;
   description: string;
   notes?: string;
+  mpesaReference?: string;
+  mpesaReferenceAccountId?: string;
 }
 
 export function useCreateTransfer() {
