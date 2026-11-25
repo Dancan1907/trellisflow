@@ -11,7 +11,6 @@ import { config as loadEnv } from 'dotenv';
 import { ConfigService } from '@nestjs/config';
 import { AnthropicProvider } from '../modules/ai/anthropic.provider';
 import { OpenRouterProvider } from '../modules/ai/openrouter.provider';
-import { AiProvider } from '../modules/ai/ai-provider.interface';
 import { MPESA_GOLDEN_FIXTURES } from '../modules/mpesa-import/mpesa-golden-fixtures';
 import { MPESA_GOLDEN_RECEIPT_FIXTURE } from '../modules/mpesa-import/mpesa-golden-receipt';
 import { MPESA_EXTRACTION_SYSTEM_PROMPT } from '../modules/mpesa-import/mpesa-extraction.prompt';
@@ -41,7 +40,7 @@ async function main(): Promise<void> {
     get: (key: string, fallback?: string) => process.env[key] ?? fallback,
   } as unknown as ConfigService;
   const providerName = process.env.AI_PROVIDER ?? 'openrouter';
-  let provider: AiProvider;
+  let provider: AnthropicProvider | OpenRouterProvider;
   let model: string;
   if (providerName === 'openrouter') {
     model =
