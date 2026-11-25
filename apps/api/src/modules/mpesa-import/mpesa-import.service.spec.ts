@@ -74,7 +74,7 @@ describe('MpesaImportService', () => {
       'user-id',
       new Date('2026-11-24T00:00:00.000Z'),
       {
-        provider: 'openrouter',
+        provider: 'gemini',
         model: 'claude-test-model',
         inputTokens: 321,
         outputTokens: 87,
@@ -94,7 +94,13 @@ describe('MpesaImportService', () => {
     expect(aiUsage.recordMpesaParse).toHaveBeenCalledWith(
       'user-id',
       new Date('2026-11-24T00:00:00.000Z'),
-      expect.objectContaining({ inputTokens: 0, outputTokens: 0, succeeded: false }),
+      {
+        provider: 'gemini',
+        model: 'gemini-3.5-flash-lite',
+        inputTokens: 0,
+        outputTokens: 0,
+        succeeded: false,
+      },
     );
   });
 
