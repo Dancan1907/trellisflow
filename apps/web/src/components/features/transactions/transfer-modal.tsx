@@ -35,6 +35,7 @@ export function TransferModal({
   initialDescription,
   mpesaReference,
   mpesaReferenceAccountId,
+  receiptImageHash,
   title = 'Transfer Between Accounts',
   onComplete,
 }: TransferModalProps) {
