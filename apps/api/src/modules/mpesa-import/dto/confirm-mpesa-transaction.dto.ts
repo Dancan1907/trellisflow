@@ -1,4 +1,4 @@
-import { IsString, Length } from 'class-validator';
+import { IsString, Length, Matches, IsOptional } from 'class-validator';
 import { CreateTransactionDto } from '../../transactions/dto/create-transaction.dto';
 
 /**
