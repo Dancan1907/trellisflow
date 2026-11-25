@@ -57,7 +57,7 @@ async function main(): Promise<void> {
     model =
       process.env.AI_MODEL ??
       process.env.OPENROUTER_MODEL ??
-      'nvidia/nemotron-3.5-super-vl:free';
+      'google/gemma-4-26b-a4b-it:free';
     if (!process.env.OPENROUTER_API_KEY) {
       throw new Error('Set OPENROUTER_API_KEY in apps/api/.env.local.');
     }
