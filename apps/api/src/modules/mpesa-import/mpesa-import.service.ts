@@ -131,15 +131,16 @@ export class MpesaImportService {
       throw new BadRequestException('The transaction date could not be read reliably.');
     }
 
-    const duplicate = draft.mpesaReference
-      ? await this.prisma.transaction.findFirst({
-          where: {
-            userId,
-            mpesaReference: draft.mpesaReference,
-          },
-          select: { id: true, date: true, amount: true, description: true },
-        })
-      : null;
+    const duplicate = await this.prisma.transaction.findFirst({
+      where: {
+        userId,
+        OR: [
+          ...(draft.mpesaReference ? [{ mpesaReference: draft.mpesaReference }] : []),
+          ...(input.receiptImageHash ? [{ receiptImageHash: input.receiptImageHash }] : []),
+        ],
+      },
+      select: { id: true, date: true, amount: true, description: true, mpesaReference: true, receiptImageHash: true },
+    });
 
     this.logger.log(`M-Pesa extraction completed (source: ${input.image ? 'receipt' : 'sms'}).`);
 
