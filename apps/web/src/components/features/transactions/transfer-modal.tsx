@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal';
 import { showToast } from '@/components/ui/toast';
 import { useAccounts } from '@/lib/hooks/use-accounts';
 import { useCreateTransfer } from '@/lib/hooks/use-transactions';
+import { NaturalLanguageTransactionForm } from '@/components/features/transactions/natural-language-transaction-form';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface TransferModalProps {
   receiptImageHash?: string;
   title?: string;
   onComplete?: () => void;
+  allowAiEntry?: boolean;
 }
 
 export function TransferModal({
@@ -38,6 +40,7 @@ export function TransferModal({
   receiptImageHash,
   title = 'Transfer Between Accounts',
   onComplete,
+  allowAiEntry = true,
 }: TransferModalProps) {
   const { data: accounts = [] } = useAccounts();
   const createTransfer = useCreateTransfer();
@@ -50,6 +53,7 @@ export function TransferModal({
   const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '');
   const [date, setDate] = useState(initialDate ?? new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState(initialDescription ?? '');
+  const [mode, setMode] = useState<'manual' | 'ai'>('manual');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -58,6 +62,7 @@ export function TransferModal({
     setAmount(initialAmount ? String(initialAmount) : '');
     setDate(initialDate ?? new Date().toISOString().slice(0, 10));
     setDescription(initialDescription ?? '');
+    setMode('manual');
   }, [isOpen, preferredFromAccountId, preferredToAccountId, initialAmount, initialDate, initialDescription]);
 
   const inputClass = 'w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary';
@@ -89,6 +94,25 @@ export function TransferModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
+      <div className="space-y-4">
+        {allowAiEntry && (
+          <div className="grid grid-cols-2 gap-2 p-1 bg-bg-tertiary rounded-md">
+            <button type="button" onClick={() => setMode('manual')} className={`py-1.5 text-sm font-medium rounded ${mode === 'manual' ? 'bg-bg-primary shadow-sm text-fg-primary' : 'text-fg-secondary'}`}>
+              Manual entry
+            </button>
+            <button type="button" onClick={() => setMode('ai')} className={`py-1.5 text-sm font-medium rounded ${mode === 'ai' ? 'bg-bg-primary shadow-sm text-fg-primary' : 'text-fg-secondary'}`}>
+              AI entry
+            </button>
+          </div>
+        )}
+        {mode === 'ai' && allowAiEntry ? (
+          <NaturalLanguageTransactionForm
+            accountId={eligibleAccounts[0]?.id ?? ''}
+            currency={currency}
+            containerId={containerId}
+            onClose={() => { if (onComplete) onComplete(); else onClose(); }}
+          />
+        ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-fg-primary mb-2">From account</label>
@@ -126,6 +150,8 @@ export function TransferModal({
           </button>
         </div>
       </form>
+        )}
+      </div>
     </Modal>
   );
 }

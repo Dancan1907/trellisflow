@@ -11,6 +11,7 @@ import {
 } from '@/lib/hooks/use-mpesa-import';
 import { showToast } from '@/components/ui/toast';
 import { TransferModal } from '@/components/features/transactions/transfer-modal';
+import { NaturalLanguageTransactionForm } from '@/components/features/transactions/natural-language-transaction-form';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export function AddTransactionModal({
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [mode, setMode] = useState<'manual' | 'mpesa'>('manual');
+  const [mode, setMode] = useState<'manual' | 'mpesa' | 'ai'>('manual');
   const [sourceMode, setSourceMode] = useState<'sms' | 'receipt'>('sms');
   const [smsText, setSmsText] = useState('');
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -152,13 +153,20 @@ export function AddTransactionModal({
     <>
     <Modal isOpen={isOpen} onClose={handleClose} title="Add Transaction">
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 p-1 bg-bg-tertiary rounded-md">
+        <div className="grid grid-cols-3 gap-2 p-1 bg-bg-tertiary rounded-md">
           <button
             type="button"
             onClick={() => setMode('manual')}
             className={`py-1.5 text-sm font-medium rounded ${mode === 'manual' ? 'bg-bg-primary shadow-sm text-fg-primary' : 'text-fg-secondary'}`}
           >
             Manual entry
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('ai')}
+            className={`py-1.5 text-sm font-medium rounded ${mode === 'ai' ? 'bg-bg-primary shadow-sm text-fg-primary' : 'text-fg-secondary'}`}
+          >
+            AI entry
           </button>
           <button
             type="button"
@@ -169,7 +177,14 @@ export function AddTransactionModal({
           </button>
         </div>
 
-        {mode === 'manual' ? (
+        {mode === 'ai' ? (
+          <NaturalLanguageTransactionForm
+            accountId={accountId}
+            currency={currency}
+            containerId={containerId}
+            onClose={handleClose}
+          />
+        ) : mode === 'manual' ? (
           <form onSubmit={handleManualSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-2 p-1 bg-bg-tertiary rounded-md">
               <button type="button" onClick={() => setType('EXPENSE')} className={`py-1.5 text-sm font-medium rounded ${type === 'EXPENSE' ? 'bg-bg-primary shadow-sm text-fg-primary' : 'text-fg-secondary'}`}>Expense</button>
@@ -331,6 +346,7 @@ export function AddTransactionModal({
           mpesaReferenceAccountId={accountId}
           receiptImageHash={parsed.receiptImageHash}
           title="Record M-Pesa Transfer"
+          allowAiEntry={false}
         />
       )}
     </>
