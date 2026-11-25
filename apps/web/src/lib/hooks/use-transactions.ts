@@ -48,6 +48,35 @@ export function useCreateTransaction() {
   });
 }
 
+export interface CreateTransferInput {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  date: string;
+  description: string;
+  notes?: string;
+  mpesaReference?: string;
+  mpesaReferenceAccountId?: string;
+  receiptImageHash?: string;
+}
+
+export function useCreateTransfer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateTransferInput) =>
+      apiFetch('/api/transactions/transfer', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
   return useMutation({

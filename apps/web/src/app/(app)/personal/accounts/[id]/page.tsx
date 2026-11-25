@@ -6,6 +6,7 @@ import { Plus, ArrowDownRight, ArrowUpRight, Edit, Archive, Trash2 } from 'lucid
 import { useAccounts, useUpdateAccount, useArchiveAccount } from '@/lib/hooks/use-accounts';
 import { useTransactions, useDeleteTransaction } from '@/lib/hooks/use-transactions';
 import { AddTransactionModal } from '@/components/features/transactions/add-transaction-modal';
+import { TransferModal } from '@/components/features/transactions/transfer-modal';
 import { AmountDisplay } from '@/components/shared/amount-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -16,6 +17,7 @@ export default function AccountDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
@@ -104,12 +106,20 @@ export default function AccountDetailPage() {
             <AmountDisplay value={account.currentBalance} currency={account.currency} />
           </h1>
         </div>
-        <button
-          onClick={() => setIsTxModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-hover transition-colors"
-        >
-          <Plus size={18} /> Add Transaction
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setIsTransferModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-border-subtle text-fg-primary text-sm font-medium hover:bg-bg-tertiary transition-colors"
+          >
+            Transfer
+          </button>
+          <button
+            onClick={() => setIsTxModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-hover transition-colors"
+          >
+            <Plus size={18} /> Add Transaction
+          </button>
+        </div>
       </div>
 
       {/* Transactions List */}
@@ -184,6 +194,14 @@ export default function AccountDetailPage() {
         isOpen={isTxModalOpen}
         onClose={() => setIsTxModalOpen(false)}
         accountId={account.id}
+        currency={account.currency}
+        containerId={account.containerId}
+      />
+
+      <TransferModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        containerId={account.containerId}
         currency={account.currency}
       />
 

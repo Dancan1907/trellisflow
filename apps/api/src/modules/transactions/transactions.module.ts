@@ -8,6 +8,6 @@ import { SnapshotsModule } from '../snapshots/snapshots.module';
   imports: [SnapshotsModule],
   controllers: [TransactionsController],
   providers: [TransactionsService, BalanceService],
-  exports: [BalanceService], // Export so other modules (like transfers) can use it
+  exports: [BalanceService, TransactionsService], // Shared transaction workflows
 })
 export class TransactionsModule {}

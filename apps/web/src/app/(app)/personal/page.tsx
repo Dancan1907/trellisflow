@@ -3,16 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeftRight } from 'lucide-react';
 import { useAccounts } from '@/lib/hooks/use-accounts';
 import { useDashboardContainers } from '@/lib/hooks/use-dashboard';
 import { AccountCard } from '@/components/features/personal/account-card';
 import { CreateAccountModal } from '@/components/features/personal/create-account-modal';
+import { TransferModal } from '@/components/features/transactions/transfer-modal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 
 export default function PersonalPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const pathname = usePathname();
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const { data: containers, isLoading: isLoadingContainers } = useDashboardContainers();
@@ -29,14 +31,24 @@ export default function PersonalPage() {
             Manage your bank accounts, wallets, and cards.
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          disabled={!personalContainer}
-          className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
-        >
-          <Plus size={18} />
-          Add Account
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setIsTransferModalOpen(true)}
+            disabled={!personalContainer}
+            className="flex items-center gap-2 px-4 py-2 rounded-md border border-border-subtle text-fg-primary text-sm font-medium hover:bg-bg-tertiary transition-colors disabled:opacity-50"
+          >
+            <ArrowLeftRight size={18} />
+            Transfer
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            disabled={!personalContainer}
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
+          >
+            <Plus size={18} />
+            Add Account
+          </button>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -109,6 +121,15 @@ export default function PersonalPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           containerId={personalContainer.id}
+        />
+      )}
+
+      {personalContainer && (
+        <TransferModal
+          isOpen={isTransferModalOpen}
+          onClose={() => setIsTransferModalOpen(false)}
+          containerId={personalContainer.id}
+          currency={personalContainer.currency}
         />
       )}
     </div>

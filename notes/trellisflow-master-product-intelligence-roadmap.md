@@ -881,6 +881,31 @@ duplicate their business rules.
 
 ### 13.1 Feature 1: M-Pesa SMS and receipt parsing (P0)
 
+**Implementation status — 2026-11-24**
+
+The implementation is on `feature/mpesa-sms-parser`; PR #50 is open against `develop`. No merge has been performed. `main` and `develop` remain untouched; the repository owner will handle all merges.
+
+The latest complete GitHub Actions run passed lint, typecheck, build, unit tests, database migrations, integration tests, and E2E tests.
+
+Implemented in this increment:
+- Anthropic Claude is the initial provider, behind a provider-agnostic internal interface. The model and API key are server-configured; the adapter uses the Anthropic Messages API.
+- Authenticated parsing accepts one pasted SMS or one JPG, PNG or WebP receipt image (maximum 5 MB).
+- Structured output is validated with Zod. Missing values remain unknown, confidence and uncertainty are returned, and unsupported events are not forced into income/expense.
+- Duplicate M-Pesa references are checked and protected by a user-scoped unique database constraint.
+- Users review and edit a draft before confirmation. Confirmation reuses the existing transaction service; extraction itself never creates a transaction.
+- Raw SMS and receipt bytes are not persisted by TrellisFlow. The UI discloses that input is sent to Anthropic for extraction.
+- Synthetic golden fixtures cover received/sent money, Buy Goods, PayBill, cash withdrawals/deposits, reversals, and Fuliza advances. Tests verify schema expectations and review-before-save behaviour.
+- Daily per-user parsing quota is enforced atomically in PostgreSQL (20 requests per UTC day by default, configurable). Failed provider attempts also consume a reservation, preventing repeated retries from bypassing the limit.
+- Anthropic input/output token usage is recorded without source content. Optional USD cost estimates can be enabled with model-specific per-million-token rates. Usage events and daily aggregates are stored separately from transaction records.
+
+Still required before enabling this for users:
+- Configure an Anthropic API key and select/verify the production model in the target environment; the feature flag remains off by default.
+- Run live-provider evaluations against representative Safaricom SMS and receipt fixtures, including OCR quality and field-level accuracy. Synthetic fixture tests do not establish real-provider accuracy.
+- Configure verified pricing rates if estimated USD costs are required; token counts are recorded regardless.
+- Complete product/privacy review of Anthropic API data handling and manual UI verification with real receipts.
+- Transfer drafts are currently identified but must be recorded through the dedicated paired-account transfer workflow; ordinary confirmation is blocked to protect account balances.
+
+
 **User flow** 1. User opens the transaction page. 2. User selects Scan
 or Import M-Pesa. 3. User pastes an SMS or provides a supported receipt. 4. User requests parsing. 5. Backend validates input and calls the
 extraction service. 6. AI returns structured data. 7. Backend validates
@@ -1999,7 +2024,7 @@ These decisions materially affect scope and architecture.
 
 ### AI
 
-9.  Which model provider should be the initial production provider?
+9.  Resolved: Anthropic Claude is the initial provider, isolated behind the internal AI provider abstraction. The model remains environment-configurable.
 10. What monthly AI budget is acceptable?
 11. Should the copilot be available to all users or only selected plans?
 12. How much conversation history should be retained?
@@ -2056,14 +2081,17 @@ a short, dependency-aware sequence.
 
 ### Sprint 3 --- AI infrastructure and M-Pesa parsing
 
-- [ ] Select and verify provider and SDK versions.
-- [ ] Add server-side provider configuration.
-- [ ] Add Zod schemas.
-- [ ] Add usage logging and rate limits.
-- [ ] Build representative parsing fixtures.
-- [ ] Implement parse endpoint.
-- [ ] Build review and confirmation UI.
-- [ ] Verify no automatic transaction creation.
+- [x] Select the initial provider (Anthropic Claude) and isolate it behind a provider abstraction.
+- [x] Add server-side provider configuration and feature flags.
+- [x] Add Zod extraction validation schemas.
+- [x] Implement authenticated SMS and receipt-image parse endpoint.
+- [x] Build review and explicit confirmation UI using the existing transaction service.
+- [x] Verify extraction does not automatically create transactions; add unit tests.
+- [x] Add an initial endpoint rate limit and safe usage event logging.
+- [x] Add durable provider token metering, optional configurable cost estimates, and an atomic per-user daily quota (20 UTC-day requests by default).
+- [x] Build synthetic golden parsing fixtures and deterministic review-before-save tests.
+- [ ] Evaluate live Anthropic extraction accuracy against representative Safaricom SMS and receipt fixtures.
+- [ ] Complete manual UI verification and production provider/privacy review.
 
 ### Sprint 4 --- Read-only copilot
 
