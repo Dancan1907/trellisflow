@@ -108,7 +108,7 @@ async function main(): Promise<void> {
       const parsed = MpesaExtractionSchema.safeParse(candidate);
       if (!parsed.success) {
         failed += 1;
-        console.log(`[FAIL] ${fixture.id}: response did not match the extraction schema.`);
+        const issues = parsed.error.issues\n          .map((issue) => `${issue.path.join('.') || '<root>'} (${issue.code})`)\n          .join(', ');\n        console.log(`[FAIL] ${fixture.id}: response did not match the extraction schema: ${issues}.`);
         continue;
       }
 
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
       const parsed = MpesaExtractionSchema.safeParse(candidate);
       if (!parsed.success) {
         failed += 1;
-        console.log(`[FAIL] ${receiptFixture.id}: response did not match the extraction schema.`);
+        const issues = parsed.error.issues\n          .map((issue) => `${issue.path.join('.') || '<root>'} (${issue.code})`)\n          .join(', ');\n        console.log(`[FAIL] ${receiptFixture.id}: response did not match the extraction schema: ${issues}.`);
       } else {
         const mismatches = CORE_FIELDS.filter(
           (field) => parsed.data[field] !== receiptFixture.expected[field],
