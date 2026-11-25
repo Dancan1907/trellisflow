@@ -109,7 +109,7 @@ export class GeminiProvider implements AiProvider {
         : 'unknown';
       const providerMessage =
         typeof payload.error?.message === 'string'
-          ? payload.error.message.replace(/[\\r\\n\\t]+/g, ' ').slice(0, 240)
+          ? payload.error.message.replace(/[\r\n\t]+/g, ' ').slice(0, 240)
           : 'No provider error message was returned.';
       this.logger.warn(
         `Gemini returned HTTP ${response.status} (provider status: ${providerStatus}, code: ${providerCode}): ${providerMessage}`,
