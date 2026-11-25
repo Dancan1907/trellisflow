@@ -53,8 +53,11 @@ export class MpesaImportService {
     // this increment atomically, so concurrent requests cannot exceed the limit.
     const usageDate = await this.aiUsage.reserveMpesaParse(userId);
     const usage = {
-      provider: this.config.get<string>('AI_PROVIDER', 'anthropic'),
-      model: this.config.get<string>('ANTHROPIC_MODEL', 'unknown'),
+      provider: this.config.get<string>('AI_PROVIDER', 'openrouter'),
+      model: this.config.get<string>(
+        'AI_MODEL',
+        this.config.get<string>('OPENROUTER_MODEL', 'nvidia/nemotron-3.5-super-vl:free'),
+      ),
       inputTokens: 0,
       outputTokens: 0,
       succeeded: true,
