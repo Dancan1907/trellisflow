@@ -207,7 +207,7 @@ export class MpesaImportService {
       );
     }
 
-    if (dto.mpesaReference) {
+    if (dto.mpesaReference || dto.receiptImageHash) {
       const existing = await this.prisma.transaction.findFirst({
         where: {
           userId,
