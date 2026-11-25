@@ -18,6 +18,7 @@ interface TransferModalProps {
   initialDescription?: string;
   mpesaReference?: string;
   mpesaReferenceAccountId?: string;
+  receiptImageHash?: string;
   title?: string;
   onComplete?: () => void;
 }
