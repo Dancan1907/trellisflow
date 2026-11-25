@@ -10,6 +10,8 @@
 import { config as loadEnv } from 'dotenv';
 import { ConfigService } from '@nestjs/config';
 import { AnthropicProvider } from '../modules/ai/anthropic.provider';
+import { OpenRouterProvider } from '../modules/ai/openrouter.provider';
+import { AiProvider } from '../modules/ai/ai-provider.interface';
 import { MPESA_GOLDEN_FIXTURES } from '../modules/mpesa-import/mpesa-golden-fixtures';
 import { MPESA_GOLDEN_RECEIPT_FIXTURE } from '../modules/mpesa-import/mpesa-golden-receipt';
 import { MPESA_EXTRACTION_SYSTEM_PROMPT } from '../modules/mpesa-import/mpesa-extraction.prompt';
@@ -32,17 +34,33 @@ const CORE_FIELDS: Array<keyof MpesaExtractionDraft> = [
 async function main(): Promise<void> {
   if (process.env.MPESA_EVAL_ALLOW_PROVIDER_CALLS !== 'true') {
     throw new Error(
-      'Live evaluation is opt-in. Set MPESA_EVAL_ALLOW_PROVIDER_CALLS=true to authorize paid provider calls.',
+      'Live evaluation is opt-in. Set MPESA_EVAL_ALLOW_PROVIDER_CALLS=true to authorize external provider calls. Free-tier quotas and provider terms still apply.',
     );
   }
-  if (!process.env.ANTHROPIC_API_KEY || !process.env.ANTHROPIC_MODEL) {
-    throw new Error('Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL in apps/api/.env.local.');
-  }
-
   const providerConfig = {
     get: (key: string, fallback?: string) => process.env[key] ?? fallback,
   } as unknown as ConfigService;
-  const provider = new AnthropicProvider(providerConfig);
+  const providerName = process.env.AI_PROVIDER ?? 'openrouter';
+  let provider: AiProvider;
+  let model: string;
+  if (providerName === 'openrouter') {
+    model =
+      process.env.AI_MODEL ??
+      process.env.OPENROUTER_MODEL ??
+      'nvidia/nemotron-3.5-super-vl:free';
+    if (!process.env.OPENROUTER_API_KEY) {
+      throw new Error('Set OPENROUTER_API_KEY in apps/api/.env.local.');
+    }
+    provider = new OpenRouterProvider(providerConfig);
+  } else if (providerName === 'anthropic') {
+    model = process.env.ANTHROPIC_MODEL ?? '';
+    if (!process.env.ANTHROPIC_API_KEY || !model) {
+      throw new Error('Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL in apps/api/.env.local.');
+    }
+    provider = new AnthropicProvider(providerConfig);
+  } else {
+    throw new Error(`Unsupported AI_PROVIDER "${providerName}". Use openrouter or anthropic.`);
+  }
 
   let passed = 0;
   let failed = 0;
@@ -50,7 +68,7 @@ async function main(): Promise<void> {
   let outputTokens = 0;
 
   console.log(
-    `Evaluating ${MPESA_GOLDEN_FIXTURES.length} synthetic M-Pesa SMS fixtures with ${process.env.ANTHROPIC_MODEL}.`,
+    `Evaluating ${MPESA_GOLDEN_FIXTURES.length} synthetic M-Pesa SMS fixtures with ${model}.`,
   );
 
   for (const fixture of MPESA_GOLDEN_FIXTURES) {
@@ -68,7 +86,7 @@ async function main(): Promise<void> {
         .replace(/^```(?:json)?\s*/i, '')
         .replace(/\s*```$/, '');
 
-      let candidate: unknown;
+      let candidate: unknown = undefined;
       try {
         candidate = JSON.parse(normalized);
       } catch {
