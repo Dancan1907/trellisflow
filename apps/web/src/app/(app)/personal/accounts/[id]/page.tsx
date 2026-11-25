@@ -195,6 +195,7 @@ export default function AccountDetailPage() {
         onClose={() => setIsTxModalOpen(false)}
         accountId={account.id}
         currency={account.currency}
+        containerId={account.containerId}
       />
 
       <TransferModal
