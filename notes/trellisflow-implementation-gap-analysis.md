@@ -1,7 +1,7 @@
 # TrellisFlow — Implementation Gap Analysis
 
 > **Document type:** Repository audit and implementation planning reference  
-> **Status:** Initial source-code audit completed against the GitHub `main` branch  
+> **Status:** Updated after Phase 1 (M-Pesa SMS/receipt parsing) implementation and deployment review  
 > **Repository:** https://github.com/Dancan1907/trellisflow  
 > **Roadmap reference:** `notes/trellisflow-master-product-intelligence-roadmap.md`  
 > **Audit scope:** Repository structure, backend modules, frontend routes/components, package manifests, Prisma schema, and existing feature notes  
@@ -15,7 +15,7 @@ TrellisFlow already has a substantial financial-management foundation. It is not
 
 The repository contains implemented modules for accounts, transactions, budgets, savings goals, debts, recurring transactions, investments/holdings, investment events, businesses, business summaries, snapshots, reports, insights, audit logs, API tokens, and external API ingestion.
 
-However, the proposed AI layer described in `notes/wave-2.5-ai-features.md` is still a plan rather than an implementation. The current code search and application module registration show no AI module, no AI provider SDK integration, no M-Pesa parsing endpoint, no conversational AI endpoint, and no RAG retrieval implementation.
+The original audit predates the M-Pesa parser work. Phase 1 has since been implemented: the API now has a provider abstraction with Gemini support, authenticated M-Pesa parsing and confirmation endpoints, transaction-review UI, usage controls, and fixture-based evaluation. The broader conversational assistant, natural-language transaction drafts, and RAG capabilities remain future work.
 
 **The correct strategy is to add intelligence on top of the existing modules and services, not rebuild the financial platform.**
 
@@ -32,8 +32,9 @@ However, the proposed AI layer described in `notes/wave-2.5-ai-features.md` is s
 | Rule-based financial insights | IMPLEMENTED IN CODE | Existing deterministic insights engine |
 | Goal completion projection | IMPLEMENTED IN CODE | Goal-specific historical projection utility |
 | Business cash-runway warning | PARTIALLY IMPLEMENTED | Existing rule-based warning; not a general cash-flow forecast |
-| M-Pesa SMS/receipt parsing | NOT FOUND IN IMPLEMENTATION | Present in the Wave 2.5 design note only |
-| Natural-language transaction entry | NOT FOUND IN IMPLEMENTATION | Existing form-based transaction entry |
+| AI provider foundation for parsing | IMPLEMENTED FOR PHASE 1 | Provider abstraction, Gemini configuration, usage accounting and feature controls |
+| M-Pesa SMS/receipt parsing | IMPLEMENTED IN CODE; DEPLOYMENT VERIFICATION PARTIAL | Authenticated parse/confirm API, SMS and receipt-image review workflow; backend deployed, frontend production update awaiting Vercel |
+| Natural-language transaction entry | NOT IMPLEMENTED | Phase 2; existing form-based transaction entry remains |
 | Financial Q&A chatbot | NOT FOUND IN IMPLEMENTATION | No AI chat module or chat UI found |
 | Natural-language navigation/actions | NOT FOUND IN IMPLEMENTATION | No assistant/tool-execution layer found |
 | RAG documentation Q&A | NOT FOUND IN IMPLEMENTATION | No embedding/retrieval implementation or vector table found |
@@ -183,28 +184,19 @@ The current insight model contains a title, message, severity, metadata and rela
 
 ---
 
-## 3. AI Infrastructure — What Is Missing
+## 3. AI Infrastructure — Current Status
 
-The repository's current application module registers the existing NestJS modules but does not register an AI module.
+The API now contains an AI module and provider abstraction used by the M-Pesa parser. Gemini is the selected provider for the current deployment, with provider configuration kept on the backend. The implementation also includes structured extraction validation, usage accounting, request limits and feature-flag controls.
 
-The inspected API package manifest includes NestJS, Prisma, validation libraries and Zod, but does not include the proposed AI SDK/provider packages. The web package manifest does not include the Vercel AI SDK React integration.
+This is a feature-specific foundation, not a completed general-purpose AI assistant. The following capabilities remain future work:
 
-Repository searches for `generateText`, `generateObject`, Anthropic SDK usage, OpenAI embedding usage, and `document_chunks` returned the Wave 2.5 planning note rather than application implementation.
+- Conversational chat API and UI.
+- Natural-language transaction draft parsing (Phase 2).
+- Read-only financial tools for a Money Copilot.
+- Embedding generation, document ingestion and RAG retrieval.
+- AI-generated insight narration.
 
-No AI-specific API module, AI frontend chat component, AI endpoint, prompt directory, embedding pipeline, or RAG document-chunk model was found in the inspected source tree.
-
-### Proposed foundation to add
-
-1. Provider configuration and secret management.
-2. A dedicated AI module in the NestJS API.
-3. Strict request DTOs and structured output validation.
-4. A provider abstraction so the product is not tightly coupled to one model vendor.
-5. Usage limits, cost logging and feature flags.
-6. Prompt/version management and tests.
-7. Narrow, authenticated, user-scoped tools that call existing application services.
-8. A frontend AI experience that can be introduced incrementally.
-
-Do not add all AI infrastructure before agreeing on the first feature. Build the smallest foundation needed for M-Pesa parsing, then extend it safely.
+Continue extending the existing provider abstraction rather than coupling future features directly to one provider. Keep provider secrets server-side, validate all model output, and require explicit user confirmation before any financial write.
 
 ---
 
@@ -212,29 +204,37 @@ Do not add all AI infrastructure before agreeing on the first feature. Build the
 
 ### 4.1 M-Pesa SMS and receipt parsing
 
-**Status: NOT FOUND IN IMPLEMENTATION — FIRST AI FEATURE TO BUILD**
+**Status: IMPLEMENTED IN CODE — Phase 1 complete; production verification is not yet fully closed.**
 
-Existing integration point:
-- `apps/api/src/modules/transactions/transactions.service.ts`
-- `apps/web/src/components/features/transactions/add-transaction-modal.tsx`
+Implemented capabilities:
+- Backend AI module with a provider abstraction and Gemini adapter/configuration.
+- Authenticated endpoints: POST /api/mpesa-import/parse and POST /api/mpesa-import/confirm.
+- SMS text and receipt-image extraction with strict structured-output validation.
+- Editable review flow; parsing does not create a transaction automatically.
+- Explicit confirmation through the existing transaction creation workflow.
+- Withdrawal and deposit handling through the paired-account transfer workflow.
+- M-Pesa reference duplicate protection for SMS transactions.
+- Request rate limiting, per-user daily usage limits, usage accounting and failure handling.
+- Raw SMS/receipt content is not persisted as transaction data or written to application logs.
 
-Build:
-1. Add an authenticated parse endpoint.
-2. Accept pasted SMS/receipt text with strict length limits.
-3. Extract transaction type, amount, currency, date, merchant/counterparty, phone/reference where available, and confidence.
-4. Validate model output against a strict schema.
-5. Show a prefilled editable transaction draft.
-6. Require the user to review and confirm.
-7. Save through the existing transaction service.
-8. Add duplicate detection for M-Pesa reference codes where appropriate.
-9. Add fixture-based tests for received money, merchant payments, paybill, till, transfers, fees, reversals, malformed messages and ambiguous dates.
+Verification reported during implementation:
+- API typecheck passed locally.
+- Synthetic Gemini evaluation passed 9/9 cases using gemini-3.5-flash-lite; only synthetic fixtures were used.
+- Core UI workflows were manually tested, including transaction review, confirmation, transfer handling and duplicate SMS protection.
+- Render backend deployment completed; startup logs showed the database connected and both M-Pesa endpoints registered.
 
-Safety requirements:
+Remaining verification / known limitations:
+- The Vercel frontend deployment is currently rate-limited, so the latest frontend build has not yet been confirmed live on the production website.
+- The same receipt image can currently be submitted more than once; image-level duplicate detection remains an outstanding improvement.
+- A complete Jest suite result has not been confirmed in the available test evidence.
+- Re-test the production frontend and end-to-end workflow after Vercel permits deployment.
+
+Safety requirements retained:
 - Never silently create a transaction from model output.
 - Never infer a missing amount.
-- Clearly mark uncertain fields.
-- Do not store raw SMS content longer than necessary.
+- Clearly surface uncertain or unsupported results for review.
 - Ensure the authenticated user owns the selected account and category.
+- Keep provider credentials exclusively in the backend environment.
 
 ### 4.2 Natural-language transaction entry
 
@@ -338,15 +338,19 @@ The following order minimizes duplication and builds on existing code.
 - [ ] Run the full test, typecheck and build commands in a local/CI environment.
 - [ ] Confirm production environment and deployment configuration.
 
-### Phase 1 — M-Pesa parser (P0)
+### Phase 1 — M-Pesa parser (P0) — IMPLEMENTED
 
-- [ ] Agree on provider/model and add secrets to deployment environment.
-- [ ] Add AI module/provider configuration.
-- [ ] Add parse DTO and strict extraction schema.
-- [ ] Add M-Pesa parser service and authenticated endpoint.
-- [ ] Add transaction-page paste/parse/review UI.
-- [ ] Save only after user confirmation through the existing transaction service.
-- [ ] Add fixture tests, rate limits, usage logging and failure handling.
+- [x] Select Gemini as the initial provider/model and configure the backend deployment environment.
+- [x] Add the AI module and provider abstraction.
+- [x] Add parse DTOs and strict extraction schema.
+- [x] Add the M-Pesa parser service and authenticated parse/confirm endpoints.
+- [x] Add transaction-page SMS paste and receipt-image parse/review UI.
+- [x] Save only after user confirmation through the existing transaction workflow.
+- [x] Add synthetic fixture evaluation, request limits, usage logging and failure handling.
+- [x] Implement withdrawal/deposit transfer handling using paired accounts.
+- [ ] Add receipt-image duplicate detection.
+- [ ] Confirm the latest frontend production deployment and complete production end-to-end verification.
+- [ ] Confirm the complete API Jest suite passes.
 
 ### Phase 2 — Natural-language transaction drafts
 
@@ -450,11 +454,11 @@ No production endpoint was modified by this audit. No application code was chang
 
 ## 9. Immediate Next Step
 
-**Start with Phase 1: M-Pesa SMS parsing.**
+**Proceed to Phase 2: Natural-language transaction drafts.**
 
-It is the smallest high-value AI feature, directly improves the existing transaction workflow, and gives us a safe foundation for structured AI output, provider integration, validation, cost controls and user confirmation.
+Phase 1's parser and provider foundation are implemented. Close the remaining Phase 1 verification items when Vercel deployments are available, particularly receipt-image duplicate detection and production end-to-end verification. These follow-ups should not be confused with the Phase 2 scope.
 
-Before implementation, inspect the current transaction DTO/controller and account/category selection UX, then agree on the provider and deployment secrets. After that, implement the parser in small, testable commits.
+For Phase 2, parse a user's natural-language sentence into a structured transaction draft, resolve account and category choices using the existing user-scoped lookup logic, ask for clarification when essential details are ambiguous, and require explicit confirmation before calling the existing transaction creation service.
 
 ---
 
