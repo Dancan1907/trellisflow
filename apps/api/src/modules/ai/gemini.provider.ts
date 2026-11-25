@@ -47,7 +47,7 @@ export class GeminiProvider implements AiProvider {
     const apiKey = this.config.get<string>('GEMINI_API_KEY');
     const configuredModel = this.config.get<string>(
       'GEMINI_MODEL',
-      'gemini-2.5-flash-lite',
+      'gemini-3.5-flash-lite',
     );
     const timeoutValue = Number(this.config.get<string>('AI_REQUEST_TIMEOUT_MS', '30000'));
     const timeoutMs =
@@ -104,8 +104,15 @@ export class GeminiProvider implements AiProvider {
     if (!response.ok) {
       const providerStatus =
         typeof payload.error?.status === 'string' ? payload.error.status : 'unknown';
+      const providerCode = Number.isSafeInteger(payload.error?.code)
+        ? payload.error!.code
+        : 'unknown';
+      const providerMessage =
+        typeof payload.error?.message === 'string'
+          ? payload.error.message.replace(/[\\r\\n\\t]+/g, ' ').slice(0, 240)
+          : 'No provider error message was returned.';
       this.logger.warn(
-        `Gemini returned HTTP ${response.status} (provider status: ${providerStatus}).`,
+        `Gemini returned HTTP ${response.status} (provider status: ${providerStatus}, code: ${providerCode}): ${providerMessage}`,
       );
       if (response.status === 429) {
         throw new HttpException(
