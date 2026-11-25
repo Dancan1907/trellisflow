@@ -67,6 +67,7 @@ export class TransactionsService {
           categoryId: dto.categoryId,
           notes: dto.notes,
           mpesaReference: dto.mpesaReference?.trim().toUpperCase(),
+          receiptImageHash: dto.receiptImageHash,
           source,
           status: 'POSTED',
         },
