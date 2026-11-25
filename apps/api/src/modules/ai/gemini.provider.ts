@@ -83,6 +83,7 @@ export class GeminiProvider implements AiProvider {
     let lastNetworkError: unknown;
     const maxAttempts = 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      response = undefined;
       try {
         response = await fetch(endpoint, {
           method: 'POST',
