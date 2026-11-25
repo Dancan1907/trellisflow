@@ -155,6 +155,7 @@ export class MpesaImportService {
             description: duplicate.description,
           }
         : { detected: false },
+      receiptImageHash: input.receiptImageHash,
       requiresReview: true,
       canAutoSave: false,
     };
