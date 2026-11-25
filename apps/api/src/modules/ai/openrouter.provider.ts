@@ -91,7 +91,13 @@ export class OpenRouterProvider implements AiProvider {
 
     const payload = (await response.json().catch(() => ({}))) as OpenRouterResponse;
     if (!response.ok) {
-      this.logger.warn(`OpenRouter returned HTTP ${response.status}.`);
+      const providerMessage =
+        typeof payload.error?.message === 'string'
+          ? payload.error.message.replace(/[\\r\\n\\t]+/g, ' ').slice(0, 240)
+          : 'No provider error message was returned.';
+      this.logger.warn(
+        `OpenRouter returned HTTP ${response.status}: ${providerMessage}`,
+      );
       if (response.status === 429) {
         throw new HttpException(
           'The AI provider is busy or its free-tier limit has been reached. Please try again later.',
