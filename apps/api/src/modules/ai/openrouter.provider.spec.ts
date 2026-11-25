@@ -96,6 +96,6 @@ describe('OpenRouterProvider', () => {
 
     await expect(
       provider.generate({ systemPrompt: 'system', userPrompt: 'hello' }),
-    ).rejects.toThrow('AI provider returned an empty response.');
+    ).rejects.toThrow('AI provider returned no usable text (finish reason: unknown).');
   });
 });
