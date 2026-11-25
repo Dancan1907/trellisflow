@@ -15,7 +15,7 @@ import {
 } from './ai-provider.interface';
 
 interface OpenRouterResponse {
-  choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }>;
+  choices?: Array<{\n    finish_reason?: string | null;\n    message?: {\n      content?: string | Array<{ type?: string; text?: string }>;\n      refusal?: string | null;\n    };\n  }>;
   model?: string;
   usage?: { prompt_tokens?: number; completion_tokens?: number };
   error?: { message?: string };
@@ -112,7 +112,7 @@ export class OpenRouterProvider implements AiProvider {
       throw new BadGatewayException('AI extraction failed. Please try again.');
     }
 
-    const messageContent = payload.choices?.[0]?.message?.content;
+    const firstChoice = payload.choices?.[0];\n    const messageContent = firstChoice?.message?.content;
     const text =
       typeof messageContent === 'string'
         ? messageContent.trim()
