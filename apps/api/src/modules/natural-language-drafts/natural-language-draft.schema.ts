@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const optionalHint = z.string().trim().max(120).nullable();
+const optionalHint = z.string().trim().min(1).max(120).nullable();
 
 export const NaturalLanguageDraftSchema = z.object({
   type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
