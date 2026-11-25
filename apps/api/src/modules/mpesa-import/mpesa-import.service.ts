@@ -52,15 +52,21 @@ export class MpesaImportService {
     // Reserve capacity before calling the external AI provider. The database performs
     // this increment atomically, so concurrent requests cannot exceed the limit.
     const usageDate = await this.aiUsage.reserveMpesaParse(userId);
-    const usage = {
-      provider: this.config.get<string>('AI_PROVIDER', 'openrouter'),
-      model:
-        this.config.get<string>('AI_PROVIDER', 'openrouter') === 'anthropic'
-          ? this.config.get<string>('ANTHROPIC_MODEL', 'unknown')
-          : this.config.get<string>(
+    const provider = this.config.get<string>('AI_PROVIDER', 'gemini');
+    const model =
+      provider === 'gemini'
+        ? this.config.get<string>('GEMINI_MODEL', 'gemini-3.5-flash-lite')
+        : provider === 'openrouter'
+          ? this.config.get<string>(
               'AI_MODEL',
-              this.config.get<string>('OPENROUTER_MODEL', 'nvidia/nemotron-3.5-super-vl:free'),
-            ),
+              this.config.get<string>('OPENROUTER_MODEL', 'google/gemma-4-26b-a4b-it:free'),
+            )
+          : provider === 'anthropic'
+            ? this.config.get<string>('ANTHROPIC_MODEL', 'unknown')
+            : 'unknown';
+    const usage = {
+      provider,
+      model,
       inputTokens: 0,
       outputTokens: 0,
       succeeded: true,
