@@ -325,6 +325,8 @@ export function AddTransactionModal({
           initialAmount={parsed.draft.amount}
           initialDate={parsed.draft.date}
           initialDescription={parsed.draft.description}
+          mpesaReference={parsed.draft.mpesaReference ?? undefined}
+          mpesaReferenceAccountId={accountId}
           title="Record M-Pesa Transfer"
         />
       )}
