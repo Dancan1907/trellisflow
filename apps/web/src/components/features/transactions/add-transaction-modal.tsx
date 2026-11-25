@@ -211,7 +211,7 @@ export function AddTransactionModal({
                       className="w-full px-3 py-2 rounded-md border border-border-subtle bg-bg-primary text-fg-primary focus:outline-none focus:border-accent-primary"
                       placeholder="Paste the complete M-Pesa SMS here..."
                     />
-                    <p className="mt-1 text-xs text-fg-tertiary">Sent to Anthropic for extraction. TrellisFlow does not store the raw SMS; Anthropic API data handling applies.</p>
+                    <p className="mt-1 text-xs text-fg-tertiary">Sent to the configured AI provider for extraction. TrellisFlow does not store the raw SMS; the provider's data-handling terms apply.</p>
                   </div>
                 ) : (
                   <div>
@@ -222,7 +222,7 @@ export function AddTransactionModal({
                       onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
                       className="block w-full text-sm text-fg-secondary file:mr-3 file:rounded-md file:border-0 file:bg-bg-tertiary file:px-3 file:py-2 file:text-fg-primary"
                     />
-                    <p className="mt-1 text-xs text-fg-tertiary">JPG, PNG, or WebP · maximum 5 MB. Sent to Anthropic for extraction. TrellisFlow does not store the receipt image; Anthropic API data handling applies.</p>
+                    <p className="mt-1 text-xs text-fg-tertiary">JPG, PNG, or WebP · maximum 5 MB. Sent to the configured AI provider for extraction. TrellisFlow does not store the receipt image; the provider's data-handling terms apply.</p>
                   </div>
                 )}
                 <div className="flex justify-end gap-3">
