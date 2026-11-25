@@ -16,6 +16,8 @@ interface TransferModalProps {
   initialAmount?: number;
   initialDate?: string;
   initialDescription?: string;
+  mpesaReference?: string;
+  mpesaReferenceAccountId?: string;
   title?: string;
   onComplete?: () => void;
 }
@@ -30,6 +32,8 @@ export function TransferModal({
   initialAmount,
   initialDate,
   initialDescription,
+  mpesaReference,
+  mpesaReferenceAccountId,
   title = 'Transfer Between Accounts',
   onComplete,
 }: TransferModalProps) {
@@ -69,6 +73,8 @@ export function TransferModal({
         amount: Number(amount),
         date,
         description: description.trim(),
+        mpesaReference,
+        mpesaReferenceAccountId,
       });
       showToast('success', 'Transfer recorded', 'Both account balances have been updated.');
       if (onComplete) onComplete();
