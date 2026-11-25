@@ -28,4 +28,15 @@ export class CreateTransferDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional({ example: 'ABC123XYZ9', description: 'M-Pesa reference stored on the matching wallet-side transfer row' })
+  @IsString()
+  @Length(1, 32)
+  @IsOptional()
+  mpesaReference?: string;
+
+  @ApiPropertyOptional({ description: 'Account whose transfer row should carry the M-Pesa reference' })
+  @IsUUID()
+  @IsOptional()
+  mpesaReferenceAccountId?: string;
 }
