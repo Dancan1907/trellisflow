@@ -385,6 +385,7 @@ export class TransactionsService {
             dto.mpesaReference && dto.mpesaReferenceAccountId === toAccount.id
               ? dto.mpesaReference.trim().toUpperCase()
               : undefined,
+          receiptImageHash: dto.receiptImageHash && dto.mpesaReferenceAccountId === toAccount.id ? dto.receiptImageHash : undefined,
           source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL',
           status: 'POSTED',
         },
