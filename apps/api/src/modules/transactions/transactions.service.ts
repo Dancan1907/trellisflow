@@ -316,8 +316,9 @@ export class TransactionsService {
       throw new BadRequestException('Transfers must be between accounts of the same currency');
     }
 
-    if (dto.mpesaReference) {
+    if (dto.mpesaReference || dto.receiptImageHash) {
       if (
+        dto.mpesaReference &&
         dto.mpesaReferenceAccountId !== fromAccount.id &&
         dto.mpesaReferenceAccountId !== toAccount.id
       ) {
