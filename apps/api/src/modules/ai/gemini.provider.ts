@@ -120,6 +120,11 @@ export class GeminiProvider implements AiProvider {
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
+      if (/API key not valid|invalid API key|API_KEY_INVALID/i.test(providerMessage)) {
+        throw new ServiceUnavailableException(
+          'The configured Gemini API key is invalid. Check GEMINI_API_KEY in the backend environment.',
+        );
+      }
       if (response.status === 401 || response.status === 403) {
         throw new ServiceUnavailableException(
           'The configured Gemini API credentials or model access are unavailable.',
