@@ -15,6 +15,7 @@ export interface MpesaExtractionDraft {
 
 export interface MpesaParseResult {
   draft: MpesaExtractionDraft;
+  receiptImageHash?: string;
   duplicate:
     | { detected: false }
     | {
