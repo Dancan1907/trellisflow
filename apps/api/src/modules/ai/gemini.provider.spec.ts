@@ -11,7 +11,7 @@ describe('GeminiProvider', () => {
       get: jest.fn((key: string, fallback?: string) => {
         const values: Record<string, string> = {
           GEMINI_API_KEY: 'test-gemini-key',
-          GEMINI_MODEL: 'gemini-2.5-flash-lite',
+          GEMINI_MODEL: 'gemini-3.5-flash-lite',
           AI_REQUEST_TIMEOUT_MS: '30000',
         };
         return values[key] ?? fallback;
@@ -29,7 +29,7 @@ describe('GeminiProvider', () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        modelVersion: 'gemini-2.5-flash-lite',
+        modelVersion: 'gemini-3.5-flash-lite',
         candidates: [{ content: { parts: [{ text: '{"type":"EXPENSE"}' }] } }],
         usageMetadata: { promptTokenCount: 140, candidatesTokenCount: 35 },
       }),
@@ -46,11 +46,11 @@ describe('GeminiProvider', () => {
       text: '{"type":"EXPENSE"}',
       inputTokens: 140,
       outputTokens: 35,
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-3.5-flash-lite',
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -69,7 +69,7 @@ describe('GeminiProvider', () => {
 
   it('requires a server-side Gemini key', async () => {
     config.get.mockImplementation((key: string) =>
-      key === 'GEMINI_API_KEY' ? undefined : 'gemini-2.5-flash-lite',
+      key === 'GEMINI_API_KEY' ? undefined : 'gemini-3.5-flash-lite',
     );
     await expect(
       provider.generate({ systemPrompt: 'system', userPrompt: 'hello' }),
