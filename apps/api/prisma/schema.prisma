@@ -854,6 +854,13 @@ enum InsightStatus {
   EXPIRED
 }
 
+enum InsightNarrationStatus {
+  NOT_REQUESTED
+  PROCESSING
+  READY
+  FAILED
+}
+
 model NetWorthSnapshot {
   id                    String   @id @db.Uuid
   userId                String   @map("user_id") @db.Uuid
@@ -886,6 +893,9 @@ model Insight {
   relatedEntityId      String?         @map("related_entity_id") @db.Uuid
   actionUrl            String?         @map("action_url")
   metadata             Json?
+  narrative            String?                 @db.VarChar(1600)
+  narrationStatus      InsightNarrationStatus @default(NOT_REQUESTED) @map("narration_status")
+  narratedAt           DateTime?               @map("narrated_at") @db.Timestamptz(6)
   status               InsightStatus   @default(ACTIVE)
   dismissedAt          DateTime?       @map("dismissed_at") @db.Timestamptz(6)
   expiresAt            DateTime?       @map("expires_at") @db.Timestamptz(6)
