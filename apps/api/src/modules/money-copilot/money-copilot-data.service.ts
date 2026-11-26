@@ -6,6 +6,7 @@ import { BusinessesService } from '../businesses/businesses.service';
 type DateRange = { from: string; to: string };
 
 const STOP_WORDS = new Set([
+  'find', 'search', 'get', 'list', 'please',
   'how', 'much', 'did', 'does', 'what', 'when', 'where', 'show', 'tell',
   'me', 'my', 'the', 'for', 'and', 'was', 'were', 'have', 'has', 'had',
   'about', 'with', 'from', 'into', 'last', 'this', 'month', 'week', 'year',
