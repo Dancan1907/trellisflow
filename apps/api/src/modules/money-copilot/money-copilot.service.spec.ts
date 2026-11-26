@@ -12,6 +12,9 @@ describe('MoneyCopilotService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    config.get.mockImplementation((key: string, fallback?: string) =>
+      key === 'AI_MONEY_COPILOT_ENABLED' ? 'true' : fallback,
+    );
     usage.reserveMoneyCopilot.mockResolvedValue(new Date('2026-11-26T00:00:00Z'));
     usage.recordMoneyCopilot.mockResolvedValue(undefined);
     data.buildContext.mockResolvedValue({ asOf: '2026-11-26', cashFlow: [] });
