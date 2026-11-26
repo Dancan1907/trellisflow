@@ -247,7 +247,7 @@ export class RecurringService {
                 containerId: rule.containerId,
                 accountId: rule.accountId,
                 type: 'TRANSFER',
-                amount: -rule.amount,
+                amount: `-${rule.amount.toString()}`,
                 currency: rule.currency,
                 date: rule.nextOccurrence,
                 description: rule.description,
