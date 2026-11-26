@@ -66,6 +66,24 @@ describe('computeCashFlowForecast', () => {
     expect(result.accounts[0]!.closingBalance).toBe(950);
   });
 
+  it('replays future signed transfer rows after rewinding cached balances', () => {
+    const destination = { id: 'account-2', name: 'Savings', currency: 'KES', currentBalance: '25' };
+    const result = computeCashFlowForecast({
+      ...base,
+      accounts: [{ ...account, currentBalance: '975' }, destination],
+      transactions: [
+        { accountId: account.id, type: 'TRANSFER', amount: '-25', date: '2026-01-03', recurringRuleId: null, status: 'POSTED' },
+        { accountId: destination.id, type: 'TRANSFER', amount: '25', date: '2026-01-03', recurringRuleId: null, status: 'POSTED' },
+      ],
+    });
+    expect(result.accounts[0]!.openingBalance).toBe(1000);
+    expect(result.accounts[1]!.openingBalance).toBe(0);
+    expect(result.accounts[0]!.points[2]!.knownScheduledNet).toBe(-25);
+    expect(result.accounts[1]!.points[2]!.knownScheduledNet).toBe(25);
+    expect(result.accounts[0]!.closingBalance).toBe(975);
+    expect(result.accounts[1]!.closingBalance).toBe(25);
+  });
+
   it('rewinds posted transactions beyond the forecast horizon for historical as-of dates', () => {
     const result = computeCashFlowForecast({
       ...base,
