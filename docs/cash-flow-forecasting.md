@@ -1,0 +1,44 @@
+# Cash-flow forecasting
+
+## Status
+
+Phase 5 implementation in progress. The deterministic API and initial report UI are implemented behind the authenticated API. No LLM is used in calculations.
+
+## Accounting scope and rules
+
+- Forecast eligible active asset accounts of type checking, savings, cash, mobile money, and prepaid card. Liability, investment, and custom accounts are not treated as liquid cash accounts in this first version.
+- Each account is forecast in its own currency. Different currencies are never summed or converted.
+- The opening balance is the account's current balance on the forecast as-of date.
+- Historical variable cash flow uses posted and reconciled income and expense transactions in the selected lookback window. Pending transactions, soft-deleted transactions, and transfers are excluded.
+- Transactions linked to recurring rules are excluded from the historical variable-flow baseline. This prevents already-generated recurring entries from being counted again when their active rule is projected.
+- Active recurring rules are projected from their persisted `nextOccurrence`, interval, frequency, and end date. Paused, ended, and deleted rules are not projected.
+- Daily, weekly, biweekly, monthly, quarterly, and yearly recurrence are supported. Month-end dates are clamped to the final calendar day. Custom recurrence is excluded with a warning because the current model does not persist a deterministic custom schedule.
+- Recurring transfers are modeled as equal and opposite movements between same-currency accounts; they do not create income or expense. A transfer with a missing destination or incompatible currency is excluded with a warning.
+- Future-dated posted or reconciled transactions are included as known scheduled movements. Pending future entries are not treated as confirmed cash movements.
+- The historical variable income and expense daily averages are projected as a baseline. Scenario controls adjust those variable components only; fixed recurring rules and known scheduled transactions remain unchanged.
+- Calculations use four-decimal fixed-point integer arithmetic. Output amounts are rendered as numbers for the API/UI; values are not persisted as financial transactions.
+
+## Uncertainty and warnings
+
+The daily uncertainty interval is an indicative 80% band (1.28 standard deviations) derived from historical daily net-flow variability and scaled by the square root of the forecast horizon. It is a heuristic, not a calibrated probability guarantee. A warning is returned when an account's projected daily balance first falls below zero.
+
+## Backtesting
+
+The initial backtest uses rolling origins: the prior 30 days of non-recurring net cash flow predict the next 7 days. It reports mean absolute error per day and mean absolute percentage error where actual net flow is non-zero. Results are separated by currency. Historical recurring-rule versions are not stored, so recurring events are excluded from backtesting rather than pretending current rules represent past schedules.
+
+## API
+
+`GET /api/forecasts/cash-flow?horizonDays=90&historyDays=90&incomeAdjustmentPercent=0&expenseAdjustmentPercent=0`
+
+JWT-authenticated. Horizon is limited to 1–365 days, lookback to 30–365 days, and scenario adjustments to -100% through +1000%. Optional `asOf` accepts an ISO date.
+
+The endpoint is read-only. It does not create forecast records, transactions, or recurring-rule occurrences.
+
+## Known follow-up work
+
+- Add user-selected account/container scope and explicit treatment of credit-card payment obligations.
+- Improve recurrence semantics to preserve the intended day-of-month across short months and support persisted custom schedules.
+- Add scenario presets and a side-by-side baseline comparison.
+- Add richer backtesting by forecast horizon, account, and income regularity.
+- Add frontend chart visualization and user-facing explanations for uncertainty.
+- Validate all financial edge cases with representative fixtures and run the full API/web test suites before merge.
