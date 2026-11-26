@@ -9,6 +9,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { showToast } from '@/components/ui/toast';
 
+function getNarrativeText(value?: string | null): string | null {
+  if (!value) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed === 'string') return parsed;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      const explanation = record.explanation ?? record.narrative ?? record.text;
+      if (typeof explanation === 'string') return explanation;
+    }
+  } catch {
+    // Existing plain-text narrations do not need parsing.
+  }
+  return value;
+}
+
 export default function InsightsPage() {
   const narrationEnabled = process.env.NEXT_PUBLIC_INSIGHTS_NARRATION_ENABLED === 'true';
   const { data: insights, isLoading } = useDashboardInsights();
@@ -92,12 +108,12 @@ export default function InsightsPage() {
                   <h3 className="font-medium text-fg-primary mb-1">{insight.title}</h3>
                   <p className="text-sm text-fg-secondary">{insight.message}</p>
 
-                  {insight.narrative && (
+                  {getNarrativeText(insight.narrative) && (
                     <div className="mt-4 rounded-md border border-border-subtle bg-bg-tertiary p-4">
                       <div className="flex items-center gap-2 text-xs font-medium text-fg-secondary mb-2">
                         <Sparkles size={14} /> AI explanation
                       </div>
-                      <p className="text-sm text-fg-primary whitespace-pre-wrap">{insight.narrative}</p>
+                      <p className="text-sm text-fg-primary whitespace-pre-wrap">{getNarrativeText(insight.narrative)}</p>
                     </div>
                   )}
 
