@@ -52,16 +52,42 @@ describe('computeCashFlowForecast', () => {
     expect(result.accounts[0]!.points[0]!.historicalBaselineNet).toBe(10);
   });
 
-  it('includes future-dated known transactions and excludes pending history', () => {
+  it('rewinds future posted movements from cached balance and includes them once', () => {
     const result = computeCashFlowForecast({
       ...base,
+      accounts: [{ ...account, currentBalance: '950' }],
       transactions: [
         { accountId: account.id, type: 'EXPENSE', amount: '50', date: '2026-01-03', recurringRuleId: null, status: 'POSTED' },
         { accountId: account.id, type: 'EXPENSE', amount: '100', date: '2025-12-20', recurringRuleId: null, status: 'PENDING' },
       ],
     });
+    expect(result.accounts[0]!.openingBalance).toBe(1000);
     expect(result.accounts[0]!.points[1]!.knownScheduledNet).toBe(-50);
     expect(result.accounts[0]!.closingBalance).toBe(950);
+  });
+
+  it('rewinds posted transactions beyond the forecast horizon for historical as-of dates', () => {
+    const result = computeCashFlowForecast({
+      ...base,
+      accounts: [{ ...account, currentBalance: '900' }],
+      transactions: [
+        { accountId: account.id, type: 'EXPENSE', amount: '100', date: '2026-03-01', recurringRuleId: null, status: 'POSTED' },
+      ],
+    });
+    expect(result.accounts[0]!.openingBalance).toBe(1000);
+    expect(result.accounts[0]!.closingBalance).toBe(1000);
+  });
+
+  it('includes future pending transactions without rewinding the cached balance', () => {
+    const result = computeCashFlowForecast({
+      ...base,
+      transactions: [
+        { accountId: account.id, type: 'EXPENSE', amount: '20', date: '2026-01-04', recurringRuleId: null, status: 'PENDING' },
+      ],
+    });
+    expect(result.accounts[0]!.openingBalance).toBe(1000);
+    expect(result.accounts[0]!.points[3]!.knownScheduledNet).toBe(-20);
+    expect(result.accounts[0]!.closingBalance).toBe(980);
   });
 
   it('clamps month-end recurrence dates and respects end dates', () => {
