@@ -6,6 +6,7 @@ import { Topbar } from '@/components/layout/topbar';
 import { MarketingFooter } from '@/components/layout/marketing-footer';
 import { OnboardingManager } from '@/components/features/onboarding/onboarding-manager';
 import { MoneyCopilotWidget } from '@/components/features/money-copilot/money-copilot-widget';
+import { HelpAssistantWidget } from '@/components/features/help-assistant/help-assistant-widget';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -27,6 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <MoneyCopilotWidget />
+      <HelpAssistantWidget />
     </div>
   );
 }
