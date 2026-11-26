@@ -78,8 +78,8 @@ describe('computeCashFlowForecast', () => {
     });
     expect(result.accounts[0]!.openingBalance).toBe(1000);
     expect(result.accounts[1]!.openingBalance).toBe(0);
-    expect(result.accounts[0]!.points[2]!.knownScheduledNet).toBe(-25);
-    expect(result.accounts[1]!.points[2]!.knownScheduledNet).toBe(25);
+    expect(result.accounts[0]!.points[1]!.knownScheduledNet).toBe(-25);
+    expect(result.accounts[1]!.points[1]!.knownScheduledNet).toBe(25);
     expect(result.accounts[0]!.closingBalance).toBe(975);
     expect(result.accounts[1]!.closingBalance).toBe(25);
   });
@@ -104,7 +104,7 @@ describe('computeCashFlowForecast', () => {
       ],
     });
     expect(result.accounts[0]!.openingBalance).toBe(1000);
-    expect(result.accounts[0]!.points[3]!.knownScheduledNet).toBe(-20);
+    expect(result.accounts[0]!.points[2]!.knownScheduledNet).toBe(-20);
     expect(result.accounts[0]!.closingBalance).toBe(980);
   });
 
