@@ -18,6 +18,8 @@ export interface ForecastRuleInput {
   description: string;
   frequency: ForecastFrequency;
   interval: number;
+  dayOfMonth?: number | null;
+  dayOfWeek?: number | null;
   nextOccurrence: Date | string;
   endDate: Date | string | null;
   status: string;
@@ -112,6 +114,25 @@ function nextDate(value: Date, frequency: ForecastFrequency, interval: number): 
     case 'YEARLY': return addMonthsClamped(value, 12 * interval);
     default: return null;
   }
+}
+
+function nextRuleDate(value: Date, rule: ForecastRuleInput): Date | null {
+  if (!Number.isInteger(rule.interval) || rule.interval < 1) return null;
+  if (rule.frequency === 'MONTHLY' || rule.frequency === 'QUARTERLY' || rule.frequency === 'YEARLY') {
+    const months = rule.frequency === 'MONTHLY' ? rule.interval : rule.frequency === 'QUARTERLY' ? 3 * rule.interval : 12 * rule.interval;
+    const target = addMonthsClamped(value, months);
+    const intendedDay = rule.dayOfMonth ?? day(rule.nextOccurrence).getUTCDate();
+    const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(intendedDay, lastDay)));
+  }
+  if (rule.frequency === 'WEEKLY' || rule.frequency === 'BIWEEKLY') {
+    const step = (rule.frequency === 'WEEKLY' ? 7 : 14) * rule.interval;
+    const target = addDays(value, step);
+    if (rule.dayOfWeek == null) return target;
+    const delta = (rule.dayOfWeek - target.getUTCDay() + 7) % 7;
+    return addDays(target, delta);
+  }
+  return nextDate(value, rule.frequency, rule.interval);
 }
 
 function signedTransactionAmount(type: ForecastTransactionType, amount: bigint): bigint {
@@ -256,7 +277,7 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
     let occurrence = day(rule.nextOccurrence);
     let guard = 0;
     while (occurrence < asOf && guard++ < 5_000) {
-      const next = nextDate(occurrence, rule.frequency, rule.interval);
+      const next = nextRuleDate(occurrence, rule);
       if (!next || next.getTime() <= occurrence.getTime()) break;
       occurrence = next;
     }
