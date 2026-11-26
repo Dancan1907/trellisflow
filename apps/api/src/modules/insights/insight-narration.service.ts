@@ -126,7 +126,7 @@ export class InsightNarrationService {
             model: 'unknown',
           };
 
-      const narrative = this.validateNarrative(result.text, sourceFacts);
+      const narrative = this.validateNarrative(this.extractNarrativeText(result.text), sourceFacts);
       await this.prisma.insight.updateMany({
         where: { id: insightId, userId, narrationStatus: 'PROCESSING' },
         data: {
@@ -162,6 +162,27 @@ export class InsightNarrationService {
         data: { narrationStatus: 'FAILED', narrative: null, narratedAt: null },
       });
       this.logger.warn(`Insight narration failed for ${insightId}: ${(error as Error).message}`);
+    }
+  }
+
+  /** Extract user-facing prose from Gemini's JSON-mode response. */
+  private extractNarrativeText(raw: string): string {
+    const cleaned = raw.trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '');
+
+    try {
+      const parsed: unknown = JSON.parse(cleaned);
+      if (typeof parsed === 'string') return parsed.trim();
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const record = parsed as Record<string, unknown>;
+        const value = record.explanation ?? record.narrative ?? record.text;
+        if (typeof value === 'string' && value.trim()) return value.trim();
+      }
+      throw new Error('AI narration JSON did not contain an explanation string');
+    } catch (error) {
+      if (error instanceof SyntaxError) return cleaned;
+      throw error;
     }
   }
 
