@@ -39,6 +39,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { MpesaImportModule } from './modules/mpesa-import/mpesa-import.module';
 import { NaturalLanguageDraftsModule } from './modules/natural-language-drafts/natural-language-drafts.module';
 import { MoneyCopilotModule } from './modules/money-copilot/money-copilot.module';
+import { CashFlowForecastingModule } from './modules/cash-flow-forecasting/cash-flow-forecasting.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { MoneyCopilotModule } from './modules/money-copilot/money-copilot.module
     MpesaImportModule,
     NaturalLanguageDraftsModule,
     MoneyCopilotModule,
+    CashFlowForecastingModule,
     ContainersModule,
     UsersModule,
     ThrottlerModule.forRoot([
