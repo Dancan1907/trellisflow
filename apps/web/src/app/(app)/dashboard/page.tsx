@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Calendar, ArrowRight, TrendingUp } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth/auth-store';
 import {
@@ -25,8 +26,8 @@ export default function DashboardPage() {
       {/* Header & Greeting */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-fg-primary mb-1 flex items-center gap-2">
-            Good evening, {firstName}! <span className="text-2xl">👋</span>
+          <h1 className="text-3xl font-display font-bold text-fg-primary mb-1">
+            Good evening, {firstName}!
           </h1>
           <p className="text-fg-secondary text-sm">
             Here&apos;s your financial snapshot for today.
@@ -68,9 +69,9 @@ export default function DashboardPage() {
             <p className="text-sm text-fg-secondary mb-6">
               Track. Plan. Invest. Let TrellisFlow guide your financial journey.
             </p>
-            <button className="w-full py-2.5 rounded-md bg-accent-primary text-bg-primary text-sm font-bold hover:bg-accent-hover transition-colors flex items-center justify-center gap-2">
+            <Link href="/insights" className="w-full py-2.5 rounded-md bg-accent-primary text-bg-primary text-sm font-bold hover:bg-accent-hover transition-colors flex items-center justify-center gap-2">
               Explore Insights <ArrowRight size={16} />
-            </button>
+            </Link>
           </div>
 
           {/* Insights Widget */}
