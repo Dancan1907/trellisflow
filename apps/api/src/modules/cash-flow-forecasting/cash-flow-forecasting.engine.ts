@@ -133,6 +133,7 @@ interface AccountAccumulator {
   balance: bigint;
   historyIncome: bigint;
   historyExpense: bigint;
+  historyTransactionCount: number;
   dailyNet: bigint[];
   uncertainty: number;
   recurringByDate: Map<string, bigint>;
@@ -172,6 +173,7 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
       balance: toUnits(account.currentBalance),
       historyIncome: 0n,
       historyExpense: 0n,
+      historyTransactionCount: 0,
       dailyNet: Array.from({ length: input.historyDays }, () => 0n),
       uncertainty: 0,
       recurringByDate: new Map(),
@@ -190,6 +192,7 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
     if (date >= historyStart && date <= asOf) {
       if (transaction.type === 'INCOME') accumulator.historyIncome += signed;
       if (transaction.type === 'EXPENSE') accumulator.historyExpense += -signed;
+      accumulator.historyTransactionCount++;
       const index = Math.floor((date.getTime() - historyStart.getTime()) / DAY_MS);
       if (index >= 0 && index < input.historyDays) accumulator.dailyNet[index] += signed;
     } else if (date > asOf && date <= endDate) {
@@ -200,6 +203,9 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
   const incomeFactor = percentFactor(incomeAdjustment);
   const expenseFactor = percentFactor(expenseAdjustment);
   for (const accumulator of accumulators.values()) {
+    if (accumulator.historyTransactionCount === 0) {
+      warnings.push(`No eligible historical income or expense transactions were found for account "${accumulator.account.name}"; its variable-flow baseline and uncertainty band may understate risk.`);
+    }
     const mean = accumulator.dailyNet.reduce((sum, value) => sum + Number(value), 0) / accumulator.dailyNet.length;
     const variance = accumulator.dailyNet.reduce((sum, value) => sum + (Number(value) - mean) ** 2, 0) / Math.max(1, accumulator.dailyNet.length - 1);
     accumulator.uncertainty = Math.sqrt(variance);
