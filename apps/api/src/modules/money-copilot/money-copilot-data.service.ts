@@ -294,7 +294,7 @@ export class MoneyCopilotDataService {
     const terms = (question.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [])
       .filter((term) => !STOP_WORDS.has(term))
       .slice(0, 3);
-    const where: Record<string, unknown> = { userId, deletedAt: null };
+    const where: Prisma.TransactionWhereInput = { userId, deletedAt: null };
     if (terms.length) {
       where.OR = terms.map((term) => ({
         description: { contains: term, mode: 'insensitive' },
