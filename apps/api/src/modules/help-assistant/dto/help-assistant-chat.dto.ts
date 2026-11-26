@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class HelpAssistantHistoryMessageDto {
@@ -11,10 +11,12 @@ class HelpAssistantHistoryMessageDto {
 
 export class HelpAssistantChatDto {
   @IsString()
+  @IsNotEmpty()
   @MaxLength(1200)
   message!: string;
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(8)
   @ValidateNested({ each: true })
   @Type(() => HelpAssistantHistoryMessageDto)
   history?: HelpAssistantHistoryMessageDto[];
