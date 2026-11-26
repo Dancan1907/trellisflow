@@ -32,7 +32,7 @@ export class MoneyCopilotDataService {
     const today = this.todayInTimezone(timezone);
     const monthStart = `${today.slice(0, 7)}-01`;
 
-    const [snapshot, accounts, monthTransactions, recentTransactions] = await Promise.all([
+    const [snapshot, accounts, monthTransactionResult, recentTransactions] = await Promise.all([
       this.prisma.netWorthSnapshot.findFirst({
         where: { userId },
         orderBy: { date: 'desc' },
@@ -48,7 +48,6 @@ export class MoneyCopilotDataService {
       this.prisma.account.findMany({
         where: { userId, status: 'ACTIVE', deletedAt: null },
         select: {
-          id: true,
           name: true,
           category: true,
           accountType: true,
@@ -104,7 +103,7 @@ export class MoneyCopilotDataService {
       accountBalancesByCurrency.set(currency, group);
     }
 
-    const monthCashFlow = this.aggregateCashFlow(monthTransactions, monthStart, today);
+    const monthCashFlow = this.aggregateCashFlow(monthTransactionResult.transactions, monthStart, today);
     const context: Record<string, unknown> = {
       asOf: today,
       timezone,
@@ -137,6 +136,7 @@ export class MoneyCopilotDataService {
         'Net worth is taken from the latest saved snapshot and may not reflect changes after its date.',
         'Account balances are current account records and are not the same as a historical net-worth snapshot.',
         'Transfers are excluded from income and expense cash-flow totals.',
+        ...(monthTransactionResult.truncated ? ['The current-month transaction calculation reached its 5,000-record safety cap and may be incomplete.'] : []),
       ],
     };
 
@@ -152,7 +152,7 @@ export class MoneyCopilotDataService {
       const range = this.resolveDateRange(question, timezone);
       context.businessPerformance = await this.getBusinessPerformance(userId, range);
     }
-    if (/transaction|transactions|payment|purchase|merchant|paid|deposit|withdrawal|transfer/.test(lower)) {
+    if (/spend|spent|transaction|transactions|payment|purchase|merchant|paid|deposit|withdrawal|transfer/.test(lower)) {
       context.transactionLookup = await this.lookupTransactions(userId, question);
     }
 
@@ -160,7 +160,7 @@ export class MoneyCopilotDataService {
   }
 
   private async getSpendingAnalysis(userId: string, range: DateRange) {
-    const transactions = await this.findTransactionsInRange(userId, range.from, range.to, {
+    const result = await this.findTransactionsInRange(userId, range.from, range.to, {
       type: true,
       amount: true,
       currency: true,
@@ -168,7 +168,7 @@ export class MoneyCopilotDataService {
       category: { select: { name: true } },
     });
     const groups = new Map<string, { currency: string; category: string; amount: number; count: number }>();
-    for (const transaction of transactions) {
+    for (const transaction of result.transactions) {
       if (transaction.type !== 'EXPENSE') continue;
       const category = transaction.category?.name ?? 'Uncategorized';
       const key = `${transaction.currency}:${category}`;
@@ -193,7 +193,10 @@ export class MoneyCopilotDataService {
       byCategory: Array.from(groups.values())
         .map((group) => ({ ...group, amount: this.money(group.amount) }))
         .sort((a, b) => b.amount - a.amount),
-      note: 'Expense totals are based on recorded, non-deleted EXPENSE transactions. Transfers are excluded.',
+      truncated: result.truncated,
+      note: result.truncated
+        ? 'The calculation reached its 5,000-record safety cap and may be incomplete. Expense totals include recorded non-deleted EXPENSE transactions; transfers are excluded.'
+        : 'Expense totals are based on recorded, non-deleted EXPENSE transactions. Transfers are excluded.',
     };
   }
 
@@ -342,7 +345,7 @@ export class MoneyCopilotDataService {
     from: string,
     to: string,
     select: Prisma.TransactionSelect,
-  ) {
+  ): Promise<{ transactions: Array<Record<string, any>>; truncated: boolean }> {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId, deletedAt: null,
@@ -350,12 +353,13 @@ export class MoneyCopilotDataService {
       },
       select: { ...select, type: true, date: true },
       orderBy: { date: 'asc' },
-      take: 5000,
+      take: 5001,
     }) as Array<Record<string, any>>;
-    return rows.filter((row) => {
+    const inRange = rows.filter((row) => {
       const date = this.dateKey(row.date);
       return date >= from && date <= to;
     });
+    return { transactions: inRange.slice(0, 5000), truncated: rows.length > 5000 };
   }
 
   private aggregateCashFlow(rows: Array<Record<string, any>>, from: string, to: string) {
@@ -380,6 +384,9 @@ export class MoneyCopilotDataService {
     if (/last\s+7\s+days|past\s+week|last\s+week/i.test(question)) {
       return { from: this.dateKey(this.addDays(date, -6)), to: today };
     }
+    if (/last\s+90\s+days|past\s+90\s+days|last\s+3\s+months/i.test(question)) {
+      return { from: this.dateKey(this.addDays(date, -89)), to: today };
+    }
     if (/last\s+30\s+days|past\s+30\s+days/i.test(question)) {
       return { from: this.dateKey(this.addDays(date, -29)), to: today };
     }
@@ -390,6 +397,11 @@ export class MoneyCopilotDataService {
         from: `${lastPrevious.getUTCFullYear()}-${String(lastPrevious.getUTCMonth() + 1).padStart(2, '0')}-01`,
         to: this.dateKey(lastPrevious),
       };
+    }
+    if (/this\s+quarter|quarter\s+to\s+date/i.test(question)) {
+      const quarterStartMonth = Math.floor(date.getUTCMonth() / 3) * 3;
+      const quarterStart = new Date(Date.UTC(date.getUTCFullYear(), quarterStartMonth, 1));
+      return { from: this.dateKey(quarterStart), to: today };
     }
     if (/this\s+year|year\s+to\s+date/i.test(question)) {
       return { from: `${today.slice(0, 4)}-01-01`, to: today };
