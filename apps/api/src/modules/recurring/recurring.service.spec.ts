@@ -5,6 +5,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 const mockPrisma = {
   account: { findFirst: jest.fn() },
+  $transaction: jest.fn(),
   recurringRule: {
     create: jest.fn(),
     findFirst: jest.fn(),
@@ -93,6 +94,84 @@ describe('RecurringService (Unit)', () => {
           startDate: '2026-10-20',
         }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+
+  describe('generateDueTransactions', () => {
+    it('generates both sides of a recurring transfer and updates both balances atomically', async () => {
+      const source = {
+        id: 'account-source',
+        userId: 'user-1',
+        containerId: 'container-1',
+        currency: 'KES',
+      };
+      const destination = {
+        id: 'account-destination',
+        userId: 'user-1',
+        containerId: 'container-1',
+        currency: 'KES',
+        status: 'ACTIVE',
+      };
+      const rule = {
+        id: 'rule-1',
+        userId: 'user-1',
+        containerId: 'container-1',
+        accountId: source.id,
+        transferToAccountId: destination.id,
+        type: 'TRANSFER',
+        amount: 250,
+        currency: 'KES',
+        description: 'Monthly savings',
+        frequency: 'MONTHLY',
+        interval: 1,
+        dayOfMonth: new Date().getUTCDate(),
+        dayOfWeek: null,
+        startDate: new Date(),
+        nextOccurrence: new Date(Date.now() - 60_000),
+        endDate: null,
+        status: 'ACTIVE',
+      };
+      const tx = {
+        account: { findFirst: jest.fn().mockResolvedValue(destination), update: jest.fn().mockResolvedValue({}) },
+        transaction: { create: jest.fn().mockResolvedValue({}) },
+        recurringRule: { update: jest.fn().mockResolvedValue({}) },
+      };
+      mockPrisma.recurringRule.findMany.mockResolvedValue([rule]);
+      mockPrisma.$transaction.mockImplementation(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx));
+
+      const result = await service.generateDueTransactions();
+
+      expect(result).toEqual({ processed: 1, failed: 0, total: 1 });
+      expect(tx.transaction.create).toHaveBeenCalledTimes(2);
+      const [outgoing, incoming] = tx.transaction.create.mock.calls.map((call) => call[0].data);
+      expect(outgoing).toEqual(expect.objectContaining({
+        accountId: source.id,
+        type: 'TRANSFER',
+        amount: -250,
+        source: 'RECURRING',
+        recurringRuleId: rule.id,
+      }));
+      expect(incoming).toEqual(expect.objectContaining({
+        accountId: destination.id,
+        type: 'TRANSFER',
+        amount: 250,
+        source: 'RECURRING',
+        recurringRuleId: rule.id,
+      }));
+      expect(outgoing.transferPairId).toBe(incoming.transferPairId);
+      expect(tx.account.update).toHaveBeenNthCalledWith(1, {
+        where: { id: source.id },
+        data: { currentBalance: { decrement: 250 } },
+      });
+      expect(tx.account.update).toHaveBeenNthCalledWith(2, {
+        where: { id: destination.id },
+        data: { currentBalance: { increment: 250 } },
+      });
+      expect(tx.recurringRule.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: rule.id },
+        data: expect.objectContaining({ lastGeneratedAt: rule.nextOccurrence }),
+      }));
     });
   });
 
