@@ -47,11 +47,23 @@ describe('RecurringService (Unit)', () => {
       expect(next.toISOString().split('T')[0]).toBe('2026-11-20');
     });
 
-    it('should handle end-of-month gracefully (Jan 31 -> Feb 28)', () => {
-      const current = new Date('2026-01-31');
-      const next = service.calculateNextOccurrence(current, 'MONTHLY', 1);
-      // 2026 is not a leap year, so Feb has 28 days
-      expect(next.toISOString().split('T')[0]).toBe('2026-02-28');
+    it('should preserve a day-31 monthly anchor across February', () => {
+      const january = new Date('2026-01-31T00:00:00.000Z');
+      const february = service.calculateNextOccurrence(january, 'MONTHLY', 1, 31);
+      const march = service.calculateNextOccurrence(february, 'MONTHLY', 1, 31);
+
+      // February clamps to its final day, then the original 31st anchor resumes.
+      expect(february.toISOString().slice(0, 10)).toBe('2026-02-28');
+      expect(march.toISOString().slice(0, 10)).toBe('2026-03-31');
+    });
+
+    it('should preserve month-end anchors for quarterly schedules', () => {
+      const january = new Date('2026-01-31T00:00:00.000Z');
+      const april = service.calculateNextOccurrence(january, 'QUARTERLY', 1, 31);
+      const july = service.calculateNextOccurrence(april, 'QUARTERLY', 1, 31);
+
+      expect(april.toISOString().slice(0, 10)).toBe('2026-04-30');
+      expect(july.toISOString().slice(0, 10)).toBe('2026-07-31');
     });
 
     it('should handle leap year end-of-month (Jan 31 -> Feb 29)', () => {
