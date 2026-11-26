@@ -37,8 +37,15 @@ describe('CashFlowForecastingService', () => {
       where: expect.objectContaining({ userId: 'user-1', status: 'ACTIVE' }),
     }));
     expect(prisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ userId: 'user-1', deletedAt: null }),
+      where: expect.objectContaining({
+        userId: 'user-1',
+        deletedAt: null,
+        date: expect.objectContaining({ gte: expect.any(Date) }),
+        status: { in: ['POSTED', 'RECONCILED', 'PENDING'] },
+      }),
     }));
+    const transactionQuery = prisma.transaction.findMany.mock.calls[0]![0];
+    expect(transactionQuery.where.date).not.toHaveProperty('lte');
   });
 
   it('returns forecasts, backtesting and an explicit empty-rule scope', async () => {
