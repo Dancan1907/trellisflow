@@ -222,6 +222,21 @@ describe('InsightNarrationService', () => {
     )).toThrow('unsupported causal claim');
   });
 
+  it('rejects narration that exceeds the 100-word response limit', () => {
+    const longNarrative = Array.from({ length: 101 }, () => 'carefully').join(' ');
+    expect(() => (service as any).validateNarrative(
+      longNarrative,
+      'Review your recent spending.',
+    )).toThrow('100-word limit');
+  });
+
+  it('rejects indirect causal claims', () => {
+    expect(() => (service as any).validateNarrative(
+      'This pattern reflects a change in your income and spending.',
+      'Your spending is above its usual level.',
+    )).toThrow('unsupported causal claim');
+  });
+
   it('accepts narration that does not add unsupported numeric facts', () => {
     expect((service as any).validateNarrative(
       'This category is running higher than its usual level. Review recent purchases.',
