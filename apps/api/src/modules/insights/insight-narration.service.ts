@@ -53,13 +53,17 @@ export class InsightNarrationService {
     if (!this.isEnabled()) return;
 
     const staleBefore = new Date(Date.now() - STALE_PROCESSING_MS);
+    // Recover abandoned jobs first. The conditional state transition makes this safe
+    // when multiple API instances run the scheduler at the same time.
+    await this.prisma.insight.updateMany({
+      where: { status: 'ACTIVE', narrationStatus: 'PROCESSING', createdAt: { lt: staleBefore } },
+      data: { narrationStatus: 'QUEUED' },
+    });
+
     const candidates = await this.prisma.insight.findMany({
       where: {
         status: 'ACTIVE',
-        OR: [
-          { narrationStatus: { in: ['NOT_REQUESTED', 'QUEUED'] } },
-          { narrationStatus: 'PROCESSING', createdAt: { lt: staleBefore } },
-        ],
+        narrationStatus: { in: ['NOT_REQUESTED', 'QUEUED'] },
       },
       orderBy: { createdAt: 'asc' },
       take: BATCH_SIZE,
