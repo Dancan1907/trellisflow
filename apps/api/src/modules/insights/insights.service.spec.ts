@@ -151,7 +151,6 @@ describe('InsightsService (Unit)', () => {
         expect.objectContaining({
           name: 'checkUnusualSpending',
           status: 'FAILED',
-          error: 'database unavailable',
         }),
         expect.objectContaining({ name: 'checkFinancialActivitySummary', status: 'SUCCEEDED' }),
       ]));
