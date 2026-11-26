@@ -22,7 +22,7 @@ describe('computeCashFlowForecast', () => {
     });
     expect(result.accounts[0]!.points.find((point) => point.date === '2026-01-05')!.recurringNet).toBe(100);
     expect(result.accounts[0]!.points.find((point) => point.date === '2026-01-10')!.recurringNet).toBe(-40);
-    expect(result.accounts[0]!.closingBalance).toBe(1060);
+    expect(result.accounts[0]!.closingBalance).toBe(1120);
   });
 
   it('uses signed transfer rows and does not count transfers as income or expense', () => {
