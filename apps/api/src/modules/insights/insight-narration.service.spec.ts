@@ -62,6 +62,15 @@ describe('InsightNarrationService', () => {
     }));
   });
 
+  it('does not queue an insight that already has a completed narration', async () => {
+    prisma.insight.findFirst.mockResolvedValue({ id: 'i-ready', narrationStatus: 'READY' });
+    await expect(service.queueForUser('u-1', 'i-ready')).resolves.toEqual({
+      queued: false,
+      reason: 'already_ready',
+    });
+    expect(prisma.insight.updateMany).not.toHaveBeenCalled();
+  });
+
   it('queues only an existing active insight and leaves its deterministic fields untouched', async () => {
     prisma.insight.findFirst.mockResolvedValue({ id: 'i-1', narrationStatus: 'NOT_REQUESTED' });
     await expect(service.queueForUser('u-1', 'i-1')).resolves.toEqual({
@@ -111,6 +120,13 @@ describe('InsightNarrationService', () => {
       'Your spending increased by 300%. You should review it.',
       'You spent 150% more on Groceries.',
     )).toThrow('introduced a financial number');
+  });
+
+  it('rejects unsupported causal claims', () => {
+    expect(() => (service as any).validateNarrative(
+      'Your spending increased because your income declined.',
+      'Your spending increased by 150%.',
+    )).toThrow('unsupported causal claim');
   });
 
   it('accepts narration that does not add unsupported numeric facts', () => {
