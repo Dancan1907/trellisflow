@@ -57,6 +57,8 @@ export class CashFlowForecastingService {
           description: true,
           frequency: true,
           interval: true,
+          dayOfMonth: true,
+          dayOfWeek: true,
           nextOccurrence: true,
           endDate: true,
           status: true,
