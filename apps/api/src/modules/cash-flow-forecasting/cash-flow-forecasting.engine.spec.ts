@@ -111,14 +111,15 @@ describe('computeCashFlowForecast', () => {
   it('clamps month-end recurrence dates and respects end dates', () => {
     const result = computeCashFlowForecast({
       ...base,
-      horizonDays: 60,
+      horizonDays: 90,
       rules: [
-        { id: 'rent', accountId: account.id, transferToAccountId: null, type: 'EXPENSE', amount: '10', currency: 'KES', description: 'Rent', frequency: 'MONTHLY', interval: 1, nextOccurrence: '2026-01-31', endDate: '2026-02-28', status: 'ACTIVE' },
+        { id: 'rent', accountId: account.id, transferToAccountId: null, type: 'EXPENSE', amount: '10', currency: 'KES', description: 'Rent', frequency: 'MONTHLY', interval: 1, dayOfMonth: 31, nextOccurrence: '2026-01-31', endDate: null, status: 'ACTIVE' },
       ],
     });
     expect(result.accounts[0]!.points.find((point) => point.date === '2026-01-31')!.recurringNet).toBe(-10);
     expect(result.accounts[0]!.points.find((point) => point.date === '2026-02-28')!.recurringNet).toBe(-10);
-    expect(result.accounts[0]!.closingBalance).toBe(980);
+    expect(result.accounts[0]!.points.find((point) => point.date === '2026-03-31')!.recurringNet).toBe(-10);
+    expect(result.accounts[0]!.closingBalance).toBe(970);
   });
 
   it('does not combine different currencies and warns about unsupported custom recurrence', () => {
