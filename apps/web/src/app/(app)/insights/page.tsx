@@ -34,6 +34,20 @@ export default function InsightsPage() {
     onError: () => showToast('error', 'Failed to dismiss insight'),
   });
 
+  const generate = useMutation({
+    mutationFn: () => apiFetch<{ created: number }>('/api/insights/generate', { method: 'POST' }),
+    onSuccess: ({ created }) => {
+      invalidateInsights();
+      showToast(
+        'success',
+        created > 0
+          ? `Found ${created} new insight${created === 1 ? '' : 's'}`
+          : 'Your finances were checked. No new insights right now.',
+      );
+    },
+    onError: () => showToast('error', 'Could not check for new insights'),
+  });
+
   const dismissAll = useMutation({
     mutationFn: () => apiFetch<void>('/api/insights', { method: 'DELETE' }),
     onSuccess: () => {
@@ -115,8 +129,21 @@ export default function InsightsPage() {
           })}
         </div>
       ) : (
-        <EmptyState icon={CheckCircle2} title="You're all caught up!"
-          description="There are no active insights right now. We'll notify you when something needs attention." />
+        <EmptyState
+          icon={CheckCircle2}
+          title="No active insights yet"
+          description="Check your financial activity to see whether anything needs your attention."
+          action={
+            <button
+              onClick={() => generate.mutate()}
+              disabled={generate.isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-accent-primary px-4 py-2.5 text-sm font-semibold text-bg-primary transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Sparkles size={15} />
+              {generate.isPending ? 'Checking your finances…' : 'Check for insights'}
+            </button>
+          }
+        />
       )}
     </div>
   );
