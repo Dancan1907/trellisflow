@@ -306,24 +306,26 @@ export class InsightsService {
       where: {
         userId,
         type: 'EXPENSE',
+        status: { in: ['POSTED', 'RECONCILED'] },
         date: { gte: threeMonthsAgo, lte: monthEnd },
         deletedAt: null,
         categoryId: { not: null },
       },
-      select: { categoryId: true, amount: true, date: true },
+      select: { categoryId: true, containerId: true, currency: true, amount: true, date: true },
     });
 
-    const byCategory = new Map<string, { current: number; past: number }>();
+    const byCategory = new Map<string, { categoryId: string; containerId: string; currency: string; current: number; past: number }>();
     for (const tx of transactions) {
-      if (!tx.categoryId) continue;
-      const entry = byCategory.get(tx.categoryId) ?? { current: 0, past: 0 };
+      if (!tx.categoryId || !tx.containerId || !tx.currency) continue;
+      const key = `${tx.containerId}:${tx.currency}:${tx.categoryId}`;
+      const entry = byCategory.get(key) ?? { categoryId: tx.categoryId, containerId: tx.containerId, currency: tx.currency, current: 0, past: 0 };
       if (tx.date >= monthStart) entry.current += Number(tx.amount);
       else entry.past += Number(tx.amount);
-      byCategory.set(tx.categoryId, entry);
+      byCategory.set(key, entry);
     }
 
     let created = 0;
-    for (const [categoryId, { current, past }] of byCategory) {
+    for (const { categoryId, containerId, currency, current, past } of byCategory.values()) {
       const monthlyAvg = past / 3;
       if (monthlyAvg < 100 || current < 1000) continue; // Ignore noise
       if (current < monthlyAvg * 1.5) continue;
@@ -333,6 +335,7 @@ export class InsightsService {
           userId,
           type: 'UNUSUAL_SPENDING',
           relatedEntityId: categoryId,
+          relatedContainerId: containerId,
           createdAt: { gte: monthStart },
         },
       });
@@ -347,10 +350,10 @@ export class InsightsService {
         'UNUSUAL_SPENDING',
         'WARNING',
         'Unusual Spending Spike',
-        `You've spent ${pct}% more on "${name}" this month than your 3-month average.`,
-        null,
+        `You've spent ${pct}% more on "${name}" this month than your 3-month average (${currency}), within this container.`,
+        containerId,
         categoryId,
-        { categoryId, current, monthlyAvg: Math.round(monthlyAvg) },
+        { categoryId, current, monthlyAvg: Math.round(monthlyAvg), currency },
       );
       created++;
     }
