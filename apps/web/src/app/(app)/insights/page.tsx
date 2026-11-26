@@ -6,7 +6,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api/api-client';
 import { AlertCircle, TrendingUp, Info, CheckCircle2, X, Sparkles, ArrowUpRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EmptyState } from '@/components/shared/empty-state';
 import { showToast } from '@/components/ui/toast';
 
 function getNarrativeText(value?: string | null): string | null {
@@ -51,15 +50,21 @@ export default function InsightsPage() {
   });
 
   const generate = useMutation({
-    mutationFn: () => apiFetch<{ created: number }>('/api/insights/generate', { method: 'POST' }),
-    onSuccess: ({ created }) => {
+    mutationFn: () => apiFetch<{
+      created: number;
+      checksExecuted: number;
+      failedChecks: number;
+      checkResults: Array<{ name: string; created: number; status: 'SUCCEEDED' | 'FAILED'; error?: string }>;
+    }>('/api/insights/generate', { method: 'POST' }),
+    onSuccess: (result) => {
       invalidateInsights();
-      showToast(
-        'success',
-        created > 0
-          ? `Found ${created} new insight${created === 1 ? '' : 's'}`
-          : 'Your finances were checked. No new insights right now.',
-      );
+      if (result.failedChecks > 0) {
+        showToast('error', `Created ${result.created} insight(s); ${result.failedChecks} of ${result.checksExecuted} checks failed. See diagnostics below.`);
+      } else {
+        showToast('success', result.created > 0
+          ? `Found ${result.created} new insight${result.created === 1 ? '' : 's'}`
+          : 'All financial checks completed. No new qualifying insights were found.');
+      }
     },
     onError: () => showToast('error', 'Could not check for new insights'),
   });
@@ -86,13 +91,39 @@ export default function InsightsPage() {
           <h1 className="text-2xl font-semibold text-fg-primary mb-1">Insights</h1>
           <p className="text-fg-secondary text-sm">Deterministic observations, with optional AI explanations.</p>
         </div>
-        {insights && insights.length > 0 && (
-          <button onClick={() => dismissAll.mutate()} disabled={dismissAll.isPending}
-            className="flex items-center gap-2 px-4 py-2 rounded-md border border-border-subtle text-fg-primary text-sm font-medium hover:bg-bg-tertiary transition-colors disabled:opacity-50">
-            <CheckCircle2 size={16} /> Dismiss All
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => generate.mutate()} disabled={generate.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent-primary text-bg-primary text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50">
+            <Sparkles size={16} /> {generate.isPending ? 'Checking…' : 'Check for insights'}
           </button>
-        )}
+          {insights && insights.length > 0 && (
+            <button onClick={() => dismissAll.mutate()} disabled={dismissAll.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-md border border-border-subtle text-fg-primary text-sm font-medium hover:bg-bg-tertiary transition-colors disabled:opacity-50">
+              <CheckCircle2 size={16} /> Dismiss All
+            </button>
+          )}
+        </div>
       </div>
+
+      {generate.data && (
+        <section className="rounded-lg border border-border-subtle bg-bg-secondary p-4" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-fg-primary">Latest generation check</h2>
+            <span className="text-xs text-fg-secondary">
+              {generate.data.created} created · {generate.data.checksExecuted} checks run · {generate.data.failedChecks} failed
+            </span>
+          </div>
+          {generate.data.failedChecks > 0 && (
+            <ul className="mt-3 space-y-2">
+              {generate.data.checkResults.filter((check) => check.status === 'FAILED').map((check) => (
+                <li key={check.name} className="text-xs text-status-negative">
+                  <span className="font-medium">{check.name}:</span> {check.error ?? 'Check failed'}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {isLoading ? (
         <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
@@ -145,21 +176,15 @@ export default function InsightsPage() {
           })}
         </div>
       ) : (
-        <EmptyState
-          icon={CheckCircle2}
-          title="No active insights yet"
-          description="Check your financial activity to see whether anything needs your attention."
-          action={
-            <button
-              onClick={() => generate.mutate()}
-              disabled={generate.isPending}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-accent-primary px-4 py-2.5 text-sm font-semibold text-bg-primary transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Sparkles size={15} />
-              {generate.isPending ? 'Checking your finances…' : 'Check for insights'}
-            </button>
-          }
-        />
+        <div className="rounded-lg border border-dashed border-border-subtle bg-bg-secondary px-6 py-12 text-center">
+          <CheckCircle2 size={28} className="mx-auto mb-3 text-fg-tertiary" />
+          <h2 className="text-lg font-semibold text-fg-primary">No active insights yet</h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-fg-secondary">
+            {generate.data?.failedChecks
+              ? 'Some financial checks could not complete. Review the diagnostic details below and try again.'
+              : 'There are no qualifying observations in the available records yet. Insights appear when your recorded activity supports a useful finding.'}
+          </p>
+        </div>
       )}
     </div>
   );
