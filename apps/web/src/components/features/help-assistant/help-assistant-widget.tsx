@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { BookOpen, Bot, CircleHelp, Minimize2, RotateCcw, Send, ShieldCheck, User, X } from 'lucide-react';
 import { HelpAssistantReply, HelpAssistantMessage, useHelpAssistantChat } from '@/lib/hooks/use-help-assistant';
 
@@ -17,7 +16,6 @@ interface DisplayMessage extends HelpAssistantMessage {
 }
 
 export function HelpAssistantWidget() {
-  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
