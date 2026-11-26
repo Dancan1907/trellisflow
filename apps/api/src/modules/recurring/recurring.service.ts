@@ -2,7 +2,7 @@
 // Recurring Service
 // ============================================================================
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
@@ -38,12 +38,24 @@ export class RecurringService {
     });
     if (!account) throw new NotFoundException('Account not found');
 
-    // If it's a transfer, verify the destination account
-    if (dto.type === 'TRANSFER' && dto.transferToAccountId) {
+    // Transfers require a distinct destination in the same container and currency.
+    if (dto.type === 'TRANSFER') {
+      if (!dto.transferToAccountId) {
+        throw new BadRequestException('A destination account is required for recurring transfers');
+      }
       const toAccount = await this.prisma.account.findFirst({
         where: { id: dto.transferToAccountId, userId, status: 'ACTIVE' },
       });
       if (!toAccount) throw new NotFoundException('Destination account not found');
+      if (toAccount.id === account.id) {
+        throw new BadRequestException('Cannot transfer to the same account');
+      }
+      if (toAccount.containerId !== account.containerId) {
+        throw new BadRequestException('Recurring transfers must be within the same container');
+      }
+      if (toAccount.currency !== account.currency) {
+        throw new BadRequestException('Recurring transfers must use the same currency');
+      }
     }
 
     return this.prisma.recurringRule.create({
@@ -135,39 +147,45 @@ export class RecurringService {
   /**
    * Helper: Calculate the next occurrence date based on frequency.
    */
-  calculateNextOccurrence(currentDate: Date, frequency: string, interval: number): Date {
+  calculateNextOccurrence(
+    currentDate: Date,
+    frequency: string,
+    interval: number,
+    dayOfMonth?: number | null,
+    dayOfWeek?: number | null,
+  ): Date {
     const next = new Date(currentDate);
 
     switch (frequency) {
       case 'DAILY':
-        next.setDate(next.getDate() + interval);
+        next.setUTCDate(next.getUTCDate() + interval);
         break;
       case 'WEEKLY':
-        next.setDate(next.getDate() + 7 * interval);
-        break;
-      case 'BIWEEKLY':
-        next.setDate(next.getDate() + 14 * interval);
-        break;
-      case 'MONTHLY': {
-        // Handle end-of-month gracefully (e.g. Jan 31 + 1 month = Feb 28)
-        const targetMonth = next.getMonth() + interval;
-        const originalDay = next.getDate();
-        next.setMonth(targetMonth);
-        // If the month overflowed (e.g. Feb 31 -> Mar 3), set to last day of the target month
-        if (next.getDate() !== originalDay) {
-          next.setDate(0); // Sets to the last day of the previous month
+      case 'BIWEEKLY': {
+        const days = (frequency === 'WEEKLY' ? 7 : 14) * interval;
+        next.setUTCDate(next.getUTCDate() + days);
+        if (dayOfWeek != null) {
+          const adjustment = (dayOfWeek - next.getUTCDay() + 7) % 7;
+          next.setUTCDate(next.getUTCDate() + adjustment);
         }
         break;
       }
+      case 'MONTHLY':
       case 'QUARTERLY':
-        next.setMonth(next.getMonth() + 3 * interval);
-        break;
-      case 'YEARLY':
-        next.setFullYear(next.getFullYear() + interval);
-        break;
+      case 'YEARLY': {
+        const months = frequency === 'MONTHLY'
+          ? interval
+          : frequency === 'QUARTERLY' ? 3 * interval : 12 * interval;
+        const targetMonth = next.getUTCMonth() + months;
+        const targetYear = next.getUTCFullYear() + Math.floor(targetMonth / 12);
+        const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+        const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate();
+        const intendedDay = dayOfMonth ?? next.getUTCDate();
+        return new Date(Date.UTC(targetYear, normalizedMonth, Math.min(intendedDay, lastDay)));
+      }
       default:
-        // Fallback to daily if unknown
-        next.setDate(next.getDate() + interval);
+        // Preserve the existing fallback behavior for unknown frequencies.
+        next.setUTCDate(next.getUTCDate() + interval);
     }
 
     return next;
@@ -200,45 +218,103 @@ export class RecurringService {
       try {
         // Execute in a DB transaction to ensure atomicity
         await this.prisma.$transaction(async (tx) => {
-          // 1. Generate the transaction
-          if (rule.type === 'TRANSFER' && rule.transferToAccountId) {
-            // For now, we skip transfers in the generator (will add later)
-            return;
+          // 1. Generate the transaction(s) and apply their balance effects atomically.
+          if (rule.type === 'TRANSFER') {
+            if (!rule.transferToAccountId) {
+              throw new Error('Recurring transfer has no destination account');
+            }
+            const destination = await tx.account.findFirst({
+              where: {
+                id: rule.transferToAccountId,
+                userId: rule.userId,
+                status: 'ACTIVE',
+              },
+            });
+            if (!destination) throw new Error('Recurring transfer destination is missing or inactive');
+            if (
+              destination.id === rule.accountId ||
+              destination.containerId !== rule.containerId ||
+              destination.currency !== rule.currency
+            ) {
+              throw new Error('Recurring transfer destination must be a different account in the same container and currency');
+            }
+
+            const pairId = randomUUID();
+            await tx.transaction.create({
+              data: {
+                id: randomUUID(),
+                userId: rule.userId,
+                containerId: rule.containerId,
+                accountId: rule.accountId,
+                type: 'TRANSFER',
+                amount: `-${rule.amount.toString()}`,
+                currency: rule.currency,
+                date: rule.nextOccurrence,
+                description: rule.description,
+                transferPairId: pairId,
+                source: 'RECURRING',
+                recurringRuleId: rule.id,
+                status: 'POSTED',
+              },
+            });
+            await tx.transaction.create({
+              data: {
+                id: randomUUID(),
+                userId: rule.userId,
+                containerId: destination.containerId,
+                accountId: destination.id,
+                type: 'TRANSFER',
+                amount: rule.amount,
+                currency: destination.currency,
+                date: rule.nextOccurrence,
+                description: rule.description,
+                transferPairId: pairId,
+                source: 'RECURRING',
+                recurringRuleId: rule.id,
+                status: 'POSTED',
+              },
+            });
+            await tx.account.update({
+              where: { id: rule.accountId },
+              data: { currentBalance: { decrement: rule.amount } },
+            });
+            await tx.account.update({
+              where: { id: destination.id },
+              data: { currentBalance: { increment: rule.amount } },
+            });
+          } else {
+            await tx.transaction.create({
+              data: {
+                id: randomUUID(),
+                userId: rule.userId,
+                containerId: rule.containerId,
+                accountId: rule.accountId,
+                type: rule.type,
+                amount: rule.amount,
+                currency: rule.currency,
+                date: rule.nextOccurrence,
+                description: rule.description,
+                categoryId: rule.categoryId,
+                source: 'RECURRING',
+                recurringRuleId: rule.id,
+                status: 'POSTED',
+              },
+            });
+
+            const delta = rule.type === 'INCOME' ? Number(rule.amount) : -Number(rule.amount);
+            await tx.account.update({
+              where: { id: rule.accountId },
+              data: { currentBalance: { increment: delta } },
+            });
           }
-
-          await tx.transaction.create({
-            data: {
-              id: randomUUID(),
-              userId: rule.userId,
-              containerId: rule.containerId,
-              accountId: rule.accountId,
-              type: rule.type,
-              amount: rule.amount,
-              currency: rule.currency,
-              date: rule.nextOccurrence,
-              description: rule.description,
-              categoryId: rule.categoryId,
-              source: 'RECURRING',
-              recurringRuleId: rule.id,
-              status: 'POSTED',
-            },
-          });
-
-          // 2. Update the balance
-          let delta = 0;
-          if (rule.type === 'INCOME') delta = Number(rule.amount);
-          if (rule.type === 'EXPENSE') delta = -Number(rule.amount);
-
-          await tx.account.update({
-            where: { id: rule.accountId },
-            data: { currentBalance: { increment: delta } },
-          });
 
           // 3. Calculate the NEXT occurrence
           const nextDate = this.calculateNextOccurrence(
             rule.nextOccurrence,
             rule.frequency,
             rule.interval,
+            rule.dayOfMonth ?? rule.startDate.getUTCDate(),
+            rule.dayOfWeek,
           );
 
           // 4. Update the rule

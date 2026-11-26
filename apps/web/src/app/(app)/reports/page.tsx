@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { TrendingUp, ArrowRightLeft, PieChart, ChevronRight } from 'lucide-react';
+import { TrendingUp, ArrowRightLeft, PieChart, ChevronRight, CalendarClock } from 'lucide-react';
 
 const reports = [
   {
@@ -15,6 +15,12 @@ const reports = [
     description: 'See where your money came from and where it went.',
     href: '/reports/cash-flow',
     icon: ArrowRightLeft,
+  },
+  {
+    title: 'Cash-flow Forecast',
+    description: 'Project future balances using your history and recurring rules.',
+    href: '/reports/cash-flow-forecast',
+    icon: CalendarClock,
   },
   {
     title: 'Allocation Report',
