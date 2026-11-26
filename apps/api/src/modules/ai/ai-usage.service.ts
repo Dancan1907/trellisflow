@@ -73,6 +73,11 @@ export class AiUsageService {
     );
   }
 
+  /** Reserves an independent daily allowance for product documentation help. */
+  async reserveHelpAssistant(userId: string): Promise<Date> {
+    return this.reserveFeature(userId, 'HELP_ASSISTANT', 'AI_HELP_ASSISTANT_DAILY_LIMIT', 'Help Assistant');
+  }
+
   /**
    * Shared atomic daily-capacity reservation.
    *
@@ -180,6 +185,11 @@ export class AiUsageService {
     usage: AiUsageRecord,
   ): Promise<void> {
     return this.recordFeatureUsage(userId, usageDate, 'MONEY_COPILOT', usage);
+  }
+
+  /** Records privacy-safe token metadata for Help Assistant. */
+  async recordHelpAssistant(userId: string, usageDate: Date, usage: AiUsageRecord): Promise<void> {
+    return this.recordFeatureUsage(userId, usageDate, 'HELP_ASSISTANT', usage);
   }
 
   /**
