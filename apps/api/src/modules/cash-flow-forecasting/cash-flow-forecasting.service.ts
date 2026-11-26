@@ -66,7 +66,7 @@ export class CashFlowForecastingService {
         where: {
           userId,
           deletedAt: null,
-          date: { gte: historyStart, lte: new Date(Math.max(forecastEnd.getTime(), Date.now())) },
+          date: { gte: historyStart },
           status: { in: ['POSTED', 'RECONCILED', 'PENDING'] },
         },
         select: {
