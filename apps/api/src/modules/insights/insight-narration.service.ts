@@ -7,6 +7,7 @@ import { AiUsageService } from '../ai/ai-usage.service';
 
 const BATCH_SIZE = 5;
 const MAX_NARRATIVE_LENGTH = 1600;
+const MAX_NARRATIVE_WORDS = 100;
 const STALE_PROCESSING_MS = 15 * 60 * 1000;
 
 @Injectable()
@@ -244,8 +245,11 @@ export class InsightNarrationService {
     if (!narrative || narrative.length < 12) {
       throw new Error('AI returned an empty or unusably short narration');
     }
-    if (/\b(because|caused by|due to|as a result|resulted in|led to|driven by)\b/i.test(narrative)) {
+    if (/\b(because|caused by|due to|as a result|resulted in|resulting from|led to|driven by|stemming from|attributed to|in response to|therefore|consequently|thus|which means|suggests that|indicates that|reflects)\b/i.test(narrative)) {
       throw new Error('AI narration contains an unsupported causal claim');
+    }
+    if (narrative.split(/\s+/).filter(Boolean).length > MAX_NARRATIVE_WORDS) {
+      throw new Error('AI narration exceeds the 100-word limit');
     }
 
     const sourceNumbers = new Set((source.match(/\d[\d,.]*(?:%?)/g) ?? []).map(this.normalizeNumber));
