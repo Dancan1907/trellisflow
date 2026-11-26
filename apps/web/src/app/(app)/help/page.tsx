@@ -62,7 +62,8 @@ export default function HelpPage() {
   const [activeSection, setActiveSection] = useState('introduction');
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">\n      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">Open the Help button at the bottom-right to ask questions and get links to the right TrellisFlow page.</p></section>
+    <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">
+      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">Open the Help button at the bottom-right to ask questions and get links to the right TrellisFlow page.</p></section>
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-64 shrink-0">
         <div className="sticky top-24 space-y-6">
