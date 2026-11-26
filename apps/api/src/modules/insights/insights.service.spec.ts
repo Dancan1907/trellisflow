@@ -49,6 +49,7 @@ describe('InsightsService (Unit)', () => {
     mockPrisma.holding.findMany.mockResolvedValue([]);
     mockPrisma.container.findMany.mockResolvedValue([]);
     mockPrisma.account.findMany.mockResolvedValue([]);
+    mockPrisma.transaction.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -95,6 +96,65 @@ describe('InsightsService (Unit)', () => {
           }),
         }),
       );
+    });
+
+    it('creates a 30-day cash-flow summary from posted transactions grouped by container and currency', async () => {
+      const containerId = '00000000-0000-4000-8000-000000000001';
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        { id: 'tx-1', containerId, type: 'INCOME', amount: 50000, currency: 'KES' },
+        { id: 'tx-2', containerId, type: 'EXPENSE', amount: 12000, currency: 'KES' },
+        { id: 'tx-3', containerId, type: 'EXPENSE', amount: 8000, currency: 'KES' },
+      ]);
+
+      const result = await service.generateForUser('u1');
+
+      expect(result.created).toBe(1);
+      expect(mockPrisma.insight.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'FINANCIAL_ACTIVITY_SUMMARY',
+          relatedContainerId: containerId,
+          message: expect.stringContaining('KES 50,000'),
+        }),
+      }));
+    });
+
+    it('does not combine transactions with different currencies into one insight', async () => {
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        { id: 'tx-1', containerId: 'container-kes', type: 'INCOME', amount: 50000, currency: 'KES' },
+        { id: 'tx-2', containerId: 'container-kes', type: 'EXPENSE', amount: 12000, currency: 'KES' },
+        { id: 'tx-3', containerId: 'container-kes', type: 'EXPENSE', amount: 8000, currency: 'KES' },
+        { id: 'tx-4', containerId: 'container-usd', type: 'INCOME', amount: 500, currency: 'USD' },
+        { id: 'tx-5', containerId: 'container-usd', type: 'EXPENSE', amount: 100, currency: 'USD' },
+        { id: 'tx-6', containerId: 'container-usd', type: 'EXPENSE', amount: 50, currency: 'USD' },
+      ]);
+
+      const result = await service.generateForUser('u1');
+
+      expect(result.created).toBe(2);
+      const summaries = mockPrisma.insight.create.mock.calls
+        .map(([call]) => call.data)
+        .filter((data) => data.type === 'FINANCIAL_ACTIVITY_SUMMARY');
+      expect(summaries).toHaveLength(2);
+      expect(summaries.map((data) => data.metadata.currency).sort()).toEqual(['KES', 'USD']);
+    });
+
+    it('reports individual rule failures without aborting the remaining checks', async () => {
+      mockPrisma.transaction.findMany
+        .mockRejectedValueOnce(new Error('database unavailable'))
+        .mockResolvedValue([]);
+
+      const result = await service.generateForUser('u1');
+
+      expect(result.checksExecuted).toBe(15);
+      expect(result.failedChecks).toBe(1);
+      expect(result.checkResults).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          name: 'checkUnusualSpending',
+          status: 'FAILED',
+          error: 'database unavailable',
+        }),
+        expect.objectContaining({ name: 'checkFinancialActivitySummary', status: 'SUCCEEDED' }),
+      ]));
     });
 
     it('should create an insight for a goal that is achieved', async () => {
