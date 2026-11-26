@@ -43,6 +43,44 @@ describe('InsightNarrationService', () => {
     );
   });
 
+  it('recovers only processing jobs whose processing timestamp is stale', async () => {
+    await service.processQueue();
+
+    const recovery = prisma.insight.updateMany.mock.calls[0][0];
+    expect(recovery).toEqual(expect.objectContaining({
+      where: expect.objectContaining({
+        status: 'ACTIVE',
+        narrationStatus: 'PROCESSING',
+        OR: [
+          { narrationProcessingAt: { lt: expect.any(Date) } },
+          { narrationProcessingAt: null },
+        ],
+      }),
+      data: { narrationStatus: 'QUEUED', narrationProcessingAt: null },
+    }));
+    expect(recovery.where).not.toHaveProperty('createdAt');
+  });
+
+  it('does not reserve quota when an insight is no longer active before narration starts', async () => {
+    prisma.insight.findMany.mockResolvedValue([{
+      id: 'i-dismissed', userId: 'u-1', narrationStatus: 'QUEUED', createdAt: new Date(),
+    }]);
+    prisma.insight.findFirst.mockResolvedValue(null);
+
+    await service.processQueue();
+
+    expect(usage.reserveInsightNarration).not.toHaveBeenCalled();
+    expect(prisma.insight.updateMany).toHaveBeenLastCalledWith({
+      where: {
+        id: 'i-dismissed',
+        userId: 'u-1',
+        narrationStatus: 'PROCESSING',
+        status: { not: 'ACTIVE' },
+      },
+      data: { narrationStatus: 'NOT_REQUESTED', narrationProcessingAt: null },
+    });
+  });
+
   it('does not queue narration when the feature flag is disabled', async () => {
     config.get.mockReturnValue('false');
     expect(service.isEnabled()).toBe(false);
@@ -99,12 +137,19 @@ describe('InsightNarrationService', () => {
     await service.processQueue();
 
     expect(provider.generateWithUsage).toHaveBeenCalledTimes(1);
+    expect(prisma.insight.updateMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      data: {
+        narrationStatus: 'PROCESSING',
+        narrationProcessingAt: expect.any(Date),
+      },
+    }));
     expect(prisma.insight.updateMany).toHaveBeenNthCalledWith(3, expect.objectContaining({
       where: { id: 'i-1', userId: 'u-1', narrationStatus: 'PROCESSING' },
       data: expect.objectContaining({
         narrative: expect.stringContaining('spending'),
         narrationStatus: 'READY',
         narratedAt: expect.any(Date),
+        narrationProcessingAt: null,
       }),
     }));
     const narrationUpdate = prisma.insight.updateMany.mock.calls[2][0].data;
@@ -183,7 +228,12 @@ describe('InsightNarrationService', () => {
     expect(usage.recordInsightNarration).toHaveBeenCalledWith('u-2', expect.any(Date),
       expect.objectContaining({ succeeded: false }));
     expect(prisma.insight.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
-      data: { narrationStatus: 'FAILED', narrative: null, narratedAt: null },
+      data: {
+        narrationStatus: 'FAILED',
+        narrative: null,
+        narratedAt: null,
+        narrationProcessingAt: null,
+      },
     }));
   });
 });
