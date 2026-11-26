@@ -49,7 +49,7 @@ export class InsightsService {
 
   async generateForUser(userId: string) {
     let created = 0;
-    const checkResults: Array<{ name: string; created: number; status: 'SUCCEEDED' | 'FAILED'; error?: string }> = [];
+    const checkResults: Array<{ name: string; created: number; status: 'SUCCEEDED' | 'FAILED' }> = [];
 
     const checks: Array<{ name: string; fn: () => Promise<number> }> = [
       { name: 'checkBudgetOverspent', fn: () => this.checkBudgetOverspent(userId) },
@@ -77,7 +77,7 @@ export class InsightsService {
       } catch (err) {
         const error = err instanceof Error ? err.message : 'Unknown error';
         this.logger.error(`Insight check "${check.name}" failed: ${error}`);
-        checkResults.push({ name: check.name, created: 0, status: 'FAILED', error });
+        checkResults.push({ name: check.name, created: 0, status: 'FAILED' });
       }
     }
 
@@ -183,7 +183,7 @@ export class InsightsService {
       groups.set(key, group);
     }
 
-    const largestByScope = new Map<string, { group: (typeof groups extends Map<string, infer V> ? V : never); scope: string }>();
+    const largestByScope = new Map<string, { group: { containerId: string; categoryId: string; currency: string; amount: number; count: number; sampleId: string; totalExpenses: number }; scope: string }>();
     for (const group of groups.values()) {
       const scope = `${group.containerId}:${group.currency}`;
       group.totalExpenses = totals.get(scope) ?? 0;
