@@ -13,6 +13,7 @@ import {
   BarChart3,
   Lightbulb,
   Sparkles,
+  CircleHelp,
   Settings,
   LucideIcon,
   X,
@@ -59,6 +60,7 @@ const navSections: { title: string; tourId?: string; items: NavItem[] }[] = [
       { label: 'Reports', href: '/reports', icon: BarChart3 },
       { label: 'Insights', href: '/insights', icon: Lightbulb },
       { label: 'Money Copilot', href: '/money-copilot', icon: Sparkles, enabled: process.env.NEXT_PUBLIC_MONEY_COPILOT_ENABLED === 'true' },
+      { label: 'Help Centre', href: '/help', icon: CircleHelp, enabled: process.env.NEXT_PUBLIC_HELP_ASSISTANT_ENABLED === 'true' },
     ],
   },
 ];
