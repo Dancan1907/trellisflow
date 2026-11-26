@@ -184,12 +184,21 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
   for (const transaction of input.transactions) {
     const date = day(transaction.date);
     const accumulator = accumulators.get(transaction.accountId);
-    if (!accumulator || transaction.recurringRuleId || !['POSTED', 'RECONCILED'].includes(transaction.status)) continue;
-    if (transaction.type === 'TRANSFER') continue;
+    if (!accumulator) continue;
+    const posted = ['POSTED', 'RECONCILED'].includes(transaction.status);
+    const pending = transaction.status === 'PENDING';
     const amount = toUnits(transaction.amount);
-    const signed = signedTransactionAmount(transaction.type, amount);
+    const signed = transaction.type === 'TRANSFER'
+      ? amount
+      : signedTransactionAmount(transaction.type, amount);
 
-    if (date >= historyStart && date <= asOf) {
+    // Cached balances are updated when posted transactions are created, even
+    // when their effective date is in the future. Rewind those movements to
+    // derive the balance at asOf, then add each future movement exactly once.
+    if (posted && date > asOf) accumulator.balance -= signed;
+
+    if (transaction.recurringRuleId || transaction.type === 'TRANSFER') continue;
+    if (posted && date >= historyStart && date <= asOf) {
       if (transaction.type === 'INCOME') accumulator.historyIncome += signed;
       if (transaction.type === 'EXPENSE') accumulator.historyExpense += -signed;
       accumulator.historyTransactionCount++;
@@ -197,8 +206,9 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
       if (index >= 0 && index < input.historyDays) {
         accumulator.dailyNet[index] = (accumulator.dailyNet[index] ?? 0n) + signed;
       }
-    } else if (date > asOf && date <= endDate) {
-      accumulator.knownByDate.set(iso(date), (accumulator.knownByDate.get(iso(date)) ?? 0n) + signed);
+    } else if ((posted || pending) && date > asOf && date <= endDate) {
+      const key = iso(date);
+      accumulator.knownByDate.set(key, (accumulator.knownByDate.get(key) ?? 0n) + signed);
     }
   }
 
@@ -307,12 +317,12 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
     accounts,
     warnings: [...new Set(warnings)],
     assumptions: [
-      'Opening balances use each active cash/asset account current balance as of the forecast date.',
+      'Opening balances are reconstructed at the selected as-of date by reversing posted or reconciled transactions dated after that date from the cached account balance.',
       'Posted and reconciled historical income and expenses establish a straight-line daily baseline over the selected lookback window.',
       'Transactions linked to recurring rules are excluded from the historical baseline to avoid double counting.',
       'Active recurring rules are projected from their stored next occurrence; paused and ended rules are excluded.',
       'Transfers move value between same-currency accounts and are not treated as income or expense.',
-      'Future-dated posted or reconciled transactions are included as known scheduled cash movements.',
+      'Future-dated posted, reconciled, and pending transactions are included once as known scheduled cash movements; posted movements are first removed from the cached opening balance.',
       'The uncertainty band is an indicative 80% interval derived from historical daily net-flow variability, not a guarantee.',
       'Each currency is forecast independently; balances in different currencies are never added together.',
       'Scenario adjustments apply only to the historical variable-income and variable-expense baseline, not to fixed recurring rules.',
