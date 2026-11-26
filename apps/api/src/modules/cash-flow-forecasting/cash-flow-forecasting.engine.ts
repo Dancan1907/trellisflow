@@ -194,7 +194,9 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
       if (transaction.type === 'EXPENSE') accumulator.historyExpense += -signed;
       accumulator.historyTransactionCount++;
       const index = Math.floor((date.getTime() - historyStart.getTime()) / DAY_MS);
-      if (index >= 0 && index < input.historyDays) accumulator.dailyNet[index] += signed;
+      if (index >= 0 && index < input.historyDays) {
+        accumulator.dailyNet[index] = (accumulator.dailyNet[index] ?? 0n) + signed;
+      }
     } else if (date > asOf && date <= endDate) {
       accumulator.knownByDate.set(iso(date), (accumulator.knownByDate.get(iso(date)) ?? 0n) + signed);
     }
