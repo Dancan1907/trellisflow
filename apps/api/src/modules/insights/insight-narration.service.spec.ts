@@ -115,6 +115,37 @@ describe('InsightNarrationService', () => {
       expect.objectContaining({ succeeded: true, model: 'test-model' }));
   });
 
+  it('extracts the explanation string from Gemini JSON-mode output', async () => {
+    prisma.insight.findMany.mockResolvedValue([{
+      id: 'i-json', userId: 'u-json', narrationStatus: 'QUEUED', createdAt: new Date(),
+    }]);
+    prisma.insight.findFirst.mockResolvedValue({
+      id: 'i-json',
+      type: 'NET_WORTH_MILESTONE',
+      severity: 'OPPORTUNITY',
+      title: 'Net Worth Milestone: KES 10,000,000',
+      message: 'Your total net worth has crossed KES 10,000,000. Great work!',
+      actionUrl: '/reports/net-worth',
+    });
+    provider.generateWithUsage.mockResolvedValue({
+      text: JSON.stringify({
+        explanation: 'This milestone marks an important point in your recorded financial position. Keep reviewing your assets and liabilities.',
+      }),
+      inputTokens: 20,
+      outputTokens: 25,
+      model: 'test-model',
+    });
+
+    await service.processQueue();
+
+    expect(prisma.insight.updateMany).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      data: expect.objectContaining({
+        narrative: expect.not.stringMatching(/^\s*\{/),
+        narrationStatus: 'READY',
+      }),
+    }));
+  });
+
   it('rejects AI output that invents financial numbers', () => {
     expect(() => (service as any).validateNarrative(
       'Your spending increased by 300%. You should review it.',
