@@ -197,6 +197,14 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
     // derive the balance at asOf, then add each future movement exactly once.
     if (posted && date > asOf) accumulator.balance -= signed;
 
+    // Scheduled movements must be replayed even when they are transfers or
+    // were generated from a recurring rule. The rule's nextOccurrence has
+    // already advanced when its transaction is generated.
+    if ((posted || pending) && date > asOf && date <= endDate) {
+      const key = iso(date);
+      accumulator.knownByDate.set(key, (accumulator.knownByDate.get(key) ?? 0n) + signed);
+    }
+
     if (transaction.recurringRuleId || transaction.type === 'TRANSFER') continue;
     if (posted && date >= historyStart && date <= asOf) {
       if (transaction.type === 'INCOME') accumulator.historyIncome += signed;
@@ -206,9 +214,6 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
       if (index >= 0 && index < input.historyDays) {
         accumulator.dailyNet[index] = (accumulator.dailyNet[index] ?? 0n) + signed;
       }
-    } else if ((posted || pending) && date > asOf && date <= endDate) {
-      const key = iso(date);
-      accumulator.knownByDate.set(key, (accumulator.knownByDate.get(key) ?? 0n) + signed);
     }
   }
 
