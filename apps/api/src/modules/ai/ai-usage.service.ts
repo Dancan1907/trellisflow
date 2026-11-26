@@ -17,7 +17,7 @@ export interface AiUsageRecord {
   succeeded: boolean;
 }
 
-type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT' | 'MONEY_COPILOT' | 'INSIGHT_NARRATION';
+type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT' | 'MONEY_COPILOT' | 'INSIGHT_NARRATION' | 'HELP_ASSISTANT';
 
 @Injectable()
 export class AiUsageService {
