@@ -313,18 +313,6 @@ export class MoneyCopilotDataService {
         category: { select: { name: true } },
       },
     });
-    if (transactions.length === 0 && terms.length) {
-      transactions = await this.prisma.transaction.findMany({
-        where: { userId, deletedAt: null },
-        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-        take: 8,
-        select: {
-          type: true, amount: true, currency: true, date: true, description: true,
-          account: { select: { name: true } },
-          category: { select: { name: true } },
-        },
-      });
-    }
     return {
       searchTerms: terms,
       matchedCount: transactions.length,
@@ -335,7 +323,7 @@ export class MoneyCopilotDataService {
         category: transaction.category?.name ?? 'Uncategorized',
       })),
       note: terms.length
-        ? 'Search is limited to transaction descriptions. If no description matched, the most recent transactions are shown instead.'
+        ? 'Search is limited to transaction descriptions. No unrelated transactions are substituted when there are no matches.'
         : 'These are the most recent recorded transactions.',
     };
   }
