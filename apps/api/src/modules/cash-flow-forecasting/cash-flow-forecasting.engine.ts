@@ -209,6 +209,10 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
     if (rule.status !== 'ACTIVE') continue;
     const source = accumulators.get(rule.accountId);
     if (!source) continue;
+    if (rule.currency !== source.account.currency) {
+      warnings.push(`Recurring rule "${rule.description}" uses a different currency from its source account and was excluded.`);
+      continue;
+    }
     if (rule.frequency === 'CUSTOM') {
       warnings.push(`Recurring rule "${rule.description}" uses a custom frequency and was excluded because its schedule cannot be projected safely.`);
       continue;
@@ -237,7 +241,7 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
       if (occurrence > asOf) {
         const dateKey = iso(occurrence);
         const amount = toUnits(rule.amount);
-        const signed = signedTransactionAmount(rule.type, amount);
+        const signed = rule.type === 'TRANSFER' ? -amount : signedTransactionAmount(rule.type, amount);
         source.recurringByDate.set(dateKey, (source.recurringByDate.get(dateKey) ?? 0n) + signed);
         if (rule.type === 'TRANSFER' && rule.transferToAccountId) {
           const destination = accumulators.get(rule.transferToAccountId)!;
