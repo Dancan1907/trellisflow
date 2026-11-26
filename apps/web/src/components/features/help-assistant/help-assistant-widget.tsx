@@ -53,7 +53,7 @@ export function HelpAssistantWidget() {
   return (
     <>
       {isOpen && (
-        <section aria-label="TrellisFlow Help Assistant" className="fixed bottom-24 right-4 z-[80] flex h-[min(680px,calc(100dvh-8rem))] w-[min(440px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border-subtle bg-bg-secondary shadow-2xl sm:right-6">
+        <section aria-label="TrellisFlow Help Assistant" className="fixed bottom-24 left-4 right-auto z-[80] flex h-[min(680px,calc(100dvh-8rem))] w-[min(440px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border-subtle bg-bg-secondary shadow-2xl sm:left-6 sm:right-auto">
           <header className="flex shrink-0 items-center justify-between border-b border-border-subtle px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-primary/10 text-accent-primary"><CircleHelp size={20} /></div>
@@ -105,7 +105,7 @@ export function HelpAssistantWidget() {
           </form>
         </section>
       )}
-      <button type="button" onClick={() => setIsOpen((value) => !value)} aria-label={isOpen ? 'Close Help Assistant' : 'Open Help Assistant'} aria-expanded={isOpen} className="fixed bottom-5 right-4 z-[80] flex h-14 items-center gap-2 rounded-full bg-accent-primary px-4 text-white shadow-xl transition-transform hover:scale-[1.03] sm:bottom-6 sm:right-6">
+      <button type="button" onClick={() => setIsOpen((value) => !value)} aria-label={isOpen ? 'Close Help Assistant' : 'Open Help Assistant'} aria-expanded={isOpen} className="fixed bottom-5 left-4 right-auto z-[80] flex h-14 items-center gap-2 rounded-full bg-accent-primary px-4 text-white shadow-xl transition-transform hover:scale-[1.03] sm:bottom-6 sm:left-6 sm:right-auto">
         {isOpen ? <X size={20}/> : <CircleHelp size={20}/>}<span className="text-sm font-semibold">Help</span>
       </button>
     </>
