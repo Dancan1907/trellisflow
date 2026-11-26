@@ -856,6 +856,7 @@ enum InsightStatus {
 
 enum InsightNarrationStatus {
   NOT_REQUESTED
+  QUEUED
   PROCESSING
   READY
   FAILED
