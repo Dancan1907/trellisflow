@@ -89,3 +89,15 @@ describe('MoneyCopilotDataService', () => {
     expect(lookupCall![0].select).not.toHaveProperty('notes');
   });
 });
+
+  it('does not return unrelated recent transactions when a description search has no matches', async () => {
+    prisma.transaction.findMany.mockResolvedValue([]);
+    const result = await service.buildContext('user-1', 'Find my fuel transaction');
+    expect(result.transactionLookup).toMatchObject({
+      searchTerms: ['fuel'],
+      matchedCount: 0,
+      transactions: [],
+    });
+    const lookupCalls = prisma.transaction.findMany.mock.calls.filter((call) => call[0].where?.OR);
+    expect(lookupCalls).toHaveLength(1);
+  });
