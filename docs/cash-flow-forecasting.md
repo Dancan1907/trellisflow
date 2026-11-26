@@ -2,7 +2,7 @@
 
 ## Status
 
-The deterministic API and report UI are implemented behind the authenticated API. The targeted forecast and recurring-service unit suites, API/web typechecks, and production build have passed locally. No LLM is used in calculations.
+The deterministic API and report UI are implemented behind the authenticated API. No LLM is used in calculations.
 
 ## Accounting scope and rules
 
