@@ -71,12 +71,13 @@ describe('InsightNarrationService', () => {
 
     expect(usage.reserveInsightNarration).not.toHaveBeenCalled();
     expect(prisma.insight.updateMany).toHaveBeenLastCalledWith({
-      where: {
+      where: expect.objectContaining({
         id: 'i-dismissed',
         userId: 'u-1',
         narrationStatus: 'PROCESSING',
+        narrationProcessingAt: expect.any(Date),
         status: { not: 'ACTIVE' },
-      },
+      }),
       data: { narrationStatus: 'NOT_REQUESTED', narrationProcessingAt: null },
     });
   });
@@ -116,8 +117,18 @@ describe('InsightNarrationService', () => {
       reason: 'queued',
     });
     expect(prisma.insight.updateMany).toHaveBeenCalledWith({
-      where: { id: 'i-1', userId: 'u-1', narrationStatus: { in: ['NOT_REQUESTED', 'FAILED'] } },
-      data: { narrationStatus: 'QUEUED' },
+      where: {
+        id: 'i-1',
+        userId: 'u-1',
+        status: 'ACTIVE',
+        narrationStatus: { in: ['NOT_REQUESTED', 'FAILED'] },
+      },
+      data: {
+        narrationStatus: 'QUEUED',
+        narrative: null,
+        narratedAt: null,
+        narrationProcessingAt: null,
+      },
     });
   });
 
@@ -144,7 +155,13 @@ describe('InsightNarrationService', () => {
       },
     }));
     expect(prisma.insight.updateMany).toHaveBeenNthCalledWith(3, expect.objectContaining({
-      where: { id: 'i-1', userId: 'u-1', narrationStatus: 'PROCESSING' },
+      where: expect.objectContaining({
+        id: 'i-1',
+        userId: 'u-1',
+        narrationStatus: 'PROCESSING',
+        narrationProcessingAt: expect.any(Date),
+        status: 'ACTIVE',
+      }),
       data: expect.objectContaining({
         narrative: expect.stringContaining('spending'),
         narrationStatus: 'READY',
