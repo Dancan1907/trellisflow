@@ -148,7 +148,7 @@ describe('RecurringService (Unit)', () => {
       expect(outgoing).toEqual(expect.objectContaining({
         accountId: source.id,
         type: 'TRANSFER',
-        amount: -250,
+        amount: '-250',
         source: 'RECURRING',
         recurringRuleId: rule.id,
       }));
