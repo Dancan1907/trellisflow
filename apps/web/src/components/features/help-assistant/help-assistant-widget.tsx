@@ -85,7 +85,7 @@ export function HelpAssistantWidget() {
                   {message.reply?.sources.length ? (
                     <div className="rounded-lg border border-border-subtle bg-bg-primary p-2.5">
                       <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-fg-tertiary"><BookOpen size={12}/> DOCUMENTATION SOURCES</p>
-                      {message.reply.sources.map((source, sourceIndex) => <div key={sourceIndex} className="text-xs text-fg-secondary">{source.title}{source.section ? ` · ${source.section}` : ''}</div>)}
+                      {message.reply.sources.map((source, sourceIndex) => <div key={sourceIndex} className="text-xs text-fg-secondary">{source.route ? <Link href={source.route} onClick={() => setIsOpen(false)} className="hover:text-accent-primary hover:underline">{source.title}{source.section ? ` · ${source.section}` : ''}</Link> : <span>{source.title}{source.section ? ` · ${source.section}` : ''}</span>}</div>)}
                     </div>
                   ) : null}
                 </div>
