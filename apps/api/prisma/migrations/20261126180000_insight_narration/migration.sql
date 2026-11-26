@@ -7,5 +7,4 @@ ALTER TABLE "insights"
   ADD COLUMN "narrated_at" TIMESTAMPTZ(6);
 
 CREATE INDEX "insights_narration_queue_idx"
-  ON "insights" ("narration_status", "created_at")
-  WHERE "status" = 'ACTIVE';
+  ON "insights" ("narration_status", "created_at");
