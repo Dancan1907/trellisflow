@@ -1,8 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
-import { InsightNarrationStatus } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AI_PROVIDER, AiProvider } from '../ai/ai-provider.interface';
 import { AiUsageService } from '../ai/ai-usage.service';
@@ -60,7 +58,7 @@ export class InsightNarrationService {
         status: 'ACTIVE',
         OR: [
           { narrationStatus: { in: ['NOT_REQUESTED', 'QUEUED'] } },
-          { narrationStatus: 'PROCESSING', updatedAt: { lt: staleBefore } },
+          { narrationStatus: 'PROCESSING', createdAt: { lt: staleBefore } },
         ],
       },
       orderBy: { createdAt: 'asc' },
