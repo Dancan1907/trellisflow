@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -18,6 +18,15 @@ interface Chunk {
   heading: string;
   content: string;
   index: number;
+}
+interface IndexedChunk {
+  chunk: Chunk;
+  vector: number[];
+  hash: string;
+}
+interface IndexedDocument {
+  document: ParsedDocument;
+  chunks: IndexedChunk[];
 }
 
 function parseDocument(source: string, raw: string): ParsedDocument {
@@ -99,7 +108,7 @@ async function listMarkdown(directory: string): Promise<string[]> {
   for (const entry of entries) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) files.push(...await listMarkdown(path));
-    else if (entry.isFile() && entry.name.endsWith('.md')) files.push(path);
+    else if (entry.isFile() && entry.name.endsWith('.md') && basename(path).toLowerCase() !== 'readme.md') files.push(path);
   }
   return files.sort();
 }
@@ -107,11 +116,8 @@ async function listMarkdown(directory: string): Promise<string[]> {
 async function main() {
   const files = await listMarkdown(DOCS_ROOT);
   if (!files.length) throw new Error('No Markdown help documents found in ' + DOCS_ROOT);
-  const activeSources = files.map((file) => relative(DOCS_ROOT, file).replace(/\\/g, '/'));
-  await prisma.$executeRawUnsafe(
-    'DELETE FROM "document_chunks" WHERE NOT ("source" = ANY($1::text[]))',
-    activeSources,
-  );
+
+  const indexed: IndexedDocument[] = [];
   let totalChunks = 0;
   for (const file of files) {
     const source = relative(DOCS_ROOT, file).replace(/\\/g, '/');
@@ -119,7 +125,7 @@ async function main() {
     const chunks = chunkDocument(document.content);
     if (!chunks.length) continue;
 
-    const embedded: Array<{ chunk: Chunk; vector: number[]; hash: string }> = [];
+    const embedded: IndexedChunk[] = [];
     for (const chunk of chunks) {
       const text = 'Document: ' + document.title + '\nSection: ' + chunk.heading + '\n\n' + chunk.content;
       embedded.push({
@@ -128,21 +134,25 @@ async function main() {
         hash: createHash('sha256').update(text).digest('hex'),
       });
     }
+    indexed.push({ document, chunks: embedded });
+    totalChunks += embedded.length;
+    process.stdout.write('Prepared ' + source + ': ' + embedded.length + ' chunks\n');
+  }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe('DELETE FROM "document_chunks" WHERE "source" = $1', source);
-      for (const item of embedded) {
-        const vectorLiteral = '[' + item.vector.join(',') + ']';
+  // Replace the complete index atomically only after every embedding succeeds.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe('DELETE FROM "document_chunks"');
+    for (const item of indexed) {
+      for (const entry of item.chunks) {
+        const vectorLiteral = '[' + entry.vector.join(',') + ']';
         await tx.$executeRawUnsafe(
           'INSERT INTO "document_chunks" ("source", "title", "heading", "route", "chunk_index", "content", "content_hash", "embedding") VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector)',
-          source, document.title, item.chunk.heading, document.route, item.chunk.index,
-          item.chunk.content, item.hash, vectorLiteral,
+          item.document.source, item.document.title, entry.chunk.heading, item.document.route,
+          entry.chunk.index, entry.chunk.content, entry.hash, vectorLiteral,
         );
       }
-    });
-    totalChunks += embedded.length;
-    process.stdout.write('Indexed ' + source + ': ' + embedded.length + ' chunks\n');
-  }
+    }
+  });
   process.stdout.write('Help documentation ingestion complete: ' + files.length + ' files, ' + totalChunks + ' chunks.\n');
 }
 
