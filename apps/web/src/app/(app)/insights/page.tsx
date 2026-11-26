@@ -54,7 +54,7 @@ export default function InsightsPage() {
       created: number;
       checksExecuted: number;
       failedChecks: number;
-      checkResults: Array<{ name: string; created: number; status: 'SUCCEEDED' | 'FAILED'; error?: string }>;
+      checkResults: Array<{ name: string; created: number; status: 'SUCCEEDED' | 'FAILED' }>;
     }>('/api/insights/generate', { method: 'POST' }),
     onSuccess: (result) => {
       invalidateInsights();
@@ -117,7 +117,7 @@ export default function InsightsPage() {
             <ul className="mt-3 space-y-2">
               {generate.data.checkResults.filter((check) => check.status === 'FAILED').map((check) => (
                 <li key={check.name} className="text-xs text-status-negative">
-                  <span className="font-medium">{check.name}:</span> {check.error ?? 'Check failed'}
+                  <span className="font-medium">{check.name}:</span> {'This check could not complete. Review the API logs for details.'}
                 </li>
               ))}
             </ul>
