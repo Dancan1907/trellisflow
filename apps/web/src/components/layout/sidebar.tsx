@@ -12,6 +12,7 @@ import {
   CreditCard,
   BarChart3,
   Lightbulb,
+  Sparkles,
   Settings,
   LucideIcon,
   X,
@@ -56,6 +57,7 @@ const navSections: { title: string; tourId?: string; items: NavItem[] }[] = [
     items: [
       { label: 'Reports', href: '/reports', icon: BarChart3 },
       { label: 'Insights', href: '/insights', icon: Lightbulb },
+      { label: 'Money Copilot', href: '/money-copilot', icon: Sparkles },
     ],
   },
 ];
