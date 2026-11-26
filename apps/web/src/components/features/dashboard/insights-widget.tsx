@@ -1,4 +1,5 @@
-import { AlertCircle, TrendingUp, Info } from 'lucide-react';
+import Link from 'next/link';
+import { AlertCircle, TrendingUp, Info, Sparkles, ArrowUpRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Insight {
@@ -6,6 +7,8 @@ interface Insight {
   severity: 'INFO' | 'OPPORTUNITY' | 'WARNING';
   title: string;
   message: string;
+  narrative?: string | null;
+  actionUrl?: string | null;
 }
 
 interface InsightsWidgetProps {
@@ -54,6 +57,17 @@ export function InsightsWidget({ isLoading, insights }: InsightsWidgetProps) {
             <div>
               <p className="text-sm font-medium text-fg-primary">{insight.title}</p>
               <p className="text-xs text-fg-secondary mt-1">{insight.message}</p>
+              {insight.narrative && (
+                <div className="mt-2 flex items-start gap-2 text-xs text-fg-primary">
+                  <Sparkles size={13} className="mt-0.5 shrink-0 text-accent-primary" />
+                  <p>{insight.narrative}</p>
+                </div>
+              )}
+              {insight.actionUrl && (
+                <Link href={insight.actionUrl} className="inline-flex items-center gap-1 mt-2 text-xs text-accent-primary hover:underline">
+                  View details <ArrowUpRight size={12} />
+                </Link>
+              )}
             </div>
           </div>
         ))}
