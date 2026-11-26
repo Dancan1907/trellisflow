@@ -108,7 +108,12 @@ async function main() {
   const files = await listMarkdown(DOCS_ROOT);
   if (!files.length) throw new Error('No Markdown help documents found in ' + DOCS_ROOT);
   const activeSources = files.map((file) => relative(DOCS_ROOT, file).replace(/\\/g, '/'));
-  await prisma.$executeRawUnsafe(\n    'DELETE FROM "document_chunks" WHERE NOT ("source" = ANY($1::text[]))',\n    activeSources,\n  );\n  let totalChunks = 0;\n  for (const file of files) {
+  await prisma.$executeRawUnsafe(
+    'DELETE FROM "document_chunks" WHERE NOT ("source" = ANY($1::text[]))',
+    activeSources,
+  );
+  let totalChunks = 0;
+  for (const file of files) {
     const source = relative(DOCS_ROOT, file).replace(/\\/g, '/');
     const document = parseDocument(source, await readFile(file, 'utf8'));
     const chunks = chunkDocument(document.content);
