@@ -16,6 +16,22 @@ interface InsightsWidgetProps {
   insights?: Insight[];
 }
 
+function getNarrativeText(value?: string | null): string | null {
+  if (!value) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed === 'string') return parsed;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      const explanation = record.explanation ?? record.narrative ?? record.text;
+      if (typeof explanation === 'string') return explanation;
+    }
+  } catch {
+    // Existing plain-text narrations do not need parsing.
+  }
+  return value;
+}
+
 export function InsightsWidget({ isLoading, insights }: InsightsWidgetProps) {
   if (isLoading || !insights) {
     return (
@@ -57,10 +73,10 @@ export function InsightsWidget({ isLoading, insights }: InsightsWidgetProps) {
             <div>
               <p className="text-sm font-medium text-fg-primary">{insight.title}</p>
               <p className="text-xs text-fg-secondary mt-1">{insight.message}</p>
-              {insight.narrative && (
+              {getNarrativeText(insight.narrative) && (
                 <div className="mt-2 flex items-start gap-2 text-xs text-fg-primary">
                   <Sparkles size={13} className="mt-0.5 shrink-0 text-accent-primary" />
-                  <p>{insight.narrative}</p>
+                  <p>{getNarrativeText(insight.narrative)}</p>
                 </div>
               )}
               {insight.actionUrl && (
