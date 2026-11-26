@@ -118,6 +118,28 @@ describe('InsightsService (Unit)', () => {
       }));
     });
 
+    it('identifies the largest spending category without combining currencies', async () => {
+      const containerId = '00000000-0000-4000-8000-000000000001';
+      const categoryId = '00000000-0000-4000-8000-000000000002';
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        { id: 'tx-1', containerId, categoryId, type: 'EXPENSE', amount: 1200, currency: 'KES' },
+        { id: 'tx-2', containerId, categoryId, type: 'EXPENSE', amount: 800, currency: 'KES' },
+        { id: 'tx-3', containerId, categoryId: '00000000-0000-4000-8000-000000000003', type: 'EXPENSE', amount: 1000, currency: 'KES' },
+      ]);
+      mockPrisma.category.findUnique.mockResolvedValue({ name: 'Food' });
+
+      await service.generateForUser('u1');
+
+      expect(mockPrisma.insight.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'TOP_SPENDING_CATEGORY',
+          title: 'Largest Spending Category: Food',
+          relatedContainerId: containerId,
+          relatedEntityId: categoryId,
+        }),
+      }));
+    });
+
     it('does not combine transactions with different currencies into one insight', async () => {
       mockPrisma.transaction.findMany.mockResolvedValue([
         { id: 'tx-1', containerId: 'container-kes', type: 'INCOME', amount: 50000, currency: 'KES' },
