@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   ForbiddenException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -106,10 +107,9 @@ export class MoneyCopilotService {
         answer,
         readOnly: true,
         asOf: (context.asOf as string) ?? null,
-        remainingContext: 'Financial figures are based on the records described in the answer.',
       };
     } catch (error) {
-      if (error instanceof BadGatewayException || error instanceof ServiceUnavailableException) {
+      if (error instanceof HttpException) {
         throw error;
       }
       this.logger.warn('Money Copilot request failed.');
