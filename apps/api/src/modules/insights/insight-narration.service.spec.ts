@@ -90,7 +90,7 @@ describe('InsightNarrationService', () => {
     await service.processQueue();
 
     expect(provider.generateWithUsage).toHaveBeenCalledTimes(1);
-    expect(prisma.insight.updateMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
+    expect(prisma.insight.updateMany).toHaveBeenNthCalledWith(3, expect.objectContaining({
       where: { id: 'i-1', userId: 'u-1', narrationStatus: 'PROCESSING' },
       data: expect.objectContaining({
         narrative: expect.stringContaining('spending'),
@@ -98,7 +98,7 @@ describe('InsightNarrationService', () => {
         narratedAt: expect.any(Date),
       }),
     }));
-    const narrationUpdate = prisma.insight.updateMany.mock.calls[1][0].data;
+    const narrationUpdate = prisma.insight.updateMany.mock.calls[2][0].data;
     expect(narrationUpdate).not.toHaveProperty('title');
     expect(narrationUpdate).not.toHaveProperty('message');
     expect(narrationUpdate).not.toHaveProperty('severity');
