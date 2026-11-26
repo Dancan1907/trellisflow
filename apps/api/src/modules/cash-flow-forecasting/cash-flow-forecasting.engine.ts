@@ -292,7 +292,7 @@ export function computeCashFlowForecast(input: CashFlowForecastInput): {
           destination.recurringByDate.set(dateKey, (destination.recurringByDate.get(dateKey) ?? 0n) - signed);
         }
       }
-      const next = nextDate(occurrence, rule.frequency, rule.interval);
+      const next = nextRuleDate(occurrence, rule);
       if (!next || next.getTime() <= occurrence.getTime()) break;
       occurrence = next;
     }
