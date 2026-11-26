@@ -17,7 +17,7 @@ export interface AiUsageRecord {
   succeeded: boolean;
 }
 
-type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT' | 'MONEY_COPILOT';
+type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT' | 'MONEY_COPILOT' | 'INSIGHT_NARRATION';
 
 @Injectable()
 export class AiUsageService {
@@ -51,6 +51,16 @@ export class AiUsageService {
       'AI_NL_DRAFT_DAILY_LIMIT',
       'Natural-language transaction drafting',
     );
+  }
+
+  /** Reserves an independent daily allowance for insight narration. */
+  async reserveInsightNarration(userId: string): Promise<Date> {
+    return this.reserveFeature(userId, 'INSIGHT_NARRATION', 'AI_INSIGHTS_NARRATION_DAILY_LIMIT', 'Insight narration');
+  }
+
+  /** Records privacy-safe token metadata for insight narration. */
+  async recordInsightNarration(userId: string, usageDate: Date, usage: AiUsageRecord): Promise<void> {
+    return this.recordFeatureUsage(userId, usageDate, 'INSIGHT_NARRATION', usage);
   }
 
   /** Reserves an independent daily allowance for read-only Money Copilot. */
