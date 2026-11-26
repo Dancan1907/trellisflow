@@ -88,7 +88,6 @@ describe('MoneyCopilotDataService', () => {
     expect(lookupCall![0].where).toMatchObject({ userId: 'user-1', deletedAt: null });
     expect(lookupCall![0].select).not.toHaveProperty('notes');
   });
-});
 
   it('does not return unrelated recent transactions when a description search has no matches', async () => {
     prisma.transaction.findMany.mockResolvedValue([]);
@@ -101,3 +100,4 @@ describe('MoneyCopilotDataService', () => {
     const lookupCalls = prisma.transaction.findMany.mock.calls.filter((call) => call[0].where?.OR);
     expect(lookupCalls).toHaveLength(1);
   });
+});
