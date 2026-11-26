@@ -135,39 +135,45 @@ export class RecurringService {
   /**
    * Helper: Calculate the next occurrence date based on frequency.
    */
-  calculateNextOccurrence(currentDate: Date, frequency: string, interval: number): Date {
+  calculateNextOccurrence(
+    currentDate: Date,
+    frequency: string,
+    interval: number,
+    dayOfMonth?: number | null,
+    dayOfWeek?: number | null,
+  ): Date {
     const next = new Date(currentDate);
 
     switch (frequency) {
       case 'DAILY':
-        next.setDate(next.getDate() + interval);
+        next.setUTCDate(next.getUTCDate() + interval);
         break;
       case 'WEEKLY':
-        next.setDate(next.getDate() + 7 * interval);
-        break;
-      case 'BIWEEKLY':
-        next.setDate(next.getDate() + 14 * interval);
-        break;
-      case 'MONTHLY': {
-        // Handle end-of-month gracefully (e.g. Jan 31 + 1 month = Feb 28)
-        const targetMonth = next.getMonth() + interval;
-        const originalDay = next.getDate();
-        next.setMonth(targetMonth);
-        // If the month overflowed (e.g. Feb 31 -> Mar 3), set to last day of the target month
-        if (next.getDate() !== originalDay) {
-          next.setDate(0); // Sets to the last day of the previous month
+      case 'BIWEEKLY': {
+        const days = (frequency === 'WEEKLY' ? 7 : 14) * interval;
+        next.setUTCDate(next.getUTCDate() + days);
+        if (dayOfWeek != null) {
+          const adjustment = (dayOfWeek - next.getUTCDay() + 7) % 7;
+          next.setUTCDate(next.getUTCDate() + adjustment);
         }
         break;
       }
+      case 'MONTHLY':
       case 'QUARTERLY':
-        next.setMonth(next.getMonth() + 3 * interval);
-        break;
-      case 'YEARLY':
-        next.setFullYear(next.getFullYear() + interval);
-        break;
+      case 'YEARLY': {
+        const months = frequency === 'MONTHLY'
+          ? interval
+          : frequency === 'QUARTERLY' ? 3 * interval : 12 * interval;
+        const targetMonth = next.getUTCMonth() + months;
+        const targetYear = next.getUTCFullYear() + Math.floor(targetMonth / 12);
+        const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+        const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate();
+        const intendedDay = dayOfMonth ?? next.getUTCDate();
+        return new Date(Date.UTC(targetYear, normalizedMonth, Math.min(intendedDay, lastDay)));
+      }
       default:
-        // Fallback to daily if unknown
-        next.setDate(next.getDate() + interval);
+        // Preserve the existing fallback behavior for unknown frequencies.
+        next.setUTCDate(next.getUTCDate() + interval);
     }
 
     return next;
@@ -239,6 +245,8 @@ export class RecurringService {
             rule.nextOccurrence,
             rule.frequency,
             rule.interval,
+            rule.dayOfMonth ?? rule.startDate.getUTCDate(),
+            rule.dayOfWeek,
           );
 
           // 4. Update the rule
