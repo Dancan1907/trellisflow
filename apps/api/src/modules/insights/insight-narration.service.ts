@@ -42,8 +42,18 @@ export class InsightNarrationService {
     }
 
     const queued = await this.prisma.insight.updateMany({
-      where: { id: insightId, userId, narrationStatus: { in: ['NOT_REQUESTED', 'FAILED'] } },
-      data: { narrationStatus: 'QUEUED' },
+      where: {
+        id: insightId,
+        userId,
+        status: 'ACTIVE',
+        narrationStatus: { in: ['NOT_REQUESTED', 'FAILED'] },
+      },
+      data: {
+        narrationStatus: 'QUEUED',
+        narrative: null,
+        narratedAt: null,
+        narrationProcessingAt: null,
+      },
     });
     return queued.count === 1
       ? { queued: true, reason: 'queued' as const }
@@ -79,30 +89,43 @@ export class InsightNarrationService {
     });
 
     for (const candidate of candidates) {
+      const processingAt = new Date();
       const claim = await this.prisma.insight.updateMany({
         where: {
           id: candidate.id,
           status: 'ACTIVE',
           narrationStatus: candidate.narrationStatus,
         },
-        data: { narrationStatus: 'PROCESSING', narrationProcessingAt: new Date() },
+        data: { narrationStatus: 'PROCESSING', narrationProcessingAt: processingAt },
       });
       if (claim.count !== 1) continue;
-      await this.narrate(candidate.id, candidate.userId);
+      await this.narrate(candidate.id, candidate.userId, processingAt);
     }
   }
 
-  private async narrate(insightId: string, userId: string): Promise<void> {
+  private async narrate(insightId: string, userId: string, processingAt: Date): Promise<void> {
     let usageDate: Date | null = null;
     let usageRecorded = false;
     try {
       const insight = await this.prisma.insight.findFirst({
-        where: { id: insightId, userId, status: 'ACTIVE', narrationStatus: 'PROCESSING' },
+        where: {
+          id: insightId,
+          userId,
+          status: 'ACTIVE',
+          narrationStatus: 'PROCESSING',
+          narrationProcessingAt: processingAt,
+        },
         select: { id: true, type: true, severity: true, title: true, message: true, actionUrl: true },
       });
       if (!insight) {
         await this.prisma.insight.updateMany({
-          where: { id: insightId, userId, narrationStatus: 'PROCESSING', status: { not: 'ACTIVE' } },
+          where: {
+            id: insightId,
+            userId,
+            narrationStatus: 'PROCESSING',
+            narrationProcessingAt: processingAt,
+            status: { not: 'ACTIVE' },
+          },
           data: { narrationStatus: 'NOT_REQUESTED', narrationProcessingAt: null },
         });
         return;
@@ -141,7 +164,13 @@ export class InsightNarrationService {
 
       const narrative = this.validateNarrative(this.extractNarrativeText(result.text), sourceFacts);
       await this.prisma.insight.updateMany({
-        where: { id: insightId, userId, narrationStatus: 'PROCESSING' },
+        where: {
+          id: insightId,
+          userId,
+          narrationStatus: 'PROCESSING',
+          narrationProcessingAt: processingAt,
+          status: 'ACTIVE',
+        },
         data: {
           narrative,
           narrationStatus: 'READY',
@@ -172,7 +201,12 @@ export class InsightNarrationService {
         }
       }
       await this.prisma.insight.updateMany({
-        where: { id: insightId, userId, narrationStatus: 'PROCESSING' },
+        where: {
+          id: insightId,
+          userId,
+          narrationStatus: 'PROCESSING',
+          narrationProcessingAt: processingAt,
+        },
         data: {
           narrationStatus: 'FAILED',
           narrative: null,
