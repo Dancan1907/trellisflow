@@ -61,7 +61,7 @@ describe('MoneyCopilotDataService', () => {
   it('keeps spending calculations grouped by currency and excludes transfers', async () => {
     const date = new Date();
     prisma.transaction.findMany.mockImplementation(async (args: any) => {
-      if (args.select?.category) return [
+      if (args.where?.date && args.select?.category) return [
         { type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } },
         { type: 'EXPENSE', amount: 50, currency: 'USD', date, category: { name: 'Food' } },
         { type: 'TRANSFER', amount: 300, currency: 'KES', date, category: null },
