@@ -38,9 +38,12 @@ The request is authenticated, rate limited, and subject to a separate per-user d
 ```env
 AI_MONEY_COPILOT_ENABLED=false
 AI_MONEY_COPILOT_DAILY_LIMIT=20
+
+# Web build-time navigation flag
+NEXT_PUBLIC_MONEY_COPILOT_ENABLED=false
 ```
 
-Keep the feature disabled until a valid server-side AI provider key is configured and the feature is validated in a non-production environment. Enable it by setting `AI_MONEY_COPILOT_ENABLED=true` in the backend environment and restarting/redeploying the API. Increase the quota independently with `AI_MONEY_COPILOT_DAILY_LIMIT` (for example, 60); no database migration is needed because the existing usage feature column is a string.
+Keep the feature disabled until a valid server-side AI provider key is configured and the feature is validated in a non-production environment. Enable it by setting `AI_MONEY_COPILOT_ENABLED=true` in the backend environment and restarting/redeploying the API. Set `NEXT_PUBLIC_MONEY_COPILOT_ENABLED=true` in the web build environment and rebuild/redeploy the frontend to display the navigation entry. Increase the quota independently with `AI_MONEY_COPILOT_DAILY_LIMIT` (for example, 60); no database migration is needed because the existing usage feature column is a string.
 
 ## Known limitations
 
