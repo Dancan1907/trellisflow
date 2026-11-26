@@ -8,13 +8,13 @@ Phase 5 implementation in progress. The deterministic API and initial report UI 
 
 - Forecast eligible active asset accounts of type checking, savings, cash, mobile money, and prepaid card. Liability, investment, and custom accounts are not treated as liquid cash accounts in this first version.
 - Each account is forecast in its own currency. Different currencies are never summed or converted.
-- The opening balance is the account's current balance on the forecast as-of date.
+- The account balance is a cached balance updated when posted transactions are created, regardless of their effective transaction date. The engine reconstructs the selected as-of opening balance by reversing every non-deleted posted/reconciled transaction dated after as-of, including movements beyond the forecast horizon; future movements inside the horizon are then added once on their effective dates.
 - Historical variable cash flow uses posted and reconciled income and expense transactions in the selected lookback window. Pending transactions, soft-deleted transactions, and transfers are excluded.
 - Transactions linked to recurring rules are excluded from the historical variable-flow baseline. This prevents already-generated recurring entries from being counted again when their active rule is projected.
 - Active recurring rules are projected from their persisted `nextOccurrence`, interval, frequency, and end date. Paused, ended, and deleted rules are not projected.
 - Daily, weekly, biweekly, monthly, quarterly, and yearly recurrence are supported. Month-end dates are clamped to the final calendar day. Custom recurrence is excluded with a warning because the current model does not persist a deterministic custom schedule.
 - Recurring transfers are modeled as equal and opposite movements between same-currency accounts; they do not create income or expense. A transfer with a missing destination or incompatible currency is excluded with a warning.
-- Future-dated posted or reconciled transactions are included as known scheduled movements. Pending future entries are not treated as confirmed cash movements.
+- Future-dated posted or reconciled transactions are included as known scheduled movements after being reversed out of the cached opening balance. Future pending entries are included as planned movements but are not reversed from the opening balance because they have not changed the cached balance. Pending historical entries are excluded.
 - The historical variable income and expense daily averages are projected as a baseline. Scenario controls adjust those variable components only; fixed recurring rules and known scheduled transactions remain unchanged.
 - Calculations use four-decimal fixed-point integer arithmetic. Output amounts are rendered as numbers for the API/UI; values are not persisted as financial transactions.
 
