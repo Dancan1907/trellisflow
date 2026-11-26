@@ -906,7 +906,7 @@ model Insight {
 
   @@index([userId, status, createdAt(sort: Desc)])
   @@index([userId, type])
-  @@index([narrationStatus, createdAt])
+  @@index([narrationStatus, createdAt], map: "insights_narration_queue_idx")
   @@index([expiresAt])
   @@map("insights")
 }
