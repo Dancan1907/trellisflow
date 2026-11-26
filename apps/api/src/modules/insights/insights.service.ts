@@ -49,6 +49,7 @@ export class InsightsService {
 
   async generateForUser(userId: string) {
     let created = 0;
+    const checkResults: Array<{ name: string; created: number; status: 'SUCCEEDED' | 'FAILED'; error?: string }> = [];
 
     const checks: Array<{ name: string; fn: () => Promise<number> }> = [
       { name: 'checkBudgetOverspent', fn: () => this.checkBudgetOverspent(userId) },
@@ -57,7 +58,6 @@ export class InsightsService {
       { name: 'checkGoalMilestones', fn: () => this.checkGoalMilestones(userId) },
       { name: 'checkGoalBehind', fn: () => this.checkGoalBehind(userId) },
       { name: 'checkDebtCompleted', fn: () => this.checkDebtCompleted(userId) },
-      // Wave 5.5 additions
       { name: 'checkTokenExpiring', fn: () => this.checkTokenExpiring(userId) },
       { name: 'checkNetWorthMilestone', fn: () => this.checkNetWorthMilestone(userId) },
       { name: 'checkUnusualSpending', fn: () => this.checkUnusualSpending(userId) },
@@ -65,17 +65,155 @@ export class InsightsService {
       { name: 'checkRebalanceSuggested', fn: () => this.checkRebalanceSuggested(userId) },
       { name: 'checkProfitDecline', fn: () => this.checkProfitDecline(userId) },
       { name: 'checkRunwayLow', fn: () => this.checkRunwayLow(userId) },
+      { name: 'checkFinancialActivitySummary', fn: () => this.checkFinancialActivitySummary(userId) },
+      { name: 'checkTopSpendingCategory', fn: () => this.checkTopSpendingCategory(userId) },
     ];
 
     for (const check of checks) {
       try {
-        created += await check.fn();
+        const count = await check.fn();
+        created += count;
+        checkResults.push({ name: check.name, created: count, status: 'SUCCEEDED' });
       } catch (err) {
-        this.logger.warn(`Insight check "${check.name}" failed: ${(err as Error).message}`);
+        const error = err instanceof Error ? err.message : 'Unknown error';
+        this.logger.error(`Insight check "${check.name}" failed: ${error}`);
+        checkResults.push({ name: check.name, created: 0, status: 'FAILED', error });
       }
     }
 
-    return { created };
+    const failedChecks = checkResults.filter((result) => result.status === 'FAILED').length;
+    return {
+      created,
+      checksExecuted: checkResults.length,
+      failedChecks,
+      checkResults,
+    };
+  }
+
+  /**
+   * Summarizes posted income and expenses from the last 30 days.
+   * Values are grouped by container and currency; transfers are excluded by
+   * querying only INCOME and EXPENSE transaction types.
+   */
+  private async checkFinancialActivitySummary(userId: string): Promise<number> {
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        type: { in: ['INCOME', 'EXPENSE'] },
+        status: { in: ['POSTED', 'RECONCILED'] },
+        date: { gte: periodStart, lte: now },
+        deletedAt: null,
+      },
+      select: { id: true, containerId: true, type: true, amount: true, currency: true },
+    });
+
+    const groups = new Map<string, { containerId: string; currency: string; income: number; expenses: number; count: number; sampleId: string }>();
+    for (const tx of transactions) {
+      if (!tx.containerId || !tx.currency || !tx.id) continue;
+      const key = `${tx.containerId}:${tx.currency}`;
+      const group = groups.get(key) ?? {
+        containerId: tx.containerId, currency: tx.currency, income: 0, expenses: 0, count: 0, sampleId: tx.id,
+      };
+      const amount = Number(tx.amount);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      if (tx.type === 'INCOME') group.income += amount;
+      if (tx.type === 'EXPENSE') group.expenses += amount;
+      group.count++;
+      groups.set(key, group);
+    }
+
+    let created = 0;
+    for (const group of groups.values()) {
+      if (group.count < 3 || (group.income === 0 && group.expenses === 0)) continue;
+      const existing = await this.prisma.insight.findFirst({
+        where: {
+          userId,
+          type: 'FINANCIAL_ACTIVITY_SUMMARY',
+          relatedEntityId: group.containerId,
+          createdAt: { gte: monthStart },
+          status: 'ACTIVE',
+        },
+      });
+      if (existing) continue;
+
+      const net = group.income - group.expenses;
+      const direction = net > 0 ? 'positive net cash flow' : net < 0 ? 'expenses exceeded income' : 'income matched expenses';
+      const message = `Over the last 30 days, recorded income was ${group.currency} ${Math.round(group.income).toLocaleString()} and recorded expenses were ${group.currency} ${Math.round(group.expenses).toLocaleString()}, resulting in ${direction} of ${group.currency} ${Math.abs(Math.round(net)).toLocaleString()}. This is based on ${group.count} posted or reconciled transactions in this container.`;
+      await this.createInsight(
+        userId, 'FINANCIAL_ACTIVITY_SUMMARY', net < 0 ? 'WARNING' : 'INFO',
+        'Your 30-Day Cash Flow', message, group.containerId, group.containerId,
+        { periodDays: 30, income: group.income, expenses: group.expenses, net, currency: group.currency, transactionCount: group.count },
+      );
+      created++;
+    }
+    return created;
+  }
+
+  /** Highlights the largest category only when it represents a material share of spending. */
+  private async checkTopSpendingCategory(userId: string): Promise<number> {
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        userId, type: 'EXPENSE', status: { in: ['POSTED', 'RECONCILED'] },
+        date: { gte: periodStart, lte: now }, deletedAt: null, categoryId: { not: null },
+      },
+      select: { id: true, containerId: true, categoryId: true, amount: true, currency: true },
+    });
+
+    const groups = new Map<string, { containerId: string; categoryId: string; currency: string; amount: number; count: number; sampleId: string; totalExpenses: number }>();
+    const totals = new Map<string, number>();
+    for (const tx of transactions) {
+      if (!tx.containerId || !tx.categoryId || !tx.currency || !tx.id) continue;
+      const amount = Number(tx.amount);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      const scope = `${tx.containerId}:${tx.currency}`;
+      totals.set(scope, (totals.get(scope) ?? 0) + amount);
+      const key = `${scope}:${tx.categoryId}`;
+      const group = groups.get(key) ?? {
+        containerId: tx.containerId, categoryId: tx.categoryId, currency: tx.currency,
+        amount: 0, count: 0, sampleId: tx.id, totalExpenses: 0,
+      };
+      group.amount += amount;
+      group.count++;
+      groups.set(key, group);
+    }
+
+    const largestByScope = new Map<string, { group: (typeof groups extends Map<string, infer V> ? V : never); scope: string }>();
+    for (const group of groups.values()) {
+      const scope = `${group.containerId}:${group.currency}`;
+      group.totalExpenses = totals.get(scope) ?? 0;
+      const current = largestByScope.get(scope);
+      if (!current || group.amount > current.group.amount) largestByScope.set(scope, { group, scope });
+    }
+
+    let created = 0;
+    for (const { group, scope } of largestByScope.values()) {
+      const share = group.totalExpenses > 0 ? group.amount / group.totalExpenses : 0;
+      if (group.count < 2 || group.amount < 1000 || share < 0.3) continue;
+      const existing = await this.prisma.insight.findFirst({
+        where: {
+          userId, type: 'TOP_SPENDING_CATEGORY', relatedEntityId: group.categoryId,
+          relatedContainerId: group.containerId, createdAt: { gte: monthStart }, status: 'ACTIVE',
+        },
+      });
+      if (existing) continue;
+      const category = await this.prisma.category.findUnique({ where: { id: group.categoryId } });
+      const categoryName = category?.name ?? 'Uncategorized spending';
+      await this.createInsight(
+        userId, 'TOP_SPENDING_CATEGORY', 'INFO',
+        `Largest Spending Category: ${categoryName}`,
+        `"${categoryName}" was your largest recorded spending category over the last 30 days: ${group.currency} ${Math.round(group.amount).toLocaleString()} (${Math.round(share * 100)}% of categorized expenses) across ${group.count} transactions.`,
+        group.containerId, group.categoryId,
+        { categoryId: group.categoryId, amount: group.amount, share: Math.round(share * 100), currency: group.currency, transactionCount: group.count, scope },
+      );
+      created++;
+    }
+    return created;
   }
 
   // ==========================================================================
@@ -775,6 +913,8 @@ export class InsightsService {
     if (type === 'OPTIMIZATION_OPPORTUNITY') return 'debt_plan';
     if (type === 'REBALANCE_SUGGESTED') return 'portfolio';
     if (type === 'PROFIT_DECLINE' || type === 'RUNWAY_LOW') return 'business';
+    if (type === 'FINANCIAL_ACTIVITY_SUMMARY') return 'container';
+    if (type === 'TOP_SPENDING_CATEGORY') return 'category';
     if (type === 'DEBT_COMPLETED') return 'debt_plan';
     if (type.includes('BUDGET')) return 'budget';
     return 'goal';
@@ -787,6 +927,8 @@ export class InsightsService {
     if (type === 'OPTIMIZATION_OPPORTUNITY' || type === 'DEBT_COMPLETED') return '/debts';
     if (type === 'REBALANCE_SUGGESTED') return '/investments';
     if (type === 'PROFIT_DECLINE' || type === 'RUNWAY_LOW') return '/businesses';
+    if (type === 'FINANCIAL_ACTIVITY_SUMMARY') return '/reports';
+    if (type === 'TOP_SPENDING_CATEGORY') return '/transactions';
     if (type.includes('GOAL')) return '/goals';
     if (type.includes('BUDGET')) return '/budgets';
     return undefined;
