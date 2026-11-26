@@ -1018,15 +1018,20 @@ Documentation updates can be re-indexed.
 
 **Purpose:** Explain existing rule-based insights in clear language.
 
-Example: \> Your groceries budget is over its limit by KES 500. Three
-transactions account for most of the difference. Review those purchases
-before changing next month's budget.
+**Implementation status — 2026-11-26:** Implemented on
+`feature/insights-narration`; pending local validation and review.
 
-**Architecture** - Existing insight engine creates the factual
-insight. - A background job queues narration. - AI receives only the
-required, minimized context. - AI returns a short explanation. - The
-narrative is stored separately from the original insight. - If AI fails,
-the original insight remains visible.
+- Added separate narration text, status and timestamp fields with a
+  Prisma migration.
+- Added a scheduled, bounded worker with conditional job claiming and
+  stale-job recovery.
+- Added authenticated, user-scoped manual queueing.
+- Reuses the provider abstraction and a separate per-user daily quota.
+- Preserves deterministic title, message, severity and metadata.
+- Rejects output containing numeric facts absent from the source insight.
+- Displays the deterministic insight, optional narration and existing
+  related-record action link in the Insights page and dashboard widget.
+- Added worker, quality, failure-fallback, quota and database-default tests.
 
 **Acceptance criteria** - Narratives never alter underlying insight
 values. - Unsupported causal claims are excluded. - Users can inspect

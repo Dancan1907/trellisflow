@@ -84,6 +84,31 @@ describe('AiUsageService', () => {
     }));
   });
 
+
+  it('reserves a separate configurable daily quota for insight narration', async () => {
+    config.get.mockImplementation((key: string, fallback?: string) =>
+      key === 'AI_INSIGHTS_NARRATION_DAILY_LIMIT' ? '12' : fallback,
+    );
+    await expect(service.reserveInsightNarration('00000000-0000-4000-8000-000000000001'))
+      .resolves.toBeInstanceOf(Date);
+    expect(prisma.$queryRaw.mock.calls[0].slice(1)).toContain('INSIGHT_NARRATION');
+    expect(prisma.$queryRaw.mock.calls[0].slice(1)).toContain(12);
+  });
+
+  it('records insight narration usage under its independent feature key', async () => {
+    await service.recordInsightNarration(
+      '00000000-0000-4000-8000-000000000001',
+      usageDate,
+      { provider: 'gemini', model: 'test-model', inputTokens: 22, outputTokens: 11, succeeded: true },
+    );
+    expect(dailyUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId_usageDate_feature: expect.objectContaining({ feature: 'INSIGHT_NARRATION' }) },
+    }));
+    expect(eventCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ feature: 'INSIGHT_NARRATION', succeeded: true }),
+    }));
+  });
+
   it('persists token counts and an optional estimated cost without source content', async () => {
     config.get.mockImplementation((key: string, fallback?: string) => {
       const values: Record<string, string> = {

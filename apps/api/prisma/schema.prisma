@@ -840,6 +840,8 @@ enum InsightType {
   REBALANCE_SUGGESTED
   PROFIT_DECLINE
   RUNWAY_LOW
+  FINANCIAL_ACTIVITY_SUMMARY
+  TOP_SPENDING_CATEGORY
 }
 
 enum InsightSeverity {
@@ -852,6 +854,14 @@ enum InsightStatus {
   ACTIVE
   DISMISSED
   EXPIRED
+}
+
+enum InsightNarrationStatus {
+  NOT_REQUESTED
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
 }
 
 model NetWorthSnapshot {
@@ -886,6 +896,10 @@ model Insight {
   relatedEntityId      String?         @map("related_entity_id") @db.Uuid
   actionUrl            String?         @map("action_url")
   metadata             Json?
+  narrative            String?                 @db.VarChar(1600)
+  narrationStatus      InsightNarrationStatus @default(NOT_REQUESTED) @map("narration_status")
+  narratedAt           DateTime?               @map("narrated_at") @db.Timestamptz(6)
+  narrationProcessingAt DateTime?               @map("narration_processing_at") @db.Timestamptz(6)
   status               InsightStatus   @default(ACTIVE)
   dismissedAt          DateTime?       @map("dismissed_at") @db.Timestamptz(6)
   expiresAt            DateTime?       @map("expires_at") @db.Timestamptz(6)
@@ -895,6 +909,8 @@ model Insight {
 
   @@index([userId, status, createdAt(sort: Desc)])
   @@index([userId, type])
+  @@index([narrationStatus, createdAt], map: "insights_narration_queue_idx")
+  @@index([narrationStatus, narrationProcessingAt], map: "insights_narration_recovery_idx")
   @@index([expiresAt])
   @@map("insights")
 }
