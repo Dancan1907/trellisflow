@@ -35,6 +35,9 @@ interface Insight {
   severity: 'INFO' | 'OPPORTUNITY' | 'WARNING';
   title: string;
   message: string;
+  narrative?: string | null;
+  narrationStatus?: 'NOT_REQUESTED' | 'QUEUED' | 'PROCESSING' | 'READY' | 'FAILED';
+  actionUrl?: string | null;
 }
 
 export function useDashboardSummary() {
@@ -71,5 +74,6 @@ export function useDashboardInsights() {
   return useQuery({
     queryKey: ['dashboard', 'insights'],
     queryFn: () => apiFetch<Insight[]>('/api/dashboard/insights'),
+    refetchInterval: 15000,
   });
 }

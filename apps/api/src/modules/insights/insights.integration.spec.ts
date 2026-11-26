@@ -108,5 +108,7 @@ describe('Insights (Integration)', () => {
     const insights = await prisma.insight.findMany({ where: { userId: testUserId } });
     expect(insights.length).toBe(1);
     expect(insights[0]!.type).toBe('BUDGET_OVERSPENT');
+    expect(insights[0]!.narrationStatus).toBe('NOT_REQUESTED');
+    expect(insights[0]!.narrative).toBeNull();
   });
 });

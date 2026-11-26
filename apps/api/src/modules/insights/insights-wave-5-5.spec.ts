@@ -158,10 +158,18 @@ describe('InsightsService — Wave 5.5 Rules', () => {
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 5);
       mockPrisma.transaction.findMany.mockResolvedValue([
         // Current month: 5000 on Groceries
-        { categoryId: 'cat-1', amount: '5000', date: thisMonth },
+        {
+          categoryId: 'cat-1',
+          containerId: 'container-1',
+          currency: 'KES',
+          amount: '5000',
+          date: thisMonth,
+        },
         // Past 3 months: 3000 total → avg 1000/mo
         {
           categoryId: 'cat-1',
+          containerId: 'container-1',
+          currency: 'KES',
           amount: '3000',
           date: new Date(now.getFullYear(), now.getMonth() - 1, 15),
         },
