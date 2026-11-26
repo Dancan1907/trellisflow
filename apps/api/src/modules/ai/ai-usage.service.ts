@@ -17,7 +17,7 @@ export interface AiUsageRecord {
   succeeded: boolean;
 }
 
-type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT';
+type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT' | 'MONEY_COPILOT';
 
 @Injectable()
 export class AiUsageService {
@@ -50,6 +50,16 @@ export class AiUsageService {
       'NATURAL_LANGUAGE_DRAFT',
       'AI_NL_DRAFT_DAILY_LIMIT',
       'Natural-language transaction drafting',
+    );
+  }
+
+  /** Reserves an independent daily allowance for read-only Money Copilot. */
+  async reserveMoneyCopilot(userId: string): Promise<Date> {
+    return this.reserveFeature(
+      userId,
+      'MONEY_COPILOT',
+      'AI_MONEY_COPILOT_DAILY_LIMIT',
+      'Money Copilot',
     );
   }
 
@@ -151,6 +161,15 @@ export class AiUsageService {
       'NATURAL_LANGUAGE_DRAFT',
       usage,
     );
+  }
+
+  /** Records privacy-safe token metadata for Money Copilot. */
+  async recordMoneyCopilot(
+    userId: string,
+    usageDate: Date,
+    usage: AiUsageRecord,
+  ): Promise<void> {
+    return this.recordFeatureUsage(userId, usageDate, 'MONEY_COPILOT', usage);
   }
 
   /**

@@ -12,6 +12,7 @@ import {
   CreditCard,
   BarChart3,
   Lightbulb,
+  Sparkles,
   Settings,
   LucideIcon,
   X,
@@ -24,6 +25,7 @@ interface NavItem {
   href: string;
   icon: LucideIcon;
   tourId?: string;
+  enabled?: boolean;
 }
 
 const navSections: { title: string; tourId?: string; items: NavItem[] }[] = [
@@ -56,6 +58,7 @@ const navSections: { title: string; tourId?: string; items: NavItem[] }[] = [
     items: [
       { label: 'Reports', href: '/reports', icon: BarChart3 },
       { label: 'Insights', href: '/insights', icon: Lightbulb },
+      { label: 'Money Copilot', href: '/money-copilot', icon: Sparkles, enabled: process.env.NEXT_PUBLIC_MONEY_COPILOT_ENABLED === 'true' },
     ],
   },
 ];
@@ -97,7 +100,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {section.title}
               </h3>
               <ul className="space-y-1">
-                {section.items.map((item) => {
+                {section.items.filter((item) => item.enabled !== false).map((item) => {
                   const isActive = pathname.startsWith(item.href);
                   const Icon = item.icon;
                   return (

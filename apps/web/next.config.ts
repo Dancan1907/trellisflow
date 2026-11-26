@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), '../../'),
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000',
+    NEXT_PUBLIC_MONEY_COPILOT_ENABLED: process.env.NEXT_PUBLIC_MONEY_COPILOT_ENABLED ?? 'false',
   },
   typescript: { ignoreBuildErrors: false },
   // ESLint runs separately via `pnpm lint`. Disabling it during build

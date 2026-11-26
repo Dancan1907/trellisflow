@@ -38,6 +38,7 @@ import { ExportModule } from './modules/export/export.module';
 import { AiModule } from './modules/ai/ai.module';
 import { MpesaImportModule } from './modules/mpesa-import/mpesa-import.module';
 import { NaturalLanguageDraftsModule } from './modules/natural-language-drafts/natural-language-drafts.module';
+import { MoneyCopilotModule } from './modules/money-copilot/money-copilot.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { NaturalLanguageDraftsModule } from './modules/natural-language-drafts/n
     AiModule,
     MpesaImportModule,
     NaturalLanguageDraftsModule,
+    MoneyCopilotModule,
     ContainersModule,
     UsersModule,
     ThrottlerModule.forRoot([

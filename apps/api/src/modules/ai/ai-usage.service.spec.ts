@@ -60,6 +60,30 @@ describe('AiUsageService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
+  it('reserves a separate configurable Money Copilot daily quota', async () => {
+    config.get.mockImplementation((key: string, fallback?: string) =>
+      key === 'AI_MONEY_COPILOT_DAILY_LIMIT' ? '60' : fallback,
+    );
+    await expect(service.reserveMoneyCopilot('00000000-0000-4000-8000-000000000001'))
+      .resolves.toBeInstanceOf(Date);
+    expect(prisma.$queryRaw.mock.calls[0][0].join('?')).toContain('ON CONFLICT');
+    expect(prisma.$queryRaw.mock.calls[0].slice(1)).toContain('MONEY_COPILOT');
+    expect(prisma.$queryRaw.mock.calls[0].slice(1)).toContain(60);
+  });
+
+  it('records Money Copilot usage under its independent feature key', async () => {
+    await service.recordMoneyCopilot(
+      '00000000-0000-4000-8000-000000000001', usageDate,
+      { provider: 'gemini', model: 'test-model', inputTokens: 10, outputTokens: 5, succeeded: true },
+    );
+    expect(dailyUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId_usageDate_feature: expect.objectContaining({ feature: 'MONEY_COPILOT' }) },
+    }));
+    expect(eventCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ feature: 'MONEY_COPILOT', succeeded: true }),
+    }));
+  });
+
   it('persists token counts and an optional estimated cost without source content', async () => {
     config.get.mockImplementation((key: string, fallback?: string) => {
       const values: Record<string, string> = {
