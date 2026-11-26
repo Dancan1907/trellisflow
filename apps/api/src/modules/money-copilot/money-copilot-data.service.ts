@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BusinessesService } from '../businesses/businesses.service';
 
@@ -253,7 +254,7 @@ export class MoneyCopilotDataService {
       },
       select: { id: true, name: true, type: true, currency: true },
       orderBy: { name: 'asc' },
-      take: 30,
+      take: 15,
     });
     return Promise.all(businesses.map(async (business) => {
       try {
@@ -336,11 +337,11 @@ export class MoneyCopilotDataService {
     };
   }
 
-  private async findTransactionsInRange<T extends Record<string, unknown>>(
+  private async findTransactionsInRange(
     userId: string,
     from: string,
     to: string,
-    select: T,
+    select: Prisma.TransactionSelect,
   ) {
     const rows = await this.prisma.transaction.findMany({
       where: {
