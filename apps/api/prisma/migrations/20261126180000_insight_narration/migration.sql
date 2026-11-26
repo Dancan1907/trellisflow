@@ -1,5 +1,5 @@
 -- Add asynchronous AI narration state without changing deterministic insight fields.
-CREATE TYPE "InsightNarrationStatus" AS ENUM ('NOT_REQUESTED', 'PROCESSING', 'READY', 'FAILED');
+CREATE TYPE "InsightNarrationStatus" AS ENUM ('NOT_REQUESTED', 'QUEUED', 'PROCESSING', 'READY', 'FAILED');
 
 ALTER TABLE "insights"
   ADD COLUMN "narrative" VARCHAR(1600),
