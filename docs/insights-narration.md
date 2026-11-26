@@ -27,6 +27,7 @@ Insight rules remain the source of truth. The existing engine computes and persi
 ```env
 AI_INSIGHTS_NARRATION_ENABLED=false
 AI_INSIGHTS_NARRATION_DAILY_LIMIT=20
+NEXT_PUBLIC_INSIGHTS_NARRATION_ENABLED=false
 ```
 
 Keep disabled until the database migration has been applied and provider behavior has been verified in a non-production environment. The limit is per user per UTC day and independent of Money Copilot, M-Pesa import, and natural-language drafts.
