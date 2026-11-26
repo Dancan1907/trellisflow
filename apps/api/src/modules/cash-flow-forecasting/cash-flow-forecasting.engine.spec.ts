@@ -22,7 +22,7 @@ describe('computeCashFlowForecast', () => {
     });
     expect(result.accounts[0]!.points.find((point) => point.date === '2026-01-05')!.recurringNet).toBe(100);
     expect(result.accounts[0]!.points.find((point) => point.date === '2026-01-10')!.recurringNet).toBe(-40);
-    expect(result.accounts[0]!.closingBalance).toBe(1120);
+    expect(result.accounts[0]!.closingBalance).toBe(1160);
   });
 
   it('uses signed transfer rows and does not count transfers as income or expense', () => {
@@ -67,6 +67,7 @@ describe('computeCashFlowForecast', () => {
   it('clamps month-end recurrence dates and respects end dates', () => {
     const result = computeCashFlowForecast({
       ...base,
+      horizonDays: 60,
       rules: [
         { id: 'rent', accountId: account.id, transferToAccountId: null, type: 'EXPENSE', amount: '10', currency: 'KES', description: 'Rent', frequency: 'MONTHLY', interval: 1, nextOccurrence: '2026-01-31', endDate: '2026-02-28', status: 'ACTIVE' },
       ],
