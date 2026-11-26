@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { showToast } from '@/components/ui/toast';
 
 export default function InsightsPage() {
+  const narrationEnabled = process.env.NEXT_PUBLIC_INSIGHTS_NARRATION_ENABLED === 'true';
   const { data: insights, isLoading } = useDashboardInsights();
   const queryClient = useQueryClient();
 
@@ -92,7 +93,7 @@ export default function InsightsPage() {
                         View related records <ArrowUpRight size={13} />
                       </Link>
                     )}
-                    {canQueue && (
+                    {narrationEnabled && canQueue && (
                       <button onClick={() => narrate.mutate(insight.id)} disabled={narrate.isPending}
                         className="inline-flex items-center gap-1 text-xs font-medium text-accent-primary hover:underline disabled:opacity-50">
                         <Sparkles size={13} /> Explain this insight
