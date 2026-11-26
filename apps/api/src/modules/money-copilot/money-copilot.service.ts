@@ -5,7 +5,6 @@ import {
   Inject,
   Injectable,
   Logger,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AI_PROVIDER, AiProvider } from '../ai/ai-provider.interface';
