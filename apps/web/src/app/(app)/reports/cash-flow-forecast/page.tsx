@@ -57,11 +57,11 @@ export default function CashFlowForecastPage() {
         </label>
         <label className="text-xs text-fg-secondary">
           Variable income scenario ({incomeAdjustmentPercent}%)
-          <input type="range" min="-100" max="100" step="5" value={incomeAdjustmentPercent} onChange={(event) => setIncomeAdjustmentPercent(Number(event.target.value))} className="mt-3 block w-full" />
+          <input type="range" min="-100" max="1000" step="5" value={incomeAdjustmentPercent} onChange={(event) => setIncomeAdjustmentPercent(Number(event.target.value))} className="mt-3 block w-full" />
         </label>
         <label className="text-xs text-fg-secondary">
           Variable expense scenario ({expenseAdjustmentPercent}%)
-          <input type="range" min="-100" max="100" step="5" value={expenseAdjustmentPercent} onChange={(event) => setExpenseAdjustmentPercent(Number(event.target.value))} className="mt-3 block w-full" />
+          <input type="range" min="-100" max="1000" step="5" value={expenseAdjustmentPercent} onChange={(event) => setExpenseAdjustmentPercent(Number(event.target.value))} className="mt-3 block w-full" />
         </label>
       </section>
 
