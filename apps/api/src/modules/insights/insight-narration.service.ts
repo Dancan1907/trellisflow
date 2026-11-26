@@ -58,8 +58,15 @@ export class InsightNarrationService {
     // Recover abandoned jobs first. The conditional state transition makes this safe
     // when multiple API instances run the scheduler at the same time.
     await this.prisma.insight.updateMany({
-      where: { status: 'ACTIVE', narrationStatus: 'PROCESSING', createdAt: { lt: staleBefore } },
-      data: { narrationStatus: 'QUEUED' },
+      where: {
+        status: 'ACTIVE',
+        narrationStatus: 'PROCESSING',
+        OR: [
+          { narrationProcessingAt: { lt: staleBefore } },
+          { narrationProcessingAt: null },
+        ],
+      },
+      data: { narrationStatus: 'QUEUED', narrationProcessingAt: null },
     });
 
     const candidates = await this.prisma.insight.findMany({
@@ -78,7 +85,7 @@ export class InsightNarrationService {
           status: 'ACTIVE',
           narrationStatus: candidate.narrationStatus,
         },
-        data: { narrationStatus: 'PROCESSING' },
+        data: { narrationStatus: 'PROCESSING', narrationProcessingAt: new Date() },
       });
       if (claim.count !== 1) continue;
       await this.narrate(candidate.id, candidate.userId);
@@ -89,13 +96,19 @@ export class InsightNarrationService {
     let usageDate: Date | null = null;
     let usageRecorded = false;
     try {
-      usageDate = await this.usage.reserveInsightNarration(userId);
       const insight = await this.prisma.insight.findFirst({
         where: { id: insightId, userId, status: 'ACTIVE', narrationStatus: 'PROCESSING' },
         select: { id: true, type: true, severity: true, title: true, message: true, actionUrl: true },
       });
-      if (!insight) return;
+      if (!insight) {
+        await this.prisma.insight.updateMany({
+          where: { id: insightId, userId, narrationStatus: 'PROCESSING', status: { not: 'ACTIVE' } },
+          data: { narrationStatus: 'NOT_REQUESTED', narrationProcessingAt: null },
+        });
+        return;
+      }
 
+      usageDate = await this.usage.reserveInsightNarration(userId);
       const sourceFacts = [insight.title, insight.message].join(' ');
       const request = {
         systemPrompt: [
@@ -133,6 +146,7 @@ export class InsightNarrationService {
           narrative,
           narrationStatus: 'READY',
           narratedAt: new Date(),
+          narrationProcessingAt: null,
         },
       });
       await this.usage.recordInsightNarration(userId, usageDate, {
@@ -159,7 +173,12 @@ export class InsightNarrationService {
       }
       await this.prisma.insight.updateMany({
         where: { id: insightId, userId, narrationStatus: 'PROCESSING' },
-        data: { narrationStatus: 'FAILED', narrative: null, narratedAt: null },
+        data: {
+          narrationStatus: 'FAILED',
+          narrative: null,
+          narratedAt: null,
+          narrationProcessingAt: null,
+        },
       });
       this.logger.warn(`Insight narration failed for ${insightId}: ${(error as Error).message}`);
     }
