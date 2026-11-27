@@ -80,6 +80,41 @@ describe('HelpAssistantService', () => {
     expect(result.navigation).toBeNull();
   });
 
+
+  it('uses the requested cash-flow forecast route instead of a parent Reports route', async () => {
+    prisma.$queryRawUnsafe.mockResolvedValue([{
+      id: 'forecast', source: '05-reports-forecasts-and-insights.md',
+      title: 'Reports, cash-flow forecasts and insights', heading: 'Cash-flow forecast',
+      route: '/reports', content: 'Open Reports then Cash-flow Forecast.', distance: 0.1,
+    }]);
+    const result = await service.chat(userId, { message: 'Where can I view my cash-flow forecast?' });
+    expect(result.navigation).toEqual({ label: 'Cash-flow Forecast', route: '/reports/cash-flow-forecast' });
+    expect(result.sources[0].route).toBe('/reports/cash-flow-forecast');
+  });
+
+  it('resolves explicit Settings navigation independently of retrieved document routes', async () => {
+    const result = await service.chat(userId, { message: 'Take me to settings page' });
+    expect(result.navigation).toEqual({ label: 'Settings', route: '/settings' });
+  });
+
+  it('resolves Businesses to its own route rather than the Investments guide route', async () => {
+    prisma.$queryRawUnsafe.mockResolvedValue([{
+      id: 'businesses', source: '04-investments-and-businesses.md',
+      title: 'Investments and businesses', heading: 'Businesses',
+      route: '/investments', content: 'Open Businesses at /businesses.', distance: 0.1,
+    }]);
+    const result = await service.chat(userId, { message: 'Take me to my Businesses page' });
+    expect(result.navigation).toEqual({ label: 'Businesses', route: '/businesses' });
+    expect(result.sources[0].route).toBe('/businesses');
+  });
+
+  it('resolves Goals and Debt to their own destinations', async () => {
+    const goals = await service.chat(userId, { message: 'Take me to my goals page' });
+    expect(goals.navigation).toEqual({ label: 'Goals', route: '/goals' });
+    const debt = await service.chat(userId, { message: 'Take me to my debts page' });
+    expect(debt.navigation).toEqual({ label: 'Debt', route: '/debts' });
+  });
+
   it('does not allow the feature to run while disabled', async () => {
     config.get.mockImplementation((key: string, fallback?: string) =>
       key === 'AI_HELP_ASSISTANT_ENABLED' ? 'false' : fallback,
