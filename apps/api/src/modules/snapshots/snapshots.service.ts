@@ -38,6 +38,21 @@ export class SnapshotsService {
       },
     });
 
+    const investmentContainerIds = containers
+      .filter((container) => container.type === 'INVESTMENT')
+      .map((container) => container.id);
+    const holdings = investmentContainerIds.length
+      ? await this.prisma.holding.findMany({
+          where: {
+            userId,
+            containerId: { in: investmentContainerIds },
+            status: 'OPEN',
+            deletedAt: null,
+          },
+          select: { currency: true, currentValueTotal: true },
+        })
+      : [];
+
     type CurrencyTotals = {
       personalNetWorth: number;
       investmentsNetWorth: number;
@@ -75,6 +90,12 @@ export class SnapshotsService {
         else if (container.type === 'INVESTMENT') group.investmentsNetWorth += netEffect;
         else if (container.type === 'INTERNAL_BUSINESS') group.businessesNetWorth += netEffect;
       }
+    }
+
+    // Investment account balances represent cash; open holding values are
+    // separate assets and must also be included in investment net worth.
+    for (const holding of holdings) {
+      getCurrencyTotals(holding.currency).investmentsNetWorth += Number(holding.currentValueTotal);
     }
 
     const byCurrency = Array.from(totalsByCurrency.entries())
