@@ -213,18 +213,21 @@ describe('BusinessesService (Unit)', () => {
         {
           type: 'INCOME',
           amount: '5000',
+          currency: 'KES',
           date: new Date('2026-11-05'),
           category: { id: 'cat-1', name: 'Sales' },
         },
         {
           type: 'INCOME',
           amount: '1000',
+          currency: 'KES',
           date: new Date('2026-11-15'),
           category: { id: 'cat-1', name: 'Sales' },
         },
         {
           type: 'EXPENSE',
           amount: '2000',
+          currency: 'KES',
           date: new Date('2026-11-20'),
           category: { id: 'cat-2', name: 'Rent' },
         },
@@ -233,12 +236,14 @@ describe('BusinessesService (Unit)', () => {
         {
           type: 'INCOME',
           amount: '9999',
+          currency: 'KES',
           date: new Date('2026-10-31'),
           category: { id: 'cat-1', name: 'Sales' },
         },
         {
           type: 'EXPENSE',
           amount: '9999',
+          currency: 'KES',
           date: new Date('2026-12-01'),
           category: { id: 'cat-2', name: 'Rent' },
         },
@@ -269,6 +274,32 @@ describe('BusinessesService (Unit)', () => {
       }));
     });
 
+    it('keeps mixed-currency P&L totals separate', async () => {
+      mockPrisma.container.findFirst.mockResolvedValue(container());
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        {
+          type: 'INCOME', amount: '1000', currency: 'KES',
+          date: new Date('2026-11-10'), category: { id: 'kes-sales', name: 'Sales' },
+        },
+        {
+          type: 'EXPENSE', amount: '200', currency: 'USD',
+          date: new Date('2026-11-11'), category: { id: 'usd-rent', name: 'Rent' },
+        },
+      ]);
+
+      const result = await service.getPnl('user-1', 'biz-1', {
+        from: '2026-11-01', to: '2026-11-30',
+      });
+
+      expect(result.currency).toBe('KES');
+      expect(result.totalIncome).toBe(1000);
+      expect(result.totalExpenses).toBe(0);
+      expect(result.byCurrency).toEqual(expect.arrayContaining([
+        expect.objectContaining({ currency: 'KES', totalIncome: 1000, totalExpenses: 0, netProfit: 1000 }),
+        expect.objectContaining({ currency: 'USD', totalIncome: 0, totalExpenses: 200, netProfit: -200 }),
+      ]));
+    });
+
     it('rejects a range whose start is after its end', async () => {
       mockPrisma.container.findFirst.mockResolvedValue(container());
 
@@ -294,7 +325,7 @@ describe('BusinessesService (Unit)', () => {
 
     it('divides liquid cash by the average monthly burn', async () => {
       mockPrisma.container.findFirst.mockResolvedValue(runwayContainer());
-      mockPrisma.transaction.findMany.mockResolvedValue([{ amount: '6000', date: new Date() }]);
+      mockPrisma.transaction.findMany.mockResolvedValue([{ amount: '6000', currency: 'KES', date: new Date() }]);
 
       const result = await service.getRunway('user-1', 'biz-1');
 
@@ -305,6 +336,30 @@ describe('BusinessesService (Unit)', () => {
       expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
         where: expect.objectContaining({ status: { in: ['POSTED', 'RECONCILED'] } }),
       }));
+    });
+
+    it('keeps cash balances and burn rates separate across currencies', async () => {
+      mockPrisma.container.findFirst.mockResolvedValue(container({
+        accounts: [
+          account({ id: 'kes-cash', currency: 'KES', currentBalance: '12000' }),
+          account({ id: 'usd-cash', accountType: 'SAVINGS', currency: 'USD', currentBalance: '500' }),
+        ],
+      }));
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        { amount: '6000', currency: 'KES', date: new Date() },
+        { amount: '3000', currency: 'USD', date: new Date() },
+      ]);
+
+      const result = await service.getRunway('user-1', 'biz-1');
+
+      expect(result.currency).toBe('KES');
+      expect(result.cashBalance).toBe(12000);
+      expect(result.monthlyBurn).toBe(2000);
+      expect(result.runwayMonths).toBe(6);
+      expect(result.byCurrency).toEqual(expect.arrayContaining([
+        expect.objectContaining({ currency: 'KES', cashBalance: 12000, monthlyBurn: 2000, runwayMonths: 6 }),
+        expect.objectContaining({ currency: 'USD', cashBalance: 500, monthlyBurn: 1000, runwayMonths: 0.5 }),
+      ]));
     });
 
     it('returns null runway when the business has no expenses', async () => {
