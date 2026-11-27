@@ -48,7 +48,11 @@ export default function DashboardPage() {
 
           {/* Row 2: Portfolio & Recent Activity */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ContainerCards isLoading={isLoadingContainers} containers={containers} />
+            <ContainerCards
+              isLoading={isLoadingContainers}
+              containers={containers}
+              reportingCurrency={summary?.netWorth.currency ?? 'KES'}
+            />
             <CashFlowWidget isLoading={isLoadingSummary} data={summary?.cashFlow} />
           </div>
         </div>
