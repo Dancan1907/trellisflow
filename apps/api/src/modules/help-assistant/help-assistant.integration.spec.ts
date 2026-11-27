@@ -35,10 +35,14 @@ describe('Help Assistant pgvector retrieval integration', () => {
       source,
     );
     expect(results).toHaveLength(2);
-    expect(results[0].title).toBe('Accounts guide');
-    expect(results[0].distance).toBeCloseTo(0, 6);
-    expect(results[1].title).toBe('Investments guide');
-    expect(results[1].distance).toBeGreaterThan(results[0].distance);
+    const [closest, secondClosest] = results;
+    if (!closest || !secondClosest) {
+      throw new Error('Expected two indexed document chunks for the cosine-distance ranking assertion.');
+    }
+    expect(closest.title).toBe('Accounts guide');
+    expect(closest.distance).toBeCloseTo(0, 6);
+    expect(secondClosest.title).toBe('Investments guide');
+    expect(secondClosest.distance).toBeGreaterThan(closest.distance);
   });
 
   it('has the pgvector extension installed by the migration', async () => {
