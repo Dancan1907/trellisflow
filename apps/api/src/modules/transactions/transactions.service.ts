@@ -406,7 +406,9 @@ export class TransactionsService {
       Number(existing.amount) === dto.amount && existingDate === dto.date.slice(0, 10) &&
       existing.description === dto.description &&
       (existing.categoryId ?? null) === (dto.categoryId ?? null) &&
-      (existing.notes ?? null) === (dto.notes ?? null);
+      (existing.notes ?? null) === (dto.notes ?? null) &&
+      (existing.mpesaReference ?? null) === (dto.mpesaReference?.trim().toUpperCase() ?? null) &&
+      (existing.receiptImageHash ?? null) === (dto.receiptImageHash ?? null);
     if (!samePayload) throw new ConflictException('This idempotency key has already been used for a different transaction.');
     return existing;
   }
