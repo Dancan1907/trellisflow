@@ -316,6 +316,30 @@ describe('MoneyCopilotDataService', () => {
     expect(businesses.getPnl).toHaveBeenCalledTimes(1);
   });
 
+  it('simulates business revenue changes separately for every recorded currency', async () => {
+    prisma.container.findMany.mockResolvedValue([
+      { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
+    ]);
+    businesses.getNetWorth.mockResolvedValue({ netWorth: 500 });
+    businesses.getPnl.mockResolvedValue({
+      from: '2026-11-01', to: '2026-11-27',
+      totalIncome: 400, totalExpenses: 300, netProfit: 100, byCategory: [],
+      byCurrency: [
+        { currency: 'KES', totalIncome: 400, totalExpenses: 300, netProfit: 100, byCategory: [] },
+        { currency: 'USD', totalIncome: 200, totalExpenses: 100, netProfit: 100, byCategory: [] },
+      ],
+    });
+    businesses.getRunway.mockResolvedValue({ currency: 'KES', cashBalance: 200, monthlyBurn: 100, runwayMonths: 2 });
+
+    const result = await service.buildContext('user-1', 'What if my business revenue increases by 10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.result).toEqual(expect.arrayContaining([
+      expect.objectContaining({ currency: 'KES', projectedRevenue: 440, projectedExpenses: 300, projectedNetProfit: 140 }),
+      expect.objectContaining({ currency: 'USD', projectedRevenue: 220, projectedExpenses: 100, projectedNetProfit: 120 }),
+    ]));
+  });
+
   it('simulates a portfolio value decline separately for each currency', async () => {
     prisma.holding.findMany.mockResolvedValue([
       { name: 'Holding KES', symbol: 'AAA', assetClass: 'EQUITY', currency: 'KES', costBasisTotal: 100, currentValueTotal: 200 },
