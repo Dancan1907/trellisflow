@@ -54,6 +54,7 @@ describe('Wave 1 — Golden Path (E2E)', () => {
     expect(res.body.refreshToken).toBeDefined();
 
     accessToken = res.body.accessToken;
+    await prisma.user.update({ where: { email: testEmail }, data: { reportingCurrency: 'KES' } });
   });
 
   it('2. auto-creates a Personal container and default categories', async () => {
