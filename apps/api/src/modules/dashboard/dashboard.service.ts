@@ -13,31 +13,53 @@ export class DashboardService {
    * Get the hero summary: Net Worth + This Month's Cash Flow.
    */
   async getSummary(userId: string) {
-    // 1. Fetch the latest net worth snapshot
-    const latestSnapshot = await this.prisma.netWorthSnapshot.findFirst({
-      where: { userId },
-      orderBy: { date: 'desc' },
-    });
+    const [latestSnapshot, user] = await Promise.all([
+      this.prisma.netWorthSnapshot.findFirst({
+        where: { userId },
+        orderBy: { date: 'desc' },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { reportingCurrency: true },
+      }),
+    ]);
+    const reportingCurrency = user?.reportingCurrency ?? 'KES';
 
-    // 2. Calculate this month's cash flow (Income vs Expense)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
     const transactions = await this.prisma.transaction.findMany({
       where: {
         userId,
+        type: { in: ['INCOME', 'EXPENSE'] },
+        status: { in: ['POSTED', 'RECONCILED'] },
         date: { gte: startOfMonth, lte: endOfMonth },
         deletedAt: null,
       },
+      select: { type: true, amount: true, currency: true },
     });
 
-    let income = 0;
-    let expenses = 0;
-    for (const tx of transactions) {
-      if (tx.type === 'INCOME') income += Number(tx.amount);
-      if (tx.type === 'EXPENSE') expenses += Number(tx.amount);
+    const cashFlowGroups = new Map<string, { income: number; expenses: number }>();
+    for (const transaction of transactions) {
+      const group = cashFlowGroups.get(transaction.currency) ?? { income: 0, expenses: 0 };
+      if (transaction.type === 'INCOME') group.income += Number(transaction.amount);
+      if (transaction.type === 'EXPENSE') group.expenses += Number(transaction.amount);
+      cashFlowGroups.set(transaction.currency, group);
     }
+    const cashFlowByCurrency = Array.from(cashFlowGroups.entries()).map(([currency, group]) => ({
+      currency,
+      income: group.income,
+      expenses: group.expenses,
+      net: group.income - group.expenses,
+    })).sort((left, right) => left.currency.localeCompare(right.currency));
+    const primaryCashFlow = cashFlowByCurrency.find((group) => group.currency === reportingCurrency) ?? {
+      currency: reportingCurrency, income: 0, expenses: 0, net: 0,
+    };
+
+    const snapshotBreakdown = latestSnapshot?.breakdown as {
+      byCurrency?: Array<Record<string, unknown>>;
+    } | null;
+    const snapshotCurrency = latestSnapshot?.currency ?? reportingCurrency;
 
     return {
       netWorth: latestSnapshot
@@ -46,13 +68,19 @@ export class DashboardService {
             personal: Number(latestSnapshot.personalNetWorth),
             investments: Number(latestSnapshot.investmentsNetWorth),
             businesses: Number(latestSnapshot.businessesNetWorth),
-            currency: latestSnapshot.currency,
+            currency: snapshotCurrency,
+            byCurrency: snapshotBreakdown?.byCurrency ?? [],
           }
-        : { total: 0, personal: 0, investments: 0, businesses: 0, currency: 'KES' },
+        : {
+            total: 0, personal: 0, investments: 0, businesses: 0,
+            currency: reportingCurrency, byCurrency: [],
+          },
       cashFlow: {
-        income,
-        expenses,
-        net: income - expenses,
+        income: primaryCashFlow.income,
+        expenses: primaryCashFlow.expenses,
+        net: primaryCashFlow.net,
+        currency: reportingCurrency,
+        byCurrency: cashFlowByCurrency,
         periodStart: startOfMonth,
         periodEnd: endOfMonth,
       },
@@ -79,33 +107,41 @@ export class DashboardService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return containers.map((c) => {
-      let netWorth = 0;
-
-      if (c.type === 'EXTERNAL_BUSINESS') {
-        const latest = c.summaries[0];
+    return containers.map((container) => {
+      const balances = new Map<string, number>();
+      if (container.type === 'EXTERNAL_BUSINESS') {
+        const latest = container.summaries[0];
         if (latest) {
-          netWorth = Number(latest.assetsValue) - Number(latest.liabilitiesValue);
+          balances.set(
+            latest.currency,
+            Number(latest.assetsValue) - Number(latest.liabilitiesValue),
+          );
         }
       } else {
-        for (const acc of c.accounts) {
-          const balance = Number(acc.currentBalance);
-          if (acc.category === 'ASSET') netWorth += balance;
-          if (acc.category === 'LIABILITY') netWorth -= balance;
+        for (const account of container.accounts) {
+          const balance = Number(account.currentBalance);
+          const signedBalance = account.category === 'ASSET' ? balance : -balance;
+          balances.set(account.currency, (balances.get(account.currency) ?? 0) + signedBalance);
         }
       }
 
-      return {
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        currency: c.currency,
-        accountCount: c._count.accounts,
-        summaryCount: c._count.summaries,
+      const byCurrency = Array.from(balances.entries()).map(([currency, netWorth]) => ({
+        currency,
         netWorth,
-        lastSummaryAt: c.type === 'EXTERNAL_BUSINESS' ? (c.summaries[0]?.createdAt ?? null) : null,
+      })).sort((left, right) => left.currency.localeCompare(right.currency));
+      const primary = byCurrency.find((item) => item.currency === container.currency);
+      return {
+        id: container.id,
+        name: container.name,
+        type: container.type,
+        currency: container.currency,
+        accountCount: container._count.accounts,
+        summaryCount: container._count.summaries,
+        netWorth: primary?.netWorth ?? 0,
+        byCurrency,
+        lastSummaryAt: container.type === 'EXTERNAL_BUSINESS' ? (container.summaries[0]?.createdAt ?? null) : null,
         lastUpdatedAt:
-          c.type === 'EXTERNAL_BUSINESS' && c.summaries[0] ? c.summaries[0].date : c.updatedAt,
+          container.type === 'EXTERNAL_BUSINESS' && container.summaries[0] ? container.summaries[0].date : container.updatedAt,
       };
     });
   }
