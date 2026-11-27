@@ -35,9 +35,9 @@ export function CashFlowWidget({ isLoading, data }: CashFlowWidgetProps) {
     );
   }
 
-  const otherCurrencies = data?.byCurrency?.filter(
-    (item) => item.currency !== data.currency,
-  ) ?? [];
+  const otherCurrencies = data
+    ? data.byCurrency.filter((item) => item.currency !== data.currency)
+    : [];
   const hasActivity = Boolean(data && (data.income !== 0 || data.expenses !== 0));
 
   return (
@@ -99,7 +99,7 @@ export function CashFlowWidget({ isLoading, data }: CashFlowWidgetProps) {
             </div>
           )}
 
-          {!hasActivity && (
+          {!hasActivity && otherCurrencies.length === 0 && (
             <div className="flex items-center gap-2 text-xs text-fg-secondary mt-4">
               <Receipt size={14} />
               No posted income or expenses recorded this month.
