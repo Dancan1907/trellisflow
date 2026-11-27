@@ -30,9 +30,9 @@ describe('MoneyCopilotActionsService', () => {
     prisma.moneyCopilotAction.create.mockResolvedValue({});
     tx.moneyCopilotAction.updateMany.mockResolvedValue({ count: 1 });
     tx.account.findFirst.mockResolvedValue({
-      id: 'account-1', containerId: 'container-1', currency: 'KES',
+      id: 'account-1', name: 'Main account', containerId: 'container-1', currency: 'KES',
     });
-    tx.category.findFirst.mockResolvedValue({ id: 'category-1' });
+    tx.category.findFirst.mockResolvedValue({ id: 'category-1', name: 'Food' });
     tx.transaction.create.mockResolvedValue({ id: 'transaction-1', amount: 100, type: 'EXPENSE' });
     tx.moneyCopilotAction.update.mockResolvedValue({});
     balances.applyTransactionEffect.mockResolvedValue(undefined);
@@ -43,7 +43,7 @@ describe('MoneyCopilotActionsService', () => {
 
   it('creates a user-scoped, expiring preview and exposes the exact details', async () => {
     const result = await service.preview('user-1', {
-      type: 'EXPENSE', amount: 100, accountId: 'account-1', categoryId: 'category-1',
+      type: 'EXPENSE', amount: 100, accountId: 'account-1', accountName: 'Main account', currency: 'KES', categoryId: 'category-1', categoryName: 'Food',
       date: '2026-11-27', description: ' Groceries ',
     });
 
@@ -85,7 +85,7 @@ describe('MoneyCopilotActionsService', () => {
     };
     const action = {
       id: 'action-1', userId: 'user-1', idempotencyKey: 'action-1',
-      payload, payloadHash: require('crypto').createHash('sha256').update(JSON.stringify({ type: payload.type, amount: payload.amount, accountId: payload.accountId, categoryId: payload.categoryId ?? null, date: payload.date, description: payload.description, notes: payload.notes ?? null })).digest('hex'),
+      payload, payloadHash: require('crypto').createHash('sha256').update(JSON.stringify({ type: payload.type, amount: payload.amount, accountId: payload.accountId, accountName: payload.accountName, currency: payload.currency, categoryId: payload.categoryId ?? null, categoryName: payload.categoryName ?? null, date: payload.date, description: payload.description, notes: payload.notes ?? null })).digest('hex'),
       status: 'PENDING', expiresAt: new Date(Date.now() + 60_000),
     };
     prisma.moneyCopilotAction.findFirst.mockResolvedValue(action);
@@ -126,7 +126,7 @@ describe('MoneyCopilotActionsService', () => {
   });
 
   it('does not create a transaction when the atomic claim has already been taken', async () => {
-    const payload = { type: 'EXPENSE', amount: 100, accountId: 'account-1', date: '2026-11-27', description: 'Groceries' };
+    const payload = { type: 'EXPENSE', amount: 100, accountId: 'account-1', accountName: 'Main account', currency: 'KES', categoryName: null, date: '2026-11-27', description: 'Groceries' };
     const action = {
       id: 'action-1', userId: 'user-1', idempotencyKey: 'action-1', payload,
       payloadHash: require('crypto').createHash('sha256').update(JSON.stringify({ type: payload.type, amount: payload.amount, accountId: payload.accountId, categoryId: payload.categoryId ?? null, date: payload.date, description: payload.description, notes: payload.notes ?? null })).digest('hex'),
