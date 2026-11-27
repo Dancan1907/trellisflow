@@ -44,6 +44,7 @@ export class MoneyCopilotDataService {
           investmentsNetWorth: true,
           businessesNetWorth: true,
           currency: true,
+          breakdown: true,
         },
       }),
       this.prisma.account.findMany({
@@ -108,6 +109,9 @@ export class MoneyCopilotDataService {
     }
 
     const monthCashFlow = this.aggregateCashFlow(monthTransactionResult.transactions, monthStart, today);
+    const snapshotBreakdown = snapshot?.breakdown as {
+      byCurrency?: Array<Record<string, unknown>>;
+    } | null;
     const context: Record<string, unknown> = {
       asOf: today,
       timezone,
@@ -119,7 +123,8 @@ export class MoneyCopilotDataService {
         investments: Number(snapshot.investmentsNetWorth),
         businesses: Number(snapshot.businessesNetWorth),
         currency: snapshot.currency,
-        source: 'latest saved net-worth snapshot',
+        byCurrency: snapshotBreakdown?.byCurrency ?? [],
+        source: 'latest saved net-worth snapshot; headline totals use the user's reporting currency only',
       } : null,
       accountBalancesByCurrency: Array.from(accountBalancesByCurrency.entries()).map(([currency, data]) => ({
         currency, assets: this.money(data.assets), liabilities: this.money(data.liabilities),
@@ -138,6 +143,7 @@ export class MoneyCopilotDataService {
       dataLimitations: [
         'Amounts in different currencies are not converted or added together.',
         'Net worth is taken from the latest saved snapshot and may not reflect changes after its date.',
+        'The snapshot headline is expressed only in the user reporting currency; other currencies remain separate in its breakdown and are not converted.',
         'Account balances are current account records and are not the same as a historical net-worth snapshot.',
         'Transfers are excluded from income and expense cash-flow totals.',
         ...(accountsTruncated ? ['The account-balance overview reached its 100-account safety cap and may be incomplete.'] : []),
