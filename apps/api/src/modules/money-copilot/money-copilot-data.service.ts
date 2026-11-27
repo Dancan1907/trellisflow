@@ -355,6 +355,9 @@ export class MoneyCopilotDataService {
           profitAndLoss: {
             from: pnl.from, to: pnl.to, income: pnl.totalIncome,
             expenses: pnl.totalExpenses, netProfit: pnl.netProfit,
+            netProfitMarginPercent: Number(pnl.totalIncome) > 0
+              ? this.money((Number(pnl.netProfit) / Number(pnl.totalIncome)) * 100)
+              : null,
             byCategory: pnl.byCategory.slice(0, 10),
           },
           cashRunwayEstimate: runway,
