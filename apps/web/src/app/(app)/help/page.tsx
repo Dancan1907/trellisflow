@@ -355,9 +355,9 @@ export default function HelpPage() {
               You can view this history to see exactly when a transaction or account was modified.
             </li>
           </ul>
+        </section>
           </>
         )}
-        </section>
       </main>
     </div>
   );
