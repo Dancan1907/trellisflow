@@ -11,6 +11,7 @@ interface HeroCardProps {
     businesses: number;
     currency: string;
     byCurrency?: Array<{ currency: string; totalNetWorth: number }>;
+    currencyBreakdownAvailable?: boolean;
   };
 }
 
@@ -105,6 +106,11 @@ export function HeroCard({ isLoading, data }: HeroCardProps) {
         ))}
       </div>
 
+      {data.currencyBreakdownAvailable === false && (
+        <p className="mt-3 text-xs text-status-warning">
+          This saved snapshot predates currency-separated totals and will be corrected on its next refresh.
+        </p>
+      )}
       {otherCurrencies.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-3">
           {otherCurrencies.map((item) => (
