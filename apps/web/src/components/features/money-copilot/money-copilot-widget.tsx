@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Bot,
+  ChartNoAxesCombined,
   MessageCircle,
   Minimize2,
   RotateCcw,
@@ -11,14 +12,28 @@ import {
   ShieldCheck,
   Sparkles,
   User,
+  Wallet,
   X,
 } from 'lucide-react';
 import { useMoneyCopilotChat, MoneyCopilotMessage } from '@/lib/hooks/use-money-copilot';
 
-const suggestions = [
-  'Summarize my financial position',
-  'Where did most of my money go this month?',
-  'How are my investments performing?',
+const suggestionGroups = [
+  {
+    title: 'Everyday finances',
+    icon: Wallet,
+    suggestions: [
+      'Summarize my financial position',
+      'Where did most of my money go this month?',
+    ],
+  },
+  {
+    title: 'Advanced insights',
+    icon: ChartNoAxesCombined,
+    suggestions: [
+      'How are my investments performing?',
+      'How profitable is my business and what is its cash runway?',
+    ],
+  },
 ];
 
 export function MoneyCopilotWidget() {
@@ -93,7 +108,7 @@ export function MoneyCopilotWidget() {
               </div>
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-fg-primary">Money Copilot</h2>
-                <p className="text-xs text-fg-tertiary">Your read-only financial assistant</p>
+                <p className="text-xs text-fg-tertiary">Everyday finances + advanced insights</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
@@ -122,27 +137,37 @@ export function MoneyCopilotWidget() {
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
             {messages.length === 0 ? (
               <div className="flex min-h-full flex-col justify-center">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-accent-primary/10 text-accent-primary">
-                  <Bot size={23} />
-                </div>
                 <h3 className="text-base font-semibold text-fg-primary">
-                  How can I help with your money?
+                  One assistant for all your finances
                 </h3>
                 <p className="mt-1 text-sm leading-5 text-fg-secondary">
-                  Ask in plain language. I use your TrellisFlow records to explain your finances.
+                  Ask about everyday money management, investment performance or business health. Use the same chat for all of it.
                 </p>
-                <div className="mt-5 space-y-2">
-                  {suggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => void submit(undefined, suggestion)}
-                      disabled={chat.isPending}
-                      className="w-full rounded-lg border border-border-subtle px-3 py-2.5 text-left text-sm text-fg-secondary transition-colors hover:border-accent-primary/50 hover:bg-bg-tertiary disabled:opacity-50"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+                <div className="mt-5 space-y-4">
+                  {suggestionGroups.map((group) => {
+                    const GroupIcon = group.icon;
+                    return (
+                      <div key={group.title}>
+                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-fg-tertiary">
+                          <GroupIcon size={14} />
+                          {group.title}
+                        </div>
+                        <div className="space-y-2">
+                          {group.suggestions.map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              onClick={() => void submit(undefined, suggestion)}
+                              disabled={chat.isPending}
+                              className="w-full rounded-lg border border-border-subtle px-3 py-2.5 text-left text-sm text-fg-secondary transition-colors hover:border-accent-primary/50 hover:bg-bg-tertiary disabled:opacity-50"
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -199,7 +224,7 @@ export function MoneyCopilotWidget() {
                 }}
                 maxLength={2000}
                 rows={2}
-                placeholder="Ask about your finances…"
+                placeholder="Ask about spending, investments or your business…"
                 aria-label="Message Money Copilot"
                 className="max-h-28 min-h-11 flex-1 resize-y rounded-lg border border-border-subtle bg-bg-primary px-3 py-2.5 text-sm text-fg-primary outline-none placeholder:text-fg-tertiary focus:border-accent-primary"
               />
