@@ -22,6 +22,7 @@ export function MarketingFooter() {
             <p className="text-sm text-fg-secondary max-w-xs">
               Connected finances. AI-assisted clarity. Better-informed decisions.
             </p>
+            <Link href="/help" className="mt-3 inline-flex text-sm font-medium text-accent-primary hover:underline">Visit the Help Centre</Link>
           </div>
 
           {/* Links */}
@@ -37,7 +38,6 @@ export function MarketingFooter() {
                   <li><Link href="/how-it-works" className="hover:text-fg-primary transition-colors">How it works</Link></li>
                   <li><Link href="/pricing" className="hover:text-fg-primary transition-colors">Pricing</Link></li>
                   <li><Link href="/about" className="hover:text-fg-primary transition-colors">About</Link></li>
-                  <li><Link href="/help" className="hover:text-fg-primary transition-colors">Help Centre</Link></li>
                   <li>
                     <Link href="/signup" className="hover:text-fg-primary transition-colors">
                       Sign up
