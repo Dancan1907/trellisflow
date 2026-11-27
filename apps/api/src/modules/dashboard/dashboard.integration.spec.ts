@@ -27,6 +27,7 @@ describe('Dashboard (Integration)', () => {
         email: `dash-int-${Date.now()}@trellisflow.com`,
         passwordHash: 'x',
         name: 'Dash Test',
+        reportingCurrency: 'KES',
       },
     });
 
