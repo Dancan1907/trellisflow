@@ -40,6 +40,7 @@ interface ContainerCard {
   currency: string;
   accountCount: number;
   netWorth: number;
+  byCurrency: Array<{ currency: string; netWorth: number }>;
   lastUpdatedAt: string;
 }
 
