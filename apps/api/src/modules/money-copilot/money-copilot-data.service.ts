@@ -124,7 +124,7 @@ export class MoneyCopilotDataService {
         businesses: Number(snapshot.businessesNetWorth),
         currency: snapshot.currency,
         byCurrency: snapshotBreakdown?.byCurrency ?? [],
-        source: 'latest saved net-worth snapshot; headline totals use the user's reporting currency only',
+        source: "latest saved net-worth snapshot; headline totals use the user's reporting currency only",
       } : null,
       accountBalancesByCurrency: Array.from(accountBalancesByCurrency.entries()).map(([currency, data]) => ({
         currency, assets: this.money(data.assets), liabilities: this.money(data.liabilities),
