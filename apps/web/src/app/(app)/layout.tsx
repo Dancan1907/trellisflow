@@ -15,12 +15,26 @@ type SessionState = 'checking' | 'authenticated' | 'anonymous' | 'error';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>('checking');
   const token = useAuthStore((state) => state.token);
   const pathname = usePathname();
   const router = useRouter();
   const isPublicHelpPage = pathname === '/help';
+
+  // Restore the user's desktop sidebar preference without changing server-rendered markup.
+  useEffect(() => {
+    setIsSidebarCollapsed(window.localStorage.getItem('trellisflow-sidebar-collapsed') === 'true');
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem('trellisflow-sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   // Do not make an authentication decision until persisted Zustand state is restored.
   useEffect(() => {
@@ -98,9 +112,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} isCollapsed={isSidebarCollapsed} />
       <div className="flex-1 flex flex-col w-full">
-        <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} />
+        <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} isSidebarCollapsed={isSidebarCollapsed} onToggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto flex flex-col">
           <div className="flex-1 p-4 md:p-8">
             <Suspense fallback={null}>
