@@ -33,7 +33,9 @@ const suggestionGroups = [
       'Show my overall net worth without double-counting assets',
       'Give me an overview of my businesses',
       'How profitable is my business and what is its cash runway?',
-      'What if I reduce my spending by 10%?'
+      'What if I reduce my spending by 10%?',
+      'What if my business revenue increases by 10%?',
+      'What if my portfolio drops by 10%?'
     ],
   },
 ];
