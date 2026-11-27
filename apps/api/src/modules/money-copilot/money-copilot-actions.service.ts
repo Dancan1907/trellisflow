@@ -23,6 +23,19 @@ type ActionPayload = {
   notes?: string;
 };
 
+function serializeActionPayload(payload: ActionPayload): string {
+  // JSONB may reorder object keys on round-trip; hash a fixed canonical shape.
+  return JSON.stringify({
+    type: payload.type,
+    amount: payload.amount,
+    accountId: payload.accountId,
+    categoryId: payload.categoryId ?? null,
+    date: payload.date,
+    description: payload.description,
+    notes: payload.notes ?? null,
+  });
+}
+
 @Injectable()
 export class MoneyCopilotActionsService {
   constructor(
@@ -65,7 +78,7 @@ export class MoneyCopilotActionsService {
       description: dto.description.trim(),
       ...(dto.notes?.trim() ? { notes: dto.notes.trim() } : {}),
     };
-    const payloadHash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+    const payloadHash = createHash('sha256').update(serializeActionPayload(payload)).digest('hex');
     const id = randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
