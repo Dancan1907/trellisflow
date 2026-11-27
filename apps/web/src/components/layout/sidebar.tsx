@@ -87,7 +87,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        <div className="h-16 flex items-center justify-between px-6 border-b border-border-subtle">
+        <div className={cn("h-16 flex items-center justify-between px-6 border-b border-border-subtle", isCollapsed && "md:justify-center md:px-2")}>
           <div className={cn(isCollapsed && 'md:hidden')}><Logo /></div>
           {isCollapsed && <div className="hidden md:flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary text-white" aria-label="TrellisFlow"><Layers3 size={21} /></div>}
           {/* Close button (Mobile only) */}
@@ -99,7 +99,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
           </button>
         </div>
 
-        <nav className={cn("flex-1 overflow-y-auto py-6 space-y-6", isCollapsed ? "px-2" : "px-3")}>
+        <nav className={cn("flex-1 overflow-y-auto py-6 space-y-6", isCollapsed && "md:space-y-3", isCollapsed ? "px-2" : "px-3")}>
           {navSections.map((section) => (
             <div key={section.title} {...(section.tourId ? { id: section.tourId } : {})}>
               <h3 className={cn("px-3 mb-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider", isCollapsed && "md:hidden")}>
