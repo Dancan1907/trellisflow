@@ -1,13 +1,31 @@
 import { Receipt, ArrowRight } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { AmountDisplay } from '@/components/shared/amount-display';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface CashFlowCurrency {
+  currency: string;
+  income: number;
+  expenses: number;
+  net: number;
+}
+
+interface CashFlowWidgetData {
+  income: number;
+  expenses: number;
+  net: number;
+  currency: string;
+  byCurrency: CashFlowCurrency[];
+  periodStart: string;
+  periodEnd: string;
+}
 
 interface CashFlowWidgetProps {
   isLoading: boolean;
-  data?: any; // We are ignoring the cash flow data prop for this visual redesign
+  data?: CashFlowWidgetData;
 }
 
-export function CashFlowWidget({ isLoading }: CashFlowWidgetProps) {
+export function CashFlowWidget({ isLoading, data }: CashFlowWidgetProps) {
   if (isLoading) {
     return (
       <div className="bg-bg-secondary border border-border-subtle rounded-xl p-6 h-full min-h-[300px]">
@@ -17,10 +35,18 @@ export function CashFlowWidget({ isLoading }: CashFlowWidgetProps) {
     );
   }
 
+  const otherCurrencies = data?.byCurrency?.filter(
+    (item) => item.currency !== data.currency,
+  ) ?? [];
+  const hasActivity = Boolean(data && (data.income !== 0 || data.expenses !== 0));
+
   return (
     <div className="bg-bg-secondary border border-border-subtle rounded-xl p-6 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-base font-semibold text-fg-primary">Recent Activity</h2>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="text-base font-semibold text-fg-primary">Cash Flow</h2>
+          <p className="text-xs text-fg-secondary mt-1">This month · {data?.currency ?? '—'}</p>
+        </div>
         <Link
           href="/personal"
           className="text-xs text-accent-primary hover:underline flex items-center gap-1"
@@ -29,38 +55,71 @@ export function CashFlowWidget({ isLoading }: CashFlowWidgetProps) {
         </Link>
       </div>
 
-      {/* Empty State matching Image 3 */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-        <div className="relative mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-bg-tertiary flex items-center justify-center border border-border-subtle z-10 relative">
-            <Receipt className="text-fg-secondary" size={28} />
+      {data ? (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-lg bg-bg-tertiary p-3">
+              <p className="text-xs text-fg-secondary mb-1">Income</p>
+              <p className="text-lg font-semibold text-status-positive">
+                <AmountDisplay value={data.income} currency={data.currency} />
+              </p>
+            </div>
+            <div className="rounded-lg bg-bg-tertiary p-3">
+              <p className="text-xs text-fg-secondary mb-1">Expenses</p>
+              <p className="text-lg font-semibold text-status-negative">
+                <AmountDisplay value={data.expenses} currency={data.currency} />
+              </p>
+            </div>
           </div>
-          {/* Green Check badge */}
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-accent-primary flex items-center justify-center border-4 border-bg-secondary z-20">
-            <svg
-              className="w-4 h-4 text-bg-primary"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="3"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+
+          <div className="flex items-center justify-between border-t border-border-subtle mt-4 pt-4">
+            <span className="text-sm text-fg-secondary">Net cash flow</span>
+            <span className={data.net >= 0 ? 'text-sm font-semibold text-status-positive' : 'text-sm font-semibold text-status-negative'}>
+              <AmountDisplay value={data.net} currency={data.currency} />
+            </span>
           </div>
+
+          {otherCurrencies.length > 0 && (
+            <div className="border-t border-border-subtle mt-4 pt-4 space-y-3">
+              <p className="text-xs font-medium text-fg-secondary">Other currencies · not converted</p>
+              {otherCurrencies.map((item) => (
+                <div key={item.currency} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-fg-secondary">{item.currency}</span>
+                  <div className="text-right">
+                    <p className="font-medium text-fg-primary">
+                      <AmountDisplay value={item.net} currency={item.currency} />
+                    </p>
+                    <p className="text-xs text-fg-tertiary">
+                      Income <AmountDisplay value={item.income} currency={item.currency} /> · Expenses{' '}
+                      <AmountDisplay value={item.expenses} currency={item.currency} />
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!hasActivity && (
+            <div className="flex items-center gap-2 text-xs text-fg-secondary mt-4">
+              <Receipt size={14} />
+              No posted income or expenses recorded this month.
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+          <Receipt className="text-fg-secondary mb-3" size={28} />
+          <p className="text-sm font-medium text-fg-primary mb-1">Cash flow unavailable</p>
+          <p className="text-xs text-fg-secondary">Your monthly cash flow summary could not be loaded.</p>
         </div>
+      )}
 
-        <h3 className="text-sm font-bold text-fg-primary mb-1">No recent transactions</h3>
-        <p className="text-xs text-fg-secondary max-w-[200px] mb-6">
-          Your activity will appear here once you make a transaction.
-        </p>
-
-        <Link
-          href="/personal"
-          className="px-5 py-2.5 rounded-full bg-accent-primary text-bg-primary text-sm font-bold hover:bg-accent-hover transition-colors"
-        >
-          Add Transaction
-        </Link>
-      </div>
+      <Link
+        href="/personal"
+        className="mt-auto pt-5 text-sm font-semibold text-accent-primary hover:underline"
+      >
+        Add or review transactions
+      </Link>
     </div>
   );
 }
