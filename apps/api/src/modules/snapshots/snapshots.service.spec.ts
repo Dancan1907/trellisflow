@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 const mockPrisma = {
   container: { findMany: jest.fn() },
+  holding: { findMany: jest.fn() },
   netWorthSnapshot: { upsert: jest.fn() },
   user: { findMany: jest.fn(), findUnique: jest.fn() },
 };
@@ -14,6 +15,7 @@ describe('SnapshotsService (Unit)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockPrisma.user.findUnique.mockResolvedValue({ reportingCurrency: 'KES' });
+    mockPrisma.holding.findMany.mockResolvedValue([]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [SnapshotsService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
@@ -97,6 +99,15 @@ describe('SnapshotsService (Unit)', () => {
           accounts: [{ currentBalance: 300, category: 'ASSET', currency: 'USD' }],
           summaries: [],
         },
+        {
+          id: 'investment-1',
+          type: 'INVESTMENT',
+          accounts: [{ currentBalance: 100, category: 'ASSET', currency: 'USD' }],
+          summaries: [],
+        },
+      ]);
+      mockPrisma.holding.findMany.mockResolvedValue([
+        { currency: 'USD', currentValueTotal: 200 },
       ]);
       mockPrisma.netWorthSnapshot.upsert.mockResolvedValue({ id: 'snap1' });
 
@@ -112,7 +123,7 @@ describe('SnapshotsService (Unit)', () => {
           breakdown: expect.objectContaining({
             byCurrency: expect.arrayContaining([
               expect.objectContaining({ currency: 'KES', totalNetWorth: 800 }),
-              expect.objectContaining({ currency: 'USD', totalNetWorth: 800 }),
+              expect.objectContaining({ currency: 'USD', investmentsNetWorth: 300, totalNetWorth: 1100 }),
             ]),
           }),
         }),
