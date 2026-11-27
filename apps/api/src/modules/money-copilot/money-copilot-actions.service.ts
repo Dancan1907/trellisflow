@@ -39,6 +39,7 @@ export class MoneyCopilotActionsService {
     });
     if (!account) throw new NotFoundException('Active account not found.');
 
+    let categoryName: string | null = null;
     if (dto.categoryId) {
       const category = await this.prisma.category.findFirst({
         where: {
@@ -52,6 +53,7 @@ export class MoneyCopilotActionsService {
         select: { id: true, name: true },
       });
       if (!category) throw new BadRequestException('The selected category is not available for this account and transaction type.');
+      categoryName = category.name;
     }
 
     const payload: ActionPayload = {
@@ -89,6 +91,7 @@ export class MoneyCopilotActionsService {
         account: account.name,
         accountId: account.id,
         categoryId: payload.categoryId ?? null,
+        category: categoryName,
         date: payload.date,
         description: payload.description,
         notes: payload.notes ?? null,
