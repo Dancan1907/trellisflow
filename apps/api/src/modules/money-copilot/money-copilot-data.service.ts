@@ -211,35 +211,45 @@ export class MoneyCopilotDataService {
         };
         result = validPercentage ? businesses
           .filter((business) => business.type === 'INTERNAL_BUSINESS' && business.profitAndLoss)
-          .map((business) => {
+          .flatMap((business) => {
             const pnl = business.profitAndLoss;
-            const income = Number(pnl.income);
-            const expenses = Number(pnl.expenses);
-            const revenueMultiplier = isBusinessRevenue
-              ? (asksReduction || asksDrop
-                ? 1 - percentage! / 100 : 1 + percentage! / 100)
-              : 1;
-            const expenseMultiplier = isBusinessExpense
-              ? (asksReduction ? 1 - percentage! / 100 : 1 + percentage! / 100)
-              : 1;
-            const projectedIncome = income * revenueMultiplier;
-            const projectedExpenses = expenses * expenseMultiplier;
-            const projectedProfit = projectedIncome - projectedExpenses;
-            return {
-              business: business.name,
-              currency: business.currency,
-              baselineRevenue: this.money(income),
-              baselineExpenses: this.money(expenses),
-              baselineNetProfit: this.money(Number(pnl.netProfit)),
-              projectedRevenue: this.money(projectedIncome),
-              projectedExpenses: this.money(projectedExpenses),
-              projectedNetProfit: this.money(projectedProfit),
-              projectedNetProfitMarginPercent: projectedIncome > 0
-                ? this.money((projectedProfit / projectedIncome) * 100) : null,
-              appliedChange: isBusinessRevenue
-                ? (revenueMultiplier < 1 ? 'REVENUE_REDUCTION' : 'REVENUE_INCREASE')
-                : (expenseMultiplier < 1 ? 'EXPENSE_REDUCTION' : 'EXPENSE_INCREASE'),
-            };
+            const currencyGroups = Array.isArray(pnl.byCurrency) && pnl.byCurrency.length
+              ? pnl.byCurrency
+              : [{
+                  currency: business.currency,
+                  totalIncome: pnl.income,
+                  totalExpenses: pnl.expenses,
+                  netProfit: pnl.netProfit,
+                }];
+            return currencyGroups.map((currencyPnl: Record<string, any>) => {
+              const income = Number(currencyPnl.totalIncome ?? currencyPnl.income ?? 0);
+              const expenses = Number(currencyPnl.totalExpenses ?? currencyPnl.expenses ?? 0);
+              const revenueMultiplier = isBusinessRevenue
+                ? (asksReduction || asksDrop
+                  ? 1 - percentage! / 100 : 1 + percentage! / 100)
+                : 1;
+              const expenseMultiplier = isBusinessExpense
+                ? (asksReduction ? 1 - percentage! / 100 : 1 + percentage! / 100)
+                : 1;
+              const projectedIncome = income * revenueMultiplier;
+              const projectedExpenses = expenses * expenseMultiplier;
+              const projectedProfit = projectedIncome - projectedExpenses;
+              return {
+                business: business.name,
+                currency: currencyPnl.currency ?? business.currency,
+                baselineRevenue: this.money(income),
+                baselineExpenses: this.money(expenses),
+                baselineNetProfit: this.money(Number(currencyPnl.netProfit ?? (income - expenses))),
+                projectedRevenue: this.money(projectedIncome),
+                projectedExpenses: this.money(projectedExpenses),
+                projectedNetProfit: this.money(projectedProfit),
+                projectedNetProfitMarginPercent: projectedIncome > 0
+                  ? this.money((projectedProfit / projectedIncome) * 100) : null,
+                appliedChange: isBusinessRevenue
+                  ? (revenueMultiplier < 1 ? 'REVENUE_REDUCTION' : 'REVENUE_INCREASE')
+                  : (expenseMultiplier < 1 ? 'EXPENSE_REDUCTION' : 'EXPENSE_INCREASE'),
+              };
+            });
           }) : null;
       } else if (isPortfolioShock) {
         scenarioType = 'PORTFOLIO_VALUE_SENSITIVITY';
@@ -495,6 +505,7 @@ export class MoneyCopilotDataService {
               ? this.money((Number(pnl.netProfit) / Number(pnl.totalIncome)) * 100)
               : null,
             byCategory: pnl.byCategory.slice(0, 10),
+            byCurrency: pnl.byCurrency ?? [],
           },
           cashRunwayEstimate: runway,
           note: 'Runway is an estimate based on the last 90 days of recorded expenses and current liquid account balances; it is not a guaranteed forecast.',
