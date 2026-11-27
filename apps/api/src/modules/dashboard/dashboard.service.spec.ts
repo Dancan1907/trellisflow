@@ -46,6 +46,10 @@ describe('DashboardService (Unit)', () => {
       expect(result.cashFlow.income).toBe(5000);
       expect(result.cashFlow.expenses).toBe(2000);
       expect(result.cashFlow.net).toBe(3000);
+      const query = mockPrisma.transaction.findMany.mock.calls[0][0];
+      expect(query.where.date.gte).toBeInstanceOf(Date);
+      expect(query.where.date.lte).toBeInstanceOf(Date);
+      expect(query.where.date.gte.getTime()).toBeLessThan(query.where.date.lte.getTime());
     });
 
     it('keeps dashboard cash flow grouped by currency and excludes pending rows', async () => {
