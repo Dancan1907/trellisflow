@@ -264,6 +264,9 @@ describe('BusinessesService (Unit)', () => {
 
       // INCOME rows sort before EXPENSE rows.
       expect(result.byCategory[0]?.type).toBe('INCOME');
+      expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ status: { in: ['POSTED', 'RECONCILED'] } }),
+      }));
     });
 
     it('rejects a range whose start is after its end', async () => {
@@ -299,6 +302,9 @@ describe('BusinessesService (Unit)', () => {
       expect(result.monthlyBurn).toBe(2000); // 6000 over 90 days ≈ 3 months
       expect(result.runwayMonths).toBe(6);
       expect(result.windowDays).toBe(90);
+      expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ status: { in: ['POSTED', 'RECONCILED'] } }),
+      }));
     });
 
     it('returns null runway when the business has no expenses', async () => {
