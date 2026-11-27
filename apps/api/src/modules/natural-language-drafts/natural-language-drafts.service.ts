@@ -174,10 +174,16 @@ export class NaturalLanguageDraftsService {
     if (dto.type === 'TRANSFER') {
       return this.transactions.transfer(
         userId,
-        dto.transaction as import('../transactions/dto/create-transfer.dto').CreateTransferDto,
+        {
+          ...(dto.transaction as import('../transactions/dto/create-transfer.dto').CreateTransferDto),
+          idempotencyKey: dto.idempotencyKey,
+        },
       );
     }
-    const transaction = dto.transaction as import('../transactions/dto/create-transaction.dto').CreateTransactionDto;
+    const transaction = {
+      ...(dto.transaction as import('../transactions/dto/create-transaction.dto').CreateTransactionDto),
+      idempotencyKey: dto.idempotencyKey,
+    };
     if (transaction.type !== dto.type) {
       throw new BadRequestException('Transaction type does not match the confirmed draft.');
     }
