@@ -7,7 +7,7 @@ Money Copilot answers natural-language questions about a signed-in user's record
 ## API capabilities
 
 - `POST /api/money-copilot/chat` — authenticated financial Q&A and supported deterministic what-if analysis.
-- Action preview and confirmation endpoints are exposed by the Money Copilot controller; the action service supports income and expense transaction creation only.
+- Action preview and confirmation endpoints are exposed by the Money Copilot controller; the action service supports income and expense transaction creation only. Chat, preview and confirmation all fail closed unless `AI_MONEY_COPILOT_ENABLED=true`.
 - JWT authentication and throttling are required.
 - Chat message is limited to 2,000 characters; optional conversation history is bounded.
 - Action previews expire after 10 minutes and require explicit confirmation.
@@ -37,6 +37,8 @@ The action workflow is deliberately constrained:
 4. The user explicitly confirms the preview.
 5. The API atomically claims the pending action, revalidates account/category state, creates the transaction, applies the balance effect, writes the audit event and stores the resulting transaction ID in one database transaction.
 6. Repeated confirmation returns the existing transaction rather than repeating the financial write. If the initial snapshot refresh failed, a retry refreshes the snapshot without duplicating the transaction.
+
+The shared transaction writer also accepts per-user idempotency keys for natural-language confirmations and paired transfers. A matching retry returns the original result; reusing a key with a different payload is rejected.
 
 Transfers, account mutations, budget changes, holding changes and arbitrary actions are not supported by this action workflow. Use their dedicated application workflows.
 
