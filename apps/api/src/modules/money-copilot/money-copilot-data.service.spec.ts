@@ -83,6 +83,37 @@ describe('MoneyCopilotDataService', () => {
     expect(prisma.holding.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 5001 }));
   });
 
+  it('exposes per-currency snapshot totals without combining them', async () => {
+    prisma.netWorthSnapshot.findFirst.mockResolvedValue({
+      date: new Date('2026-11-20T00:00:00.000Z'),
+      totalNetWorth: 1000,
+      personalNetWorth: 800,
+      investmentsNetWorth: 100,
+      businessesNetWorth: 100,
+      currency: 'KES',
+      breakdown: {
+        byCurrency: [
+          { currency: 'KES', totalNetWorth: 1000 },
+          { currency: 'USD', totalNetWorth: 500 },
+        ],
+      },
+    });
+
+    const result = await service.buildContext('user-1', 'Summarize my overall net worth');
+
+    expect(result.netWorthSnapshot).toMatchObject({
+      total: 1000,
+      currency: 'KES',
+      byCurrency: [
+        { currency: 'KES', totalNetWorth: 1000 },
+        { currency: 'USD', totalNetWorth: 500 },
+      ],
+    });
+    expect((result.dataLimitations as string[]).join(' ')).toContain(
+      'other currencies remain separate',
+    );
+  });
+
   it('only requests investment records when the question concerns investments', async () => {
     await service.buildContext('user-1', 'How is my investment portfolio doing?');
 
