@@ -98,6 +98,7 @@ export class DashboardService {
       include: {
         accounts: { where: { status: 'ACTIVE' } },
         summaries: {
+          where: { deletedAt: null },
           orderBy: { date: 'desc' },
           take: 1,
         },
