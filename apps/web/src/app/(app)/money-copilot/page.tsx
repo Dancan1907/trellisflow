@@ -1,14 +1,47 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bot, Send, Sparkles, ShieldCheck, User, RotateCcw } from 'lucide-react';
-import { useMoneyCopilotChat, MoneyCopilotMessage } from '@/lib/hooks/use-money-copilot';
+import {
+  Bot,
+  BriefcaseBusiness,
+  ChartNoAxesCombined,
+  Send,
+  ShieldCheck,
+  User,
+  Wallet,
+  RotateCcw,
+  Plus,
+  CheckCircle2,
+} from 'lucide-react';
+import { useMoneyCopilotChat, MoneyCopilotMessage, useMoneyCopilotActionPreview, useConfirmMoneyCopilotAction, MoneyCopilotActionPreview } from '@/lib/hooks/use-money-copilot';
+import { useAccounts } from '@/lib/hooks/use-accounts';
+import { useCategories } from '@/lib/hooks/use-categories';
 
-const suggestions = [
-  'Summarize my financial position',
-  'Where did most of my money go this month?',
-  'How are my investments performing?',
-  'Give me an overview of my businesses',
+const suggestionGroups = [
+  {
+    title: 'Everyday financial assistance',
+    description: 'Understand your spending, budgets, transactions and overall financial position.',
+    icon: Wallet,
+    suggestions: [
+      'Summarize my financial position',
+      'Where did most of my money go this month?',
+    ],
+  },
+  {
+    title: 'Advanced financial intelligence',
+    description: 'Explore investment performance, business profitability and cash runway.',
+    icon: ChartNoAxesCombined,
+    suggestions: [
+      'How are my investments performing?',
+      'How diversified is my investment portfolio?',
+      'Show my overall net worth without double-counting assets',
+      'Give me an overview of my businesses',
+      'How profitable is my business and what is its cash runway?',
+      'What if I reduce my spending by 10%?',
+      'What if my business revenue increases by 10%?',
+      'What if my portfolio drops by 10%?'
+    ],
+  },
 ];
 
 export default function MoneyCopilotPage() {
@@ -16,6 +49,20 @@ export default function MoneyCopilotPage() {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const chat = useMoneyCopilotChat();
+  const accountsQuery = useAccounts();
+  const categoriesQuery = useCategories();
+  const previewMutation = useMoneyCopilotActionPreview();
+  const confirmMutation = useConfirmMoneyCopilotAction();
+  const [showActionForm, setShowActionForm] = useState(false);
+  const [actionType, setActionType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
+  const [actionAmount, setActionAmount] = useState('');
+  const [actionAccountId, setActionAccountId] = useState('');
+  const [actionCategoryId, setActionCategoryId] = useState('');
+  const [actionDate, setActionDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
+  const [actionDescription, setActionDescription] = useState('');
+  const [actionNotes, setActionNotes] = useState('');
+  const [actionPreview, setActionPreview] = useState<MoneyCopilotActionPreview | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -45,11 +92,13 @@ export default function MoneyCopilotPage() {
         <div>
           <div className="mb-1 flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
-              <Sparkles size={19} />
+              <ChartNoAxesCombined size={19} />
             </div>
             <h1 className="text-2xl font-semibold text-fg-primary">Money Copilot</h1>
           </div>
-          <p className="text-sm text-fg-secondary">Ask questions about your money, investments, and businesses.</p>
+          <p className="max-w-2xl text-sm text-fg-secondary">
+            One assistant for everyday money management and deeper investment and business insights.
+          </p>
         </div>
         <button
           type="button"
@@ -61,29 +110,149 @@ export default function MoneyCopilotPage() {
         </button>
       </header>
 
+      <section className="rounded-xl border border-border-subtle bg-bg-secondary p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-fg-primary">Record a transaction with confirmation</h2>
+            <p className="mt-1 text-xs text-fg-secondary">Prepare an income or expense, review the exact details, then confirm to save it.</p>
+          </div>
+          <button type="button" onClick={() => { setShowActionForm((value) => !value); setActionPreview(null); setActionMessage(''); }} className="flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm text-fg-primary hover:bg-bg-tertiary">
+            <Plus size={15} /> {showActionForm ? 'Close' : 'Prepare transaction'}
+          </button>
+        </div>
+        {showActionForm && !actionPreview && (
+          <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={async (event) => {
+            event.preventDefault();
+            setActionMessage('');
+            try {
+              const preview = await previewMutation.mutateAsync({
+                type: actionType, amount: Number(actionAmount), accountId: actionAccountId,
+                ...(actionCategoryId ? { categoryId: actionCategoryId } : {}),
+                date: actionDate, description: actionDescription.trim(),
+                ...(actionNotes.trim() ? { notes: actionNotes.trim() } : {}),
+              });
+              setActionPreview(preview);
+            } catch (error) {
+              setActionMessage(error instanceof Error ? error.message : 'Could not prepare this transaction.');
+            }
+          }}>
+            <label className="space-y-1 text-xs text-fg-secondary">Type
+              <select value={actionType} onChange={(event) => { setActionType(event.target.value as 'INCOME' | 'EXPENSE'); setActionCategoryId(''); }} className="w-full rounded-lg border border-border-subtle bg-bg-primary p-2.5 text-sm text-fg-primary">
+                <option value="EXPENSE">Expense</option><option value="INCOME">Income</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-xs text-fg-secondary">Amount
+              <input required type="number" min="0.01" step="0.0001" value={actionAmount} onChange={(event) => setActionAmount(event.target.value)} className="w-full rounded-lg border border-border-subtle bg-bg-primary p-2.5 text-sm text-fg-primary" />
+            </label>
+            <label className="space-y-1 text-xs text-fg-secondary">Account
+              <select required value={actionAccountId} onChange={(event) => setActionAccountId(event.target.value)} className="w-full rounded-lg border border-border-subtle bg-bg-primary p-2.5 text-sm text-fg-primary">
+                <option value="">Select account</option>
+                {(accountsQuery.data ?? []).map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs text-fg-secondary">Category
+              <select value={actionCategoryId} onChange={(event) => setActionCategoryId(event.target.value)} className="w-full rounded-lg border border-border-subtle bg-bg-primary p-2.5 text-sm text-fg-primary">
+                <option value="">Uncategorized</option>
+                {(categoriesQuery.data ?? []).filter((category) => category.type === actionType).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs text-fg-secondary">Date
+              <input required type="date" value={actionDate} onChange={(event) => setActionDate(event.target.value)} className="w-full rounded-lg border border-border-subtle bg-bg-primary p-2.5 text-sm text-fg-primary" />
+            </label>
+            <label className="space-y-1 text-xs text-fg-secondary">Description
+              <input required maxLength={200} value={actionDescription} onChange={(event) => setActionDescription(event.target.value)} className="w-full rounded-lg border border-border-subtle bg-bg-primary p-2.5 text-sm text-fg-primary" />
+            </label>
+            <label className="space-y-1 text-xs text-fg-secondary sm:col-span-2">Notes (optional)
+              <input maxLength={1000} value={actionNotes} onChange={(event) => setActionNotes(event.target.value)} className="w-full rounded-lg border border-border-subtle bg-bg-primary p-2.5 text-sm text-fg-primary" />
+            </label>
+            {actionMessage && <p role="alert" className="text-sm text-red-500 sm:col-span-2">{actionMessage}</p>}
+            <button type="submit" disabled={previewMutation.isPending || !actionAccountId || !actionAmount || !actionDescription.trim()} className="rounded-lg bg-accent-primary px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 sm:col-span-2">
+              {previewMutation.isPending ? 'Preparing preview…' : 'Review transaction'}
+            </button>
+          </form>
+        )}
+        {actionPreview && (
+          <div className="mt-4 rounded-lg border border-border-subtle bg-bg-primary p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg-primary"><CheckCircle2 size={16} /> Review before confirming</div>
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div><dt className="text-xs text-fg-tertiary">Type</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.type}</dd></div>
+              <div><dt className="text-xs text-fg-tertiary">Amount</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.currency} {actionPreview.preview.amount.toLocaleString()}</dd></div>
+              <div><dt className="text-xs text-fg-tertiary">Account</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.account}</dd></div>
+              <div><dt className="text-xs text-fg-tertiary">Category</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.category ?? 'Uncategorized'}</dd></div>
+              <div><dt className="text-xs text-fg-tertiary">Date</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.date}</dd></div>
+              <div className="sm:col-span-2"><dt className="text-xs text-fg-tertiary">Description</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.description}</dd></div>
+              {actionPreview.preview.notes && <div className="sm:col-span-2"><dt className="text-xs text-fg-tertiary">Notes</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.notes}</dd></div>}
+            </dl>
+            <p className="mt-3 text-xs text-fg-tertiary">Preview expires {new Date(actionPreview.expiresAt).toLocaleTimeString()}. Confirmation creates the transaction and updates the account balance.</p>
+            {actionMessage && <p role="alert" className="mt-2 text-sm text-red-500">{actionMessage}</p>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" disabled={confirmMutation.isPending} onClick={async () => {
+                setActionMessage('');
+                try {
+                  await confirmMutation.mutateAsync(actionPreview.actionId);
+                  setActionMessage('Transaction confirmed and recorded.');
+                  setActionPreview(null);
+                  setActionAmount('');
+                  setActionDescription('');
+                  setActionNotes('');
+                  setShowActionForm(false);
+                } catch (error) {
+                  setActionMessage(error instanceof Error ? error.message : 'Confirmation failed. Review your transactions before retrying.');
+                }
+              }} className="rounded-lg bg-accent-primary px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50">
+                {confirmMutation.isPending ? 'Confirming…' : 'Confirm transaction'}
+              </button>
+              <button type="button" disabled={confirmMutation.isPending} onClick={() => setActionPreview(null)} className="rounded-lg border border-border-subtle px-4 py-2.5 text-sm text-fg-secondary">Cancel preview</button>
+            </div>
+          </div>
+        )}
+        {actionMessage && !actionPreview && !showActionForm && <p role="status" className="mt-3 text-sm text-green-600">{actionMessage}</p>}
+      </section>
+
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-secondary">
         <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto p-4 md:p-6">
           {messages.length === 0 ? (
-            <div className="mx-auto flex max-w-xl flex-col items-center py-10 text-center">
+            <div className="mx-auto flex max-w-2xl flex-col items-center py-8 text-center sm:py-10">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-primary/10 text-accent-primary">
                 <Bot size={28} />
               </div>
-              <h2 className="text-lg font-semibold text-fg-primary">Your finances, explained</h2>
-              <p className="mt-2 text-sm leading-6 text-fg-secondary">
-                Ask a question in plain language. I use your TrellisFlow records to explain the numbers and highlight useful context.
+              <h2 className="text-lg font-semibold text-fg-primary">Your finances, explained. Your decisions, informed.</h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-fg-secondary">
+                Ask in plain language. Money Copilot can help with everyday finances and dig deeper into your investments and businesses using your TrellisFlow records.
               </p>
-              <div className="mt-6 grid w-full gap-2 sm:grid-cols-2">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => void submit(undefined, suggestion)}
-                    disabled={chat.isPending}
-                    className="rounded-lg border border-border-subtle p-3 text-left text-sm text-fg-secondary transition-colors hover:border-accent-primary/50 hover:bg-bg-tertiary disabled:opacity-50"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+
+              <div className="mt-7 grid w-full gap-4 text-left sm:grid-cols-2">
+                {suggestionGroups.map((group) => {
+                  const GroupIcon = group.icon;
+                  return (
+                    <div key={group.title} className="rounded-xl border border-border-subtle bg-bg-primary p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
+                          <GroupIcon size={18} />
+                        </div>
+                        <h3 className="text-sm font-semibold text-fg-primary">{group.title}</h3>
+                      </div>
+                      <p className="mb-3 text-xs leading-5 text-fg-secondary">{group.description}</p>
+                      <div className="space-y-2">
+                        {group.suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => void submit(undefined, suggestion)}
+                            disabled={chat.isPending}
+                            className="w-full rounded-lg border border-border-subtle p-2.5 text-left text-sm text-fg-secondary transition-colors hover:border-accent-primary/50 hover:bg-bg-tertiary disabled:opacity-50"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-fg-tertiary">
+                <BriefcaseBusiness size={14} />
+                <span>Ask about personal finances, investments or your businesses in this same conversation.</span>
               </div>
             </div>
           ) : messages.map((message, index) => (
@@ -124,7 +293,8 @@ export default function MoneyCopilotPage() {
               }}
               maxLength={2000}
               rows={2}
-              placeholder="Ask about your finances…"
+              placeholder="Ask about spending, investments or business performance…"
+              aria-label="Ask Money Copilot a question"
               className="max-h-32 min-h-12 flex-1 resize-y rounded-lg border border-border-subtle bg-bg-primary px-3 py-3 text-sm text-fg-primary outline-none placeholder:text-fg-tertiary focus:border-accent-primary"
             />
             <button
@@ -137,7 +307,7 @@ export default function MoneyCopilotPage() {
             </button>
           </div>
           <div className="mt-2 flex items-center justify-center gap-1.5 text-xs text-fg-tertiary">
-            <ShieldCheck size={13} /> Read-only assistance. Review important financial decisions independently.
+            <ShieldCheck size={13} /> Chat answers are read-only. Any transaction requires a separate review and explicit confirmation.
           </div>
         </form>
       </section>

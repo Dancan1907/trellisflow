@@ -17,6 +17,7 @@ const USER_TABLES = [
   'SavingsGoal',
   'DebtPayoffPlan',
   'Insight',
+  'MoneyCopilotAction',
 ];
 
 export function tenantExtension(cls: ClsService) {

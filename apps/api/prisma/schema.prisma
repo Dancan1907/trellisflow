@@ -52,47 +52,48 @@ enum VerificationPurpose {
 }
 
 model User {
-  id                String         @id @db.Uuid
-  email             String         @unique
-  emailVerifiedAt   DateTime?      @map("email_verified_at") @db.Timestamptz(6)
-  passwordHash      String         @map("password_hash")
+  id                String       @id @db.Uuid
+  email             String       @unique
+  emailVerifiedAt   DateTime?    @map("email_verified_at") @db.Timestamptz(6)
+  passwordHash      String       @map("password_hash")
   name              String
-  timezone          String         @default("UTC")
-  reportingCurrency String         @default("USD") @map("reporting_currency") @db.VarChar(3)
-  tier              UserTier       @default(FREE)
-  personaHint       PersonaHint?   @map("persona_hint")
-  status            UserStatus     @default(ACTIVE)
+  timezone          String       @default("UTC")
+  reportingCurrency String       @default("USD") @map("reporting_currency") @db.VarChar(3)
+  tier              UserTier     @default(FREE)
+  personaHint       PersonaHint? @map("persona_hint")
+  status            UserStatus   @default(ACTIVE)
 
   // Onboarding State
-  hasSeenWelcome      Boolean      @default(false) @map("has_seen_welcome")
-  quickTourCompleted  Boolean      @default(false) @map("quick_tour_completed")
-  quickTourSkipped    Boolean      @default(false) @map("quick_tour_skipped")
+  hasSeenWelcome     Boolean @default(false) @map("has_seen_welcome")
+  quickTourCompleted Boolean @default(false) @map("quick_tour_completed")
+  quickTourSkipped   Boolean @default(false) @map("quick_tour_skipped")
 
-  deletedAt         DateTime?      @map("deleted_at") @db.Timestamptz(6)
-  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  sessions           Session[]
-  verificationTokens EmailVerificationToken[]
-  containers         Container[]
-  accounts           Account[]
-  categories         Category[]
-  transactions       Transaction[]
-  recurringRules     RecurringRule[]
-  holdings           Holding[]
-  investmentEvents   InvestmentEvent[]
-  summaries          Summary[]
-  summaryVersions    SummaryVersion[]
-  apiTokens          ApiToken[]
-  budgets            Budget[]
-  savingsGoals       SavingsGoal[]
-  goalContributions  GoalContribution[]
-  debtPlans          DebtPayoffPlan[]
-  netWorthSnapshots  NetWorthSnapshot[]
-  insights           Insight[]
-  auditLogs          AuditLog[]
-  aiUsageDaily       AiUsageDaily[]
-  aiUsageEvents      AiUsageEvent[]
+  sessions            Session[]
+  verificationTokens  EmailVerificationToken[]
+  containers          Container[]
+  accounts            Account[]
+  categories          Category[]
+  transactions        Transaction[]
+  recurringRules      RecurringRule[]
+  holdings            Holding[]
+  investmentEvents    InvestmentEvent[]
+  summaries           Summary[]
+  summaryVersions     SummaryVersion[]
+  apiTokens           ApiToken[]
+  budgets             Budget[]
+  savingsGoals        SavingsGoal[]
+  goalContributions   GoalContribution[]
+  debtPlans           DebtPayoffPlan[]
+  netWorthSnapshots   NetWorthSnapshot[]
+  insights            Insight[]
+  auditLogs           AuditLog[]
+  aiUsageDaily        AiUsageDaily[]
+  aiUsageEvents       AiUsageEvent[]
+  moneyCopilotActions MoneyCopilotAction[]
 
   @@index([status])
   @@map("users")
@@ -182,19 +183,19 @@ model Container {
   updatedAt  DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessProfile         BusinessProfile?
-  externalSource          ExternalBusinessSource?
-  accounts                Account[]
-  categories              Category[]
-  transactions            Transaction[]
-  recurringRules          RecurringRule[]
-  holdings                Holding[]
-  investmentEvents        InvestmentEvent[]
-  summaries               Summary[]
-  apiTokens               ApiToken[]
-  budgets                 Budget[]
-  savingsGoals            SavingsGoal[]
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessProfile  BusinessProfile?
+  externalSource   ExternalBusinessSource?
+  accounts         Account[]
+  categories       Category[]
+  transactions     Transaction[]
+  recurringRules   RecurringRule[]
+  holdings         Holding[]
+  investmentEvents InvestmentEvent[]
+  summaries        Summary[]
+  apiTokens        ApiToken[]
+  budgets          Budget[]
+  savingsGoals     SavingsGoal[]
 
   @@index([userId, status])
   @@index([userId, type])
@@ -202,15 +203,15 @@ model Container {
 }
 
 model BusinessProfile {
-  id                   String       @id @db.Uuid
-  containerId          String       @unique @map("container_id") @db.Uuid
-  businessType         BusinessType @map("business_type")
-  businessTypeCustom   String?      @map("business_type_custom")
-  startDate            DateTime?    @map("start_date") @db.Date
-  notes                String?
-  logoUrl              String?      @map("logo_url")
-  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String       @id @db.Uuid
+  containerId        String       @unique @map("container_id") @db.Uuid
+  businessType       BusinessType @map("business_type")
+  businessTypeCustom String?      @map("business_type_custom")
+  startDate          DateTime?    @map("start_date") @db.Date
+  notes              String?
+  logoUrl            String?      @map("logo_url")
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
 
@@ -218,15 +219,15 @@ model BusinessProfile {
 }
 
 model ExternalBusinessSource {
-  id               String                @id @db.Uuid
-  containerId      String                @unique @map("container_id") @db.Uuid
-  sourceType       ExternalSourceType    @default(MANUAL) @map("source_type")
-  lastSyncedAt     DateTime?             @map("last_synced_at") @db.Timestamptz(6)
-  lastSummaryDate  DateTime?             @map("last_summary_date") @db.Date
-  lastSummaryAt    DateTime?             @map("last_summary_at") @db.Timestamptz(6)
-  syncInterval     ExternalSyncInterval? @map("sync_interval")
-  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id              String                @id @db.Uuid
+  containerId     String                @unique @map("container_id") @db.Uuid
+  sourceType      ExternalSourceType    @default(MANUAL) @map("source_type")
+  lastSyncedAt    DateTime?             @map("last_synced_at") @db.Timestamptz(6)
+  lastSummaryDate DateTime?             @map("last_summary_date") @db.Date
+  lastSummaryAt   DateTime?             @map("last_summary_at") @db.Timestamptz(6)
+  syncInterval    ExternalSyncInterval? @map("sync_interval")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
 
@@ -287,6 +288,12 @@ enum TransactionStatus {
   RECONCILED
 }
 
+enum MoneyCopilotActionStatus {
+  PENDING
+  CONFIRMED
+  EXPIRED
+}
+
 enum RecurringFrequency {
   DAILY
   WEEKLY
@@ -305,20 +312,20 @@ enum RecurringStatus {
 }
 
 model Category {
-  id          String       @id @db.Uuid
-  userId      String       @map("user_id") @db.Uuid
-  containerId String?      @map("container_id") @db.Uuid
-  parentId    String?      @map("parent_id") @db.Uuid
+  id          String          @id @db.Uuid
+  userId      String          @map("user_id") @db.Uuid
+  containerId String?         @map("container_id") @db.Uuid
+  parentId    String?         @map("parent_id") @db.Uuid
   name        String
   type        CategoryType
   icon        String?
   color       String?
-  sortOrder   Int          @default(0) @map("sort_order")
-  isSystem    Boolean      @default(false) @map("is_system")
+  sortOrder   Int             @default(0) @map("sort_order")
+  isSystem    Boolean         @default(false) @map("is_system")
   status      ContainerStatus @default(ACTIVE)
-  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamptz(6)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -332,7 +339,6 @@ model Category {
   @@index([parentId])
   @@map("categories")
 }
-
 
 model Account {
   id             String          @id @db.Uuid
@@ -352,21 +358,19 @@ model Account {
   updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  container       Container       @relation(fields: [containerId], references: [id], onDelete: Cascade)
-  transactions    Transaction[]
-  recurringRules  RecurringRule[]
-  debtPayoffPlan  DebtPayoffPlan?
-  holdings        Holding[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container      Container       @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  recurringRules RecurringRule[]
+  debtPayoffPlan DebtPayoffPlan?
+  holdings       Holding[]
 
   // Indexes
   @@index([userId, status])
   @@index([containerId, status])
   @@index([userId, category])
-
   @@map("accounts")
 }
-
 
 model Transaction {
   id               String            @id @db.Uuid
@@ -398,39 +402,59 @@ model Transaction {
   category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, idempotencyKey])
+  @@unique([userId, mpesaReference])
+  @@unique([userId, receiptImageHash])
   @@index([userId, date(sort: Desc)])
   @@index([accountId, date(sort: Desc)])
   @@index([containerId, date(sort: Desc)])
   @@index([categoryId, date])
   @@index([transferPairId])
-  @@index([userId, idempotencyKey])
-  @@unique([userId, mpesaReference])
-  @@unique([userId, receiptImageHash])
   @@map("transactions")
 }
 
+model MoneyCopilotAction {
+  id             String                   @id @db.Uuid
+  userId         String                   @map("user_id") @db.Uuid
+  idempotencyKey String                   @map("idempotency_key") @db.VarChar(36)
+  payloadHash    String                   @map("payload_hash") @db.Char(64)
+  payload        Json
+  status         MoneyCopilotActionStatus @default(PENDING)
+  expiresAt      DateTime                 @map("expires_at") @db.Timestamptz(6)
+  confirmedAt    DateTime?                @map("confirmed_at") @db.Timestamptz(6)
+  transactionId  String?                  @map("transaction_id") @db.Uuid
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, status, expiresAt])
+  @@index([transactionId])
+  @@map("money_copilot_actions")
+}
+
 model RecurringRule {
-  id                  String            @id @db.Uuid
-  userId              String            @map("user_id") @db.Uuid
-  containerId         String            @map("container_id") @db.Uuid
-  accountId           String            @map("account_id") @db.Uuid
+  id                  String             @id @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  containerId         String             @map("container_id") @db.Uuid
+  accountId           String             @map("account_id") @db.Uuid
   type                TransactionType
-  amount              Decimal           @db.Decimal(19, 4)
-  currency            String            @db.VarChar(3)
-  categoryId          String?           @map("category_id") @db.Uuid
-  transferToAccountId String?           @map("transfer_to_account_id") @db.Uuid
+  amount              Decimal            @db.Decimal(19, 4)
+  currency            String             @db.VarChar(3)
+  categoryId          String?            @map("category_id") @db.Uuid
+  transferToAccountId String?            @map("transfer_to_account_id") @db.Uuid
   description         String
   frequency           RecurringFrequency
-  interval            Int               @default(1)
-  dayOfWeek           Int?              @map("day_of_week")
-  dayOfMonth          Int?              @map("day_of_month")
-  startDate           DateTime          @map("start_date") @db.Date
-  endDate             DateTime?         @map("end_date") @db.Date
-  nextOccurrence      DateTime          @map("next_occurrence") @db.Date
-  lastGeneratedAt     DateTime?         @map("last_generated_at") @db.Date
-  status              RecurringStatus   @default(ACTIVE)
-  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  interval            Int                @default(1)
+  dayOfWeek           Int?               @map("day_of_week")
+  dayOfMonth          Int?               @map("day_of_month")
+  startDate           DateTime           @map("start_date") @db.Date
+  endDate             DateTime?          @map("end_date") @db.Date
+  nextOccurrence      DateTime           @map("next_occurrence") @db.Date
+  lastGeneratedAt     DateTime?          @map("last_generated_at") @db.Date
+  status              RecurringStatus    @default(ACTIVE)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -484,7 +508,6 @@ enum InvestmentEventType {
   TRANSFER_OUT
 }
 
-
 model Holding {
   id                String        @id @db.Uuid
   userId            String        @map("user_id") @db.Uuid
@@ -521,10 +544,8 @@ model Holding {
   @@index([userId, assetClass])
   @@index([pricingMode, lastPricedAt])
   @@index([userId, accountId])
-
   @@map("holdings")
 }
-
 
 model InvestmentEvent {
   id                   String              @id @db.Uuid
@@ -544,9 +565,9 @@ model InvestmentEvent {
   updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  container Container  @relation(fields: [containerId], references: [id], onDelete: Cascade)
-  holding   Holding?   @relation(fields: [holdingId], references: [id], onDelete: SetNull)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  container Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  holding   Holding?  @relation(fields: [holdingId], references: [id], onDelete: SetNull)
 
   @@index([holdingId, date(sort: Desc)])
   @@index([userId, date(sort: Desc)])
@@ -601,9 +622,9 @@ model Summary {
   deletedAt        DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   container Container        @relation(fields: [containerId], references: [id], onDelete: Cascade)
-  versions SummaryVersion[]
+  versions  SummaryVersion[]
 
   @@unique([containerId, date, unit])
   @@index([containerId, date(sort: Desc)])
@@ -629,20 +650,20 @@ model SummaryVersion {
 }
 
 model ApiToken {
-  id             String         @id @db.Uuid
-  userId         String         @map("user_id") @db.Uuid
-  containerId    String         @map("container_id") @db.Uuid
-  label          String
-  tokenHash      String         @unique @map("token_hash")
-  tokenPrefix    String         @map("token_prefix")
-  scopes         Json
-  expiresAt      DateTime       @map("expires_at") @db.Timestamptz(6)
-  lastUsedAt     DateTime?      @map("last_used_at") @db.Timestamptz(6)
-  lastUsedIp     String?        @map("last_used_ip")
-  revokedAt      DateTime?      @map("revoked_at") @db.Timestamptz(6)
-  revokedReason  String?        @map("revoked_reason")
-  status         ApiTokenStatus @default(ACTIVE)
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  id            String         @id @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  containerId   String         @map("container_id") @db.Uuid
+  label         String
+  tokenHash     String         @unique @map("token_hash")
+  tokenPrefix   String         @map("token_prefix")
+  scopes        Json
+  expiresAt     DateTime       @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt    DateTime?      @map("last_used_at") @db.Timestamptz(6)
+  lastUsedIp    String?        @map("last_used_ip")
+  revokedAt     DateTime?      @map("revoked_at") @db.Timestamptz(6)
+  revokedReason String?        @map("revoked_reason")
+  status        ApiTokenStatus @default(ACTIVE)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   container       Container        @relation(fields: [containerId], references: [id], onDelete: Cascade)
@@ -722,22 +743,22 @@ enum DebtStatus {
 }
 
 model Budget {
-  id              String         @id @db.Uuid
-  userId          String         @map("user_id") @db.Uuid
-  containerId     String         @map("container_id") @db.Uuid
-  categoryId      String         @map("category_id") @db.Uuid
-  amount          Decimal        @db.Decimal(19, 4)
-  currency        String         @db.VarChar(3)
-  period          BudgetPeriod   @default(MONTHLY)
-  periodStart     DateTime?      @map("period_start") @db.Date
-  periodEnd       DateTime?      @map("period_end") @db.Date
-  rollover        Boolean        @default(false)
-  rolloverBalance Decimal        @default(0) @map("rollover_balance") @db.Decimal(19, 4)
-  method          BudgetMethod   @default(TARGET)
-  status          BudgetStatus   @default(ACTIVE)
-  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
-  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id              String       @id @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  containerId     String       @map("container_id") @db.Uuid
+  categoryId      String       @map("category_id") @db.Uuid
+  amount          Decimal      @db.Decimal(19, 4)
+  currency        String       @db.VarChar(3)
+  period          BudgetPeriod @default(MONTHLY)
+  periodStart     DateTime?    @map("period_start") @db.Date
+  periodEnd       DateTime?    @map("period_end") @db.Date
+  rollover        Boolean      @default(false)
+  rolloverBalance Decimal      @default(0) @map("rollover_balance") @db.Decimal(19, 4)
+  method          BudgetMethod @default(TARGET)
+  status          BudgetStatus @default(ACTIVE)
+  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -797,25 +818,25 @@ model GoalContribution {
 }
 
 model DebtPayoffPlan {
-  id                     String     @id @db.Uuid
-  userId                 String     @map("user_id") @db.Uuid
-  accountId              String     @unique @map("account_id") @db.Uuid
-  method                 DebtMethod @default(SNOWBALL)
-  extraMonthlyPayment    Decimal    @map("extra_monthly_payment") @db.Decimal(19, 4)
-  minimumPayment         Decimal    @map("minimum_payment") @db.Decimal(19, 4)
-  interestRate           Decimal    @map("interest_rate") @db.Decimal(9, 6)
-  projectedPayoffDate    DateTime?  @map("projected_payoff_date") @db.Date
-  projectedInterestPaid  Decimal?   @map("projected_interest_paid") @db.Decimal(19, 4)
-  notes                  String?
-  status                 DebtStatus @default(ACTIVE)
-  completedAt            DateTime?  @map("completed_at") @db.Timestamptz(6)
-  deletedAt              DateTime?  @map("deleted_at") @db.Timestamptz(6)
-  createdAt              DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt              DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                    String     @id @db.Uuid
+  userId                String     @map("user_id") @db.Uuid
+  accountId             String     @unique @map("account_id") @db.Uuid
+  method                DebtMethod @default(SNOWBALL)
+  extraMonthlyPayment   Decimal    @map("extra_monthly_payment") @db.Decimal(19, 4)
+  minimumPayment        Decimal    @map("minimum_payment") @db.Decimal(19, 4)
+  interestRate          Decimal    @map("interest_rate") @db.Decimal(9, 6)
+  projectedPayoffDate   DateTime?  @map("projected_payoff_date") @db.Date
+  projectedInterestPaid Decimal?   @map("projected_interest_paid") @db.Decimal(19, 4)
+  notes                 String?
+  status                DebtStatus @default(ACTIVE)
+  completedAt           DateTime?  @map("completed_at") @db.Timestamptz(6)
+  deletedAt             DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  createdAt             DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@map("debt_payoff_plans")
@@ -865,17 +886,17 @@ enum InsightNarrationStatus {
 }
 
 model NetWorthSnapshot {
-  id                    String   @id @db.Uuid
-  userId                String   @map("user_id") @db.Uuid
-  date                  DateTime @db.Date
-  totalNetWorth         Decimal  @map("total_net_worth") @db.Decimal(19, 4)
-  personalNetWorth      Decimal  @map("personal_net_worth") @db.Decimal(19, 4)
-  investmentsNetWorth   Decimal  @map("investments_net_worth") @db.Decimal(19, 4)
-  businessesNetWorth    Decimal  @map("businesses_net_worth") @db.Decimal(19, 4)
-  breakdown             Json
-  currency              String   @db.VarChar(3)
-  computedAt            DateTime @default(now()) @map("computed_at") @db.Timestamptz(6)
-  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                  String   @id @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  date                DateTime @db.Date
+  totalNetWorth       Decimal  @map("total_net_worth") @db.Decimal(19, 4)
+  personalNetWorth    Decimal  @map("personal_net_worth") @db.Decimal(19, 4)
+  investmentsNetWorth Decimal  @map("investments_net_worth") @db.Decimal(19, 4)
+  businessesNetWorth  Decimal  @map("businesses_net_worth") @db.Decimal(19, 4)
+  breakdown           Json
+  currency            String   @db.VarChar(3)
+  computedAt          DateTime @default(now()) @map("computed_at") @db.Timestamptz(6)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -885,25 +906,25 @@ model NetWorthSnapshot {
 }
 
 model Insight {
-  id                   String          @id @db.Uuid
-  userId               String          @map("user_id") @db.Uuid
-  type                 InsightType
-  severity             InsightSeverity
-  title                String
-  message              String
-  relatedContainerId   String?         @map("related_container_id") @db.Uuid
-  relatedEntityType    String?         @map("related_entity_type")
-  relatedEntityId      String?         @map("related_entity_id") @db.Uuid
-  actionUrl            String?         @map("action_url")
-  metadata             Json?
-  narrative            String?                 @db.VarChar(1600)
-  narrationStatus      InsightNarrationStatus @default(NOT_REQUESTED) @map("narration_status")
-  narratedAt           DateTime?               @map("narrated_at") @db.Timestamptz(6)
-  narrationProcessingAt DateTime?               @map("narration_processing_at") @db.Timestamptz(6)
-  status               InsightStatus   @default(ACTIVE)
-  dismissedAt          DateTime?       @map("dismissed_at") @db.Timestamptz(6)
-  expiresAt            DateTime?       @map("expires_at") @db.Timestamptz(6)
-  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                    String                 @id @db.Uuid
+  userId                String                 @map("user_id") @db.Uuid
+  type                  InsightType
+  severity              InsightSeverity
+  title                 String
+  message               String
+  relatedContainerId    String?                @map("related_container_id") @db.Uuid
+  relatedEntityType     String?                @map("related_entity_type")
+  relatedEntityId       String?                @map("related_entity_id") @db.Uuid
+  actionUrl             String?                @map("action_url")
+  metadata              Json?
+  narrative             String?                @db.VarChar(1600)
+  narrationStatus       InsightNarrationStatus @default(NOT_REQUESTED) @map("narration_status")
+  narratedAt            DateTime?              @map("narrated_at") @db.Timestamptz(6)
+  narrationProcessingAt DateTime?              @map("narration_processing_at") @db.Timestamptz(6)
+  status                InsightStatus          @default(ACTIVE)
+  dismissedAt           DateTime?              @map("dismissed_at") @db.Timestamptz(6)
+  expiresAt             DateTime?              @map("expires_at") @db.Timestamptz(6)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -915,19 +936,18 @@ model Insight {
   @@map("insights")
 }
 
-
 // AI usage accounting contains operational metadata only; never store prompts,
 // SMS bodies, receipt bytes, or extracted transaction details here.
 model AiUsageDaily {
-  id             String   @id @db.Uuid
-  userId         String   @map("user_id") @db.Uuid
-  usageDate      DateTime @map("usage_date") @db.Date
-  feature        String   @db.VarChar(64)
-  requestCount   Int      @default(0) @map("request_count")
-  inputTokens    Int      @default(0) @map("input_tokens")
-  outputTokens   Int      @default(0) @map("output_tokens")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String   @id @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  usageDate    DateTime @map("usage_date") @db.Date
+  feature      String   @db.VarChar(64)
+  requestCount Int      @default(0) @map("request_count")
+  inputTokens  Int      @default(0) @map("input_tokens")
+  outputTokens Int      @default(0) @map("output_tokens")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -982,20 +1002,20 @@ enum JobStatus {
 }
 
 model AuditLog {
-  id            String       @id @db.Uuid
-  userId        String       @map("user_id") @db.Uuid
-  actorType     ActorType    @map("actor_type")
-  actorId       String?      @map("actor_id") @db.Uuid
-  entityType    String       @map("entity_type")
-  entityId      String       @map("entity_id") @db.Uuid
+  id            String      @id @db.Uuid
+  userId        String      @map("user_id") @db.Uuid
+  actorType     ActorType   @map("actor_type")
+  actorId       String?     @map("actor_id") @db.Uuid
+  entityType    String      @map("entity_type")
+  entityId      String      @map("entity_id") @db.Uuid
   action        AuditAction
   before        Json?
   after         Json?
-  changedFields String[]     @map("changed_fields")
-  ipAddress     String?      @map("ip_address")
-  userAgent     String?      @map("user_agent")
-  requestId     String?      @map("request_id") @db.Uuid
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  changedFields String[]    @map("changed_fields")
+  ipAddress     String?     @map("ip_address")
+  userAgent     String?     @map("user_agent")
+  requestId     String?     @map("request_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
