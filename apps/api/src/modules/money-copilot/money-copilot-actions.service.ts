@@ -17,7 +17,10 @@ type ActionPayload = {
   type: 'INCOME' | 'EXPENSE';
   amount: number;
   accountId: string;
+  accountName: string;
+  currency: string;
   categoryId?: string;
+  categoryName: string | null;
   date: string;
   description: string;
   notes?: string;
@@ -29,7 +32,10 @@ function serializeActionPayload(payload: ActionPayload): string {
     type: payload.type,
     amount: payload.amount,
     accountId: payload.accountId,
+    accountName: payload.accountName,
+    currency: payload.currency,
     categoryId: payload.categoryId ?? null,
+    categoryName: payload.categoryName,
     date: payload.date,
     description: payload.description,
     notes: payload.notes ?? null,
@@ -73,7 +79,10 @@ export class MoneyCopilotActionsService {
       type: dto.type,
       amount: Number(dto.amount),
       accountId: dto.accountId,
+      accountName: account.name,
+      currency: account.currency,
       ...(dto.categoryId ? { categoryId: dto.categoryId } : {}),
+      categoryName,
       date: dto.date.slice(0, 10),
       description: dto.description.trim(),
       ...(dto.notes?.trim() ? { notes: dto.notes.trim() } : {}),
@@ -100,8 +109,8 @@ export class MoneyCopilotActionsService {
       preview: {
         type: payload.type,
         amount: payload.amount,
-        currency: account.currency,
-        account: account.name,
+        currency: payload.currency,
+        account: payload.accountName,
         accountId: account.id,
         categoryId: payload.categoryId ?? null,
         category: categoryName,
@@ -157,6 +166,9 @@ export class MoneyCopilotActionsService {
           where: { id: payload.accountId, userId, status: 'ACTIVE', deletedAt: null },
         });
         if (!account) throw new NotFoundException('The selected account is no longer active.');
+        if (account.name !== payload.accountName || account.currency !== payload.currency) {
+          throw new ConflictException('The account details changed after preview. Create a new preview.');
+        }
 
         if (payload.categoryId) {
           const category = await tx.category.findFirst({
@@ -170,6 +182,7 @@ export class MoneyCopilotActionsService {
             },
           });
           if (!category) throw new BadRequestException('The selected category is no longer available.');
+          if (category.name !== payload.categoryName) throw new ConflictException('The category changed after preview. Create a new preview.');
         }
 
         const created = await tx.transaction.create({
