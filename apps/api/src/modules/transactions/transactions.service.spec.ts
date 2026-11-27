@@ -172,6 +172,20 @@ describe('TransactionsService', () => {
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
 
+    it('converts a concurrent M-Pesa fingerprint uniqueness race into a conflict', async () => {
+      mockPrisma.account.findFirst.mockResolvedValue({
+        id: 'acc-1', containerId: 'cont-1', currency: 'KES',
+      });
+      mockPrisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+      mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 'already-imported' });
+
+      await expect(service.create('user-1', {
+        type: 'EXPENSE', amount: 100, date: '2026-10-20', description: 'Receipt',
+        accountId: 'acc-1', receiptImageHash: 'a'.repeat(64),
+      }, 'IMPORTED')).rejects.toBeInstanceOf(ConflictException);
+      expect(mockBalanceService.applyTransactionEffect).not.toHaveBeenCalled();
+    });
+
     it('returns both existing transfer rows for a matching retry', async () => {
       const date = new Date('2026-10-20T00:00:00.000Z');
       const outTx = {
