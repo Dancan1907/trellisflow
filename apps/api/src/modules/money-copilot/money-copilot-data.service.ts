@@ -57,7 +57,7 @@ export class MoneyCopilotDataService {
           container: { select: { name: true, type: true, status: true } },
         },
         orderBy: { name: 'asc' },
-        take: 100,
+        take: 101,
       }),
       this.findTransactionsInRange(userId, monthStart, today, {
         type: true,
@@ -81,10 +81,13 @@ export class MoneyCopilotDataService {
       }),
     ]);
 
+    const accountLimit = 100;
+    const accountsTruncated = accounts.length > accountLimit;
+    const includedAccounts = accounts.slice(0, accountLimit);
     const accountBalancesByCurrency = new Map<string, {
       assets: number; liabilities: number; net: number; accounts: Array<Record<string, unknown>>;
     }>();
-    for (const account of accounts) {
+    for (const account of includedAccounts) {
       if (account.container.status !== 'ACTIVE') continue;
       const currency = account.currency;
       const group = accountBalancesByCurrency.get(currency) ?? {
@@ -137,6 +140,7 @@ export class MoneyCopilotDataService {
         'Net worth is taken from the latest saved snapshot and may not reflect changes after its date.',
         'Account balances are current account records and are not the same as a historical net-worth snapshot.',
         'Transfers are excluded from income and expense cash-flow totals.',
+        ...(accountsTruncated ? ['The account-balance overview reached its 100-account safety cap and may be incomplete.'] : []),
         ...(monthTransactionResult.truncated ? ['The current-month transaction calculation reached its 5,000-record safety cap and may be incomplete.'] : []),
       ],
     };
@@ -330,15 +334,17 @@ export class MoneyCopilotDataService {
   }
 
   private async getInvestmentSummary(userId: string) {
-    const holdings = await this.prisma.holding.findMany({
+    const fetchedHoldings = await this.prisma.holding.findMany({
       where: { userId, status: 'OPEN', deletedAt: null },
       orderBy: { updatedAt: 'desc' },
-      take: 100,
+      take: 5001,
       select: {
         name: true, symbol: true, assetClass: true, currency: true,
         costBasisTotal: true, currentValueTotal: true,
       },
     });
+    const holdingsTruncated = fetchedHoldings.length > 5000;
+    const holdings = fetchedHoldings.slice(0, 5000);
     const groups = new Map<string, {
       costBasis: number; currentValue: number; count: number;
       byAssetClass: Map<string, { value: number; count: number }>;
@@ -405,6 +411,7 @@ export class MoneyCopilotDataService {
         'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
         'Asset-class allocation and largest-holding concentration are descriptive concentration indicators, not a complete risk assessment.',
         'Unrealized gain is current recorded value minus cost basis; it is not realized profit and excludes fees, taxes and cash flows.',
+        ...(holdingsTruncated ? ['The portfolio analysis reached its 5,000-holding safety cap; totals and allocations may be incomplete.'] : []),
       ],
     };
   }
