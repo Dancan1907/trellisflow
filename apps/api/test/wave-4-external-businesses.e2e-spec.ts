@@ -27,6 +27,7 @@ describe('Wave 4 - External Businesses (e2e)', () => {
       name: 'Wave 4 Tester',
     });
     authToken = signupRes.body.accessToken;
+    await prisma.user.update({ where: { email: testEmail }, data: { reportingCurrency: 'KES' } });
   });
 
   afterAll(async () => {
