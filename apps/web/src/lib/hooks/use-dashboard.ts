@@ -9,6 +9,7 @@ interface DashboardSummary {
     investments: number;
     businesses: number;
     currency: string;
+    currencyBreakdownAvailable: boolean;
     byCurrency: Array<{
       currency: string;
       totalNetWorth: number;
