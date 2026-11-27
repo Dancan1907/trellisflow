@@ -78,6 +78,7 @@ describe('HelpAssistantService', () => {
     const result = await service.chat(userId, { message: 'Where is the forecast?' });
     expect(result.sources).toEqual([]);
     expect(result.navigation).toBeNull();
+    expect(result.answer).toContain("couldn't verify an answer");
   });
 
 
