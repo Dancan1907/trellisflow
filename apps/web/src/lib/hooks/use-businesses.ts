@@ -14,11 +14,19 @@ export interface BusinessProfile {
   logoUrl: string | null;
 }
 
+export interface BusinessNetWorthCurrency {
+  currency: string;
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+}
+
 export interface BusinessNetWorth {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
   currency: string;
+  byCurrency: BusinessNetWorthCurrency[];
 }
 
 export interface BusinessSummary {
