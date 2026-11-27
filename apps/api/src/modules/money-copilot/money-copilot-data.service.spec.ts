@@ -180,6 +180,23 @@ describe('MoneyCopilotDataService', () => {
     expect((result.consolidatedWealth as any).aggregationRule).toContain('Do not add account balances');
   });
 
+  it('discloses when business performance analysis reaches its safety cap', async () => {
+    prisma.container.findMany.mockResolvedValue(Array.from({ length: 16 }, (_, index) => ({
+      id: 'external-' + index,
+      name: 'External business ' + index,
+      type: 'EXTERNAL_BUSINESS',
+      currency: 'KES',
+    })));
+    businesses.getNetWorth.mockResolvedValue({ netWorth: 100 });
+
+    const result = await service.buildContext('user-1', 'Summarize my businesses');
+
+    expect(result.businessPerformance).toHaveLength(15);
+    expect(result.dataLimitations).toContain(
+      'Business performance analysis reached its 15-business safety cap and may be incomplete.',
+    );
+  });
+
   it('calculates internal business profit margin from the trusted P&L service', async () => {
     prisma.container.findMany.mockResolvedValue([
       { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
