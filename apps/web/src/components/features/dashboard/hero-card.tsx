@@ -31,7 +31,7 @@ export function HeroCard({ isLoading, data }: HeroCardProps) {
 
   const cards = [
     {
-      label: 'Total Net Worth',
+      label: `Net Worth · ${data.currency}`,
       value: data.total,
       icon: Wallet,
       color: 'text-accent-primary',
