@@ -56,7 +56,7 @@ describe('HelpAssistantService', () => {
     const result = await service.chat(userId, { message: 'Where is the cash-flow forecast?' });
     expect(result.answer).toContain('Cash-flow Forecast');
     expect(result.sources).toEqual([expect.objectContaining({ source: '05-reports-forecasts-and-insights.md' })]);
-    expect(result.navigation).toEqual({ label: 'Reports, cash-flow forecasts and insights', route: '/reports/cash-flow-forecast' });
+    expect(result.navigation).toEqual({ label: 'Cash-flow Forecast', route: '/reports/cash-flow-forecast' });
     expect(prisma.$queryRawUnsafe).toHaveBeenCalledWith(expect.stringContaining('embedding'), expect.stringMatching(/^\[/));
     expect(usage.recordHelpAssistant).toHaveBeenCalledWith(userId, expect.any(Date), expect.objectContaining({
       provider: 'gemini', model: 'test-model', inputTokens: 100, outputTokens: 30, succeeded: true,
@@ -89,7 +89,7 @@ describe('HelpAssistantService', () => {
     }]);
     const result = await service.chat(userId, { message: 'Where can I view my cash-flow forecast?' });
     expect(result.navigation).toEqual({ label: 'Cash-flow Forecast', route: '/reports/cash-flow-forecast' });
-    expect(result.sources[0].route).toBe('/reports/cash-flow-forecast');
+    expect(result.sources[0]?.route).toBe('/reports/cash-flow-forecast');
   });
 
   it('resolves explicit Settings navigation independently of retrieved document routes', async () => {
@@ -105,7 +105,7 @@ describe('HelpAssistantService', () => {
     }]);
     const result = await service.chat(userId, { message: 'Take me to my Businesses page' });
     expect(result.navigation).toEqual({ label: 'Businesses', route: '/businesses' });
-    expect(result.sources[0].route).toBe('/businesses');
+    expect(result.sources[0]?.route).toBe('/businesses');
   });
 
   it('resolves Goals and Debt to their own destinations', async () => {
