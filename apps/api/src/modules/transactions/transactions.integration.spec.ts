@@ -132,6 +132,7 @@ describe('Transactions (Integration)', () => {
   });
 
   it('should create a transaction and atomically update the account balance', async () => {
+    const before = Number((await prisma.account.findUnique({ where: { id: accountId } }))?.currentBalance);
     await service.create(testUserId, {
       type: 'EXPENSE',
       amount: 250,
@@ -141,7 +142,7 @@ describe('Transactions (Integration)', () => {
     });
 
     const acc = await prisma.account.findUnique({ where: { id: accountId } });
-    expect(Number(acc?.currentBalance)).toBe(750); // 1000 - 250
+    expect(Number(acc?.currentBalance)).toBe(before - 250);
 
     // Verify the DB actually has the transaction
     const tx = await prisma.transaction.findFirst({ where: { accountId } });
