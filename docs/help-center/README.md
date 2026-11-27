@@ -1,6 +1,6 @@
 # TrellisFlow Help Centre knowledge base
 
-This directory contains approved, user-facing product documentation indexed by the authenticated Help Assistant.
+This directory contains approved, user-facing product documentation indexed by the authenticated Help Assistant. The in-app Help Centre exposes only a small general overview to logged-out visitors; the complete guide is available after sign-in.
 
 ## Update workflow
 
@@ -15,7 +15,7 @@ The command reads product-guide Markdown files recursively (excluding this READM
 
 ## Trust and visibility
 
-These files are source material for the authenticated Help Assistant. They are not served as public static files by the Help Assistant API. The existing in-app Help page remains behind the authenticated application layout. Do not put secrets, private operational runbooks, user data, credentials or internal-only infrastructure details here.
+These files are source material for the authenticated Help Assistant and are not served as public static files. The Help Assistant chat endpoint requires a valid JWT. The in-app `/help` page is intentionally public: logged-out visitors see the general introduction, dashboard overview and container explanation; authenticated users see the complete guide and the Help Assistant launcher. The authenticated app shell (sidebar, topbar and application widgets) must never render for anonymous or invalid sessions. Do not put secrets, private operational runbooks, user data, credentials or internal-only infrastructure details here.
 
 All retrieved text is treated as untrusted reference content by the answer-generation prompt. Product documentation should describe verified user-facing behavior only.
 
