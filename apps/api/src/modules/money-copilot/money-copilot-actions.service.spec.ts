@@ -85,7 +85,7 @@ describe('MoneyCopilotActionsService', () => {
     };
     const action = {
       id: 'action-1', userId: 'user-1', idempotencyKey: 'action-1',
-      payload, payloadHash: require('crypto').createHash('sha256').update(JSON.stringify(payload)).digest('hex'),
+      payload, payloadHash: require('crypto').createHash('sha256').update(JSON.stringify({ type: payload.type, amount: payload.amount, accountId: payload.accountId, categoryId: payload.categoryId ?? null, date: payload.date, description: payload.description, notes: payload.notes ?? null })).digest('hex'),
       status: 'PENDING', expiresAt: new Date(Date.now() + 60_000),
     };
     prisma.moneyCopilotAction.findFirst.mockResolvedValue(action);
