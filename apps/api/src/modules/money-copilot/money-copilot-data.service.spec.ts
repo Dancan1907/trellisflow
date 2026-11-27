@@ -78,6 +78,70 @@ describe('MoneyCopilotDataService', () => {
     ]));
   });
 
+  it('calculates portfolio return and holding concentration without claiming volatility risk', async () => {
+    prisma.holding.findMany.mockResolvedValue([
+      { name: 'Holding A', symbol: 'AAA', assetClass: 'EQUITY', currency: 'KES', costBasisTotal: 100, currentValueTotal: 120 },
+      { name: 'Holding B', symbol: 'BBB', assetClass: 'EQUITY', currency: 'KES', costBasisTotal: 100, currentValueTotal: 30 },
+    ]);
+
+    const result = await service.buildContext('user-1', 'Analyze my investment portfolio risk');
+    const investments = result.investments as any;
+
+    expect(investments.byCurrency[0]).toMatchObject({
+      currency: 'KES',
+      costBasis: 200,
+      currentValue: 150,
+      unrealizedGain: -50,
+      unrealizedReturnPercent: -25,
+    });
+    expect(investments.byCurrency[0].concentration.largestHoldingPercent).toBe(80);
+    expect(investments.riskLimitations).toContain(
+      'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
+    );
+  });
+
+  it('provides a deterministic spending-reduction illustration from recorded expenses', async () => {
+    const date = new Date();
+    prisma.transaction.findMany.mockImplementation(async (args: any) => {
+      if (args.select?.category) {
+        return [{ type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } }];
+      }
+      return [];
+    });
+
+    const result = await service.buildContext('user-1', 'What if I reduce my spending by 10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.requestedChangePercent).toBe(10);
+    expect(simulation.result).toEqual([
+      expect.objectContaining({
+        currency: 'KES',
+        baselineExpenses: 120,
+        estimatedMonthlySavings: 12,
+        projectedExpensesAfterChange: 108,
+      }),
+    ]);
+  });
+
+  it('uses the saved net-worth snapshot as the consolidated total without adding overlapping records', async () => {
+    prisma.netWorthSnapshot.findFirst.mockResolvedValue({
+      date: new Date('2026-11-20T00:00:00.000Z'),
+      totalNetWorth: 1000,
+      personalNetWorth: 600,
+      investmentsNetWorth: 250,
+      businessesNetWorth: 150,
+      currency: 'KES',
+    });
+
+    const result = await service.buildContext('user-1', 'Show my overall consolidated wealth');
+    expect(result.consolidatedWealth).toMatchObject({
+      currency: 'KES',
+      totalNetWorth: 1000,
+      components: { personal: 600, investments: 250, businesses: 150 },
+    });
+    expect((result.consolidatedWealth as any).aggregationRule).toContain('Do not add account balances');
+  });
+
   it('uses description-only transaction search and never selects private notes', async () => {
     await service.buildContext('user-1', 'Find my fuel transaction');
 
