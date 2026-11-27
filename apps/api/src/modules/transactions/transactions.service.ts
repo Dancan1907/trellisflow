@@ -69,11 +69,26 @@ export class TransactionsService {
         return created;
       });
     } catch (error) {
-      if (dto.idempotencyKey && this.isUniqueConstraintViolation(error)) {
-        const existing = await this.prisma.transaction.findFirst({
-          where: { userId, idempotencyKey: dto.idempotencyKey },
-        });
-        if (existing) return this.resolveIdempotentTransaction(existing, dto);
+      if (this.isUniqueConstraintViolation(error)) {
+        if (dto.idempotencyKey) {
+          const existing = await this.prisma.transaction.findFirst({
+            where: { userId, idempotencyKey: dto.idempotencyKey },
+          });
+          if (existing) return this.resolveIdempotentTransaction(existing, dto);
+        }
+        if (dto.mpesaReference || dto.receiptImageHash) {
+          const duplicate = await this.prisma.transaction.findFirst({
+            where: {
+              userId,
+              OR: [
+                ...(dto.mpesaReference ? [{ mpesaReference: dto.mpesaReference.trim().toUpperCase() }] : []),
+                ...(dto.receiptImageHash ? [{ receiptImageHash: dto.receiptImageHash }] : []),
+              ],
+            },
+            select: { id: true },
+          });
+          if (duplicate) throw new ConflictException('This M-Pesa reference or receipt has already been imported.');
+        }
       }
       throw error;
     }
@@ -351,11 +366,26 @@ export class TransactionsService {
         return { outTx, inTx };
       });
     } catch (error) {
-      if (dto.idempotencyKey && this.isUniqueConstraintViolation(error)) {
-        const existing = await this.prisma.transaction.findFirst({
-          where: { userId, idempotencyKey: dto.idempotencyKey },
-        });
-        if (existing) return this.resolveIdempotentTransfer(existing, dto, userId);
+      if (this.isUniqueConstraintViolation(error)) {
+        if (dto.idempotencyKey) {
+          const existing = await this.prisma.transaction.findFirst({
+            where: { userId, idempotencyKey: dto.idempotencyKey },
+          });
+          if (existing) return this.resolveIdempotentTransfer(existing, dto, userId);
+        }
+        if (dto.mpesaReference || dto.receiptImageHash) {
+          const duplicate = await this.prisma.transaction.findFirst({
+            where: {
+              userId,
+              OR: [
+                ...(dto.mpesaReference ? [{ mpesaReference: dto.mpesaReference.trim().toUpperCase() }] : []),
+                ...(dto.receiptImageHash ? [{ receiptImageHash: dto.receiptImageHash }] : []),
+              ],
+            },
+            select: { id: true },
+          });
+          if (duplicate) throw new ConflictException('This M-Pesa reference or receipt has already been imported.');
+        }
       }
       throw error;
     }
