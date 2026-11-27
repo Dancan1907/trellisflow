@@ -159,7 +159,7 @@ export class MoneyCopilotDataService {
 
     if (/what[- ]if|what would happen|simulate|simulation|scenario|reduce.*spend|cut.*spend|increase.*spend/i.test(question)) {
       const range = this.resolveDateRange('last 30 days', timezone);
-      const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
+      const match = question.match(/(-?\d{1,3}(?:\.\d+)?)\s*%/);
       const percentage = match ? Number(match[1]) : null;
       const validPercentage = percentage !== null && percentage >= 0 && percentage <= 100;
       // Match natural-language inflections (e.g. increases, drops, growing), not only base verbs.
