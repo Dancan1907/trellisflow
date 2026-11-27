@@ -2,21 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // This cookie is a lightweight routing hint only. The app layout verifies
-  // the JWT with the API before rendering authenticated UI.
-  const isAuthenticated = request.cookies.has('trellisflow-authenticated');
+  // This cookie is only a routing hint. The app layout verifies the JWT
+  // against the API before rendering authenticated UI.
+  const hasAuthHint = request.cookies.get('trellisflow-authenticated')?.value === 'true';
   const pathname = request.nextUrl.pathname;
-
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-  const isLandingPage = pathname === '/';
-
-  if (isAuthenticated && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  if (isAuthenticated && isLandingPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
 
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
@@ -31,19 +20,18 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/settings') ||
     pathname.startsWith('/money-copilot');
 
-  if (!isAuthenticated && isProtectedRoute) {
+  if (!hasAuthHint && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // /help is intentionally public; its page filters documentation by session.
+  // Do not redirect away from login based on this non-authoritative cookie:
+  // an expired token must be able to reach login and establish a new session.
+  // /help is intentionally public and its page filters the guide by session.
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/',
-    '/login',
-    '/signup',
     '/dashboard/:path*',
     '/personal/:path*',
     '/investments/:path*',
