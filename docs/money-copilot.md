@@ -67,7 +67,7 @@ Keep the feature disabled until a valid server-side AI provider key is configure
 ## Known limitations
 
 - Business runway is a historical 90-day burn-rate estimate, not a guaranteed forward forecast.
-- Unrealized investment gain is based on recorded cost basis and current recorded value; it is not a time-weighted or money-weighted historical return series. Realized gains and dividend/interest income are available only when their investment events have been explicitly recorded; contributions and withdrawals are not investment returns.
+- Unrealized investment gain is based on recorded cost basis and current recorded value; it is not a time-weighted or money-weighted historical return series. Realized gains and dividend/interest income are available only when their investment events have been explicitly recorded; contributions and withdrawals are not investment returns. Investment-event amounts are analytical breakdowns of linked activity and must not be added again to transaction cash flow or holding values.
 - Concentration indicators are descriptive. Volatility, beta, Sharpe ratio, maximum drawdown and correlation are unavailable without reliable historical market-price series.
 - External businesses use saved summary data and do not have the same transaction-level analysis as internal businesses.
 - The latest net-worth snapshot can lag current account balances. Its components are breakdowns, not additional wealth to sum again.
