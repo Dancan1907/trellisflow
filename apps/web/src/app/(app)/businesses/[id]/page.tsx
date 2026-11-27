@@ -231,23 +231,24 @@ export default function BusinessDetailPage() {
           </MetricCard>
           <MetricCard
             label="Cash Runway"
-            hint={
-              runway
-                ? runway.runwayMonths === null
-                  ? 'No expense history yet'
-                  : `Monthly burn ${business.currency} ${runway.monthlyBurn.toLocaleString(
-                      'en-US',
-                      {
-                        maximumFractionDigits: 0,
-                      },
-                    )}`
-                : undefined
-            }
+            hint="Historical 90-day burn estimate; currencies are kept separate."
           >
             {runway ? (
-              <p className="text-2xl font-semibold text-fg-primary">
-                {runway.runwayMonths === null ? '—' : `${runway.runwayMonths.toFixed(1)} mo`}
-              </p>
+              <div className="space-y-2">
+                {(runway.byCurrency?.length ? runway.byCurrency : [{
+                  currency: runway.currency,
+                  cashBalance: runway.cashBalance,
+                  monthlyBurn: runway.monthlyBurn,
+                  runwayMonths: runway.runwayMonths,
+                }]).map((item) => (
+                  <div key={item.currency} className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-fg-secondary">{item.currency}</span>
+                    <span className="text-lg font-semibold text-fg-primary">
+                      {item.runwayMonths === null ? '—' : `${item.runwayMonths.toFixed(1)} mo`}
+                    </span>
+                  </div>
+                ))}
+              </div>
             ) : (
               <Skeleton className="h-8 w-24" />
             )}
@@ -379,6 +380,53 @@ export default function BusinessDetailPage() {
                   })}
                 </div>
               )}
+              {pnl.byCurrency.filter((group) => group.currency !== pnl.currency).map((group) => {
+                const groupMax = Math.max(group.totalIncome, group.totalExpenses, 1);
+                return (
+                  <div key={group.currency} className="mt-6 border-t border-border-subtle pt-5">
+                    <h3 className="text-sm font-medium text-fg-primary mb-3">
+                      Additional currency · {group.currency}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                      <PnlTotal label="Income" value={group.totalIncome} currency={group.currency} positive />
+                      <PnlTotal label="Expenses" value={group.totalExpenses} currency={group.currency} negative />
+                      <PnlTotal
+                        label="Net Profit"
+                        value={group.netProfit}
+                        currency={group.currency}
+                        positive={group.netProfit >= 0}
+                        negative={group.netProfit < 0}
+                      />
+                    </div>
+                    {group.byCategory.length > 0 && (
+                      <div className="space-y-3">
+                        {group.byCategory.map((row) => {
+                          const isIncome = row.type === 'INCOME';
+                          const width = Math.round((row.amount / groupMax) * 100);
+                          return (
+                            <div key={`${row.type}:${row.categoryId ?? 'uncategorized'}`}>
+                              <div className="flex items-center justify-between text-sm mb-1">
+                                <span className="text-fg-primary">{row.categoryName}</span>
+                                <AmountDisplay
+                                  value={row.amount}
+                                  currency={group.currency}
+                                  className={isIncome ? 'text-status-positive' : 'text-status-negative'}
+                                />
+                              </div>
+                              <div className="h-2 rounded bg-bg-tertiary overflow-hidden">
+                                <div
+                                  className={isIncome ? 'h-full bg-status-positive' : 'h-full bg-status-negative'}
+                                  style={{ width: `${width}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </>
           )}
         </section>
