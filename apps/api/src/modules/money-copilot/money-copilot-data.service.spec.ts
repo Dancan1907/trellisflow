@@ -142,6 +142,28 @@ describe('MoneyCopilotDataService', () => {
     expect((result.consolidatedWealth as any).aggregationRule).toContain('Do not add account balances');
   });
 
+  it('calculates internal business profit margin from the trusted P&L service', async () => {
+    prisma.container.findMany.mockResolvedValue([
+      { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
+    ]);
+    businesses.getNetWorth.mockResolvedValue({ netWorth: 500 });
+    businesses.getPnl.mockResolvedValue({
+      from: '2026-11-01', to: '2026-11-27',
+      totalIncome: 400, totalExpenses: 300, netProfit: 100, byCategory: [],
+    });
+    businesses.getRunway.mockResolvedValue({
+      currency: 'KES', cashBalance: 200, monthlyBurn: 100, runwayMonths: 2,
+    });
+
+    const result = await service.buildContext('user-1', 'How profitable is my business and what is its cash runway?');
+    const performance = result.businessPerformance as any[];
+
+    expect(performance[0].profitAndLoss).toMatchObject({
+      income: 400, expenses: 300, netProfit: 100, netProfitMarginPercent: 25,
+    });
+    expect(performance[0].cashRunwayEstimate.runwayMonths).toBe(2);
+  });
+
   it('uses description-only transaction search and never selects private notes', async () => {
     await service.buildContext('user-1', 'Find my fuel transaction');
 
