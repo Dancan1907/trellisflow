@@ -20,7 +20,12 @@ export class SnapshotsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to midnight for the unique constraint
 
-    // 1. Fetch all active containers for this user
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { reportingCurrency: true },
+    });
+    const reportingCurrency = user?.reportingCurrency ?? 'KES';
+
     const containers = await this.prisma.container.findMany({
       where: { userId, status: 'ACTIVE' },
       include: {
@@ -28,50 +33,78 @@ export class SnapshotsService {
         summaries: {
           where: { deletedAt: null },
           orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-          take: 1, // Get the latest summary for external businesses
+          take: 1,
         },
       },
     });
 
-    let personalNetWorth = 0;
-    let investmentsNetWorth = 0;
-    let businessesNetWorth = 0;
+    type CurrencyTotals = {
+      personalNetWorth: number;
+      investmentsNetWorth: number;
+      businessesNetWorth: number;
+    };
+    const totalsByCurrency = new Map<string, CurrencyTotals>();
+    const getCurrencyTotals = (currency: string): CurrencyTotals => {
+      const existing = totalsByCurrency.get(currency);
+      if (existing) return existing;
+      const created = {
+        personalNetWorth: 0,
+        investmentsNetWorth: 0,
+        businessesNetWorth: 0,
+      };
+      totalsByCurrency.set(currency, created);
+      return created;
+    };
 
-    // 2. Iterate through containers and calculate
     for (const container of containers) {
-      let containerTotal = 0;
-
       if (container.type === 'EXTERNAL_BUSINESS') {
-        // External businesses use their latest summary
         const latest = container.summaries[0];
         if (latest) {
-          containerTotal = Number(latest.assetsValue) - Number(latest.liabilitiesValue);
+          const group = getCurrencyTotals(latest.currency);
+          group.businessesNetWorth += Number(latest.assetsValue) - Number(latest.liabilitiesValue);
         }
-      } else {
-        // Internal containers use accounts
-        for (const account of container.accounts) {
-          const balance = Number(account.currentBalance);
-          if (account.category === 'ASSET') {
-            containerTotal += balance;
-          } else if (account.category === 'LIABILITY') {
-            containerTotal -= balance;
-          }
-        }
+        continue;
       }
 
-      // 3. Add to the correct bucket
-      if (container.type === 'PERSONAL') {
-        personalNetWorth += containerTotal;
-      } else if (container.type === 'INVESTMENT') {
-        investmentsNetWorth += containerTotal;
-      } else if (container.type === 'INTERNAL_BUSINESS' || container.type === 'EXTERNAL_BUSINESS') {
-        businessesNetWorth += containerTotal;
+      for (const account of container.accounts) {
+        const group = getCurrencyTotals(account.currency);
+        const balance = Number(account.currentBalance);
+        const netEffect = account.category === 'ASSET' ? balance : -balance;
+
+        if (container.type === 'PERSONAL') group.personalNetWorth += netEffect;
+        else if (container.type === 'INVESTMENT') group.investmentsNetWorth += netEffect;
+        else if (container.type === 'INTERNAL_BUSINESS') group.businessesNetWorth += netEffect;
       }
     }
 
-    const totalNetWorth = personalNetWorth + investmentsNetWorth + businessesNetWorth;
+    const byCurrency = Array.from(totalsByCurrency.entries())
+      .map(([currency, totals]) => ({
+        currency,
+        personalNetWorth: totals.personalNetWorth,
+        investmentsNetWorth: totals.investmentsNetWorth,
+        businessesNetWorth: totals.businessesNetWorth,
+        totalNetWorth:
+          totals.personalNetWorth + totals.investmentsNetWorth + totals.businessesNetWorth,
+      }))
+      .sort((left, right) => left.currency.localeCompare(right.currency));
 
-    // 4. Upsert the snapshot (so running it twice on the same day just updates it)
+    // The snapshot headline is always expressed in the user's reporting
+    // currency. Other currencies remain visible in the JSON breakdown; no FX
+    // conversion or cross-currency addition is attempted.
+    const reportingTotals = totalsByCurrency.get(reportingCurrency) ?? {
+      personalNetWorth: 0,
+      investmentsNetWorth: 0,
+      businessesNetWorth: 0,
+    };
+    const personalNetWorth = reportingTotals.personalNetWorth;
+    const investmentsNetWorth = reportingTotals.investmentsNetWorth;
+    const businessesNetWorth = reportingTotals.businessesNetWorth;
+    const totalNetWorth = personalNetWorth + investmentsNetWorth + businessesNetWorth;
+    const breakdown = {
+      byCurrency,
+      currencyHandling: 'Each currency is calculated independently. The snapshot headline contains only the user reporting currency; no FX conversion is applied.',
+    };
+
     const snapshot = await this.prisma.netWorthSnapshot.upsert({
       where: {
         userId_date: {
@@ -87,19 +120,23 @@ export class SnapshotsService {
         personalNetWorth,
         investmentsNetWorth,
         businessesNetWorth,
-        breakdown: {}, // JSONB breakdown (can be expanded later)
-        currency: 'KES', // Hardcoded for now, should be the user's reporting currency
+        breakdown,
+        currency: reportingCurrency,
       },
       update: {
         totalNetWorth,
         personalNetWorth,
         investmentsNetWorth,
         businessesNetWorth,
+        breakdown,
+        currency: reportingCurrency,
         computedAt: new Date(),
       },
     });
 
-    this.logger.log(`Snapshot saved for user ${userId}: Total ${totalNetWorth}`);
+    this.logger.log(
+      `Snapshot saved for user ${userId}: ${reportingCurrency} ${totalNetWorth}`,
+    );
     return snapshot;
   }
 
