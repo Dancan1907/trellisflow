@@ -87,7 +87,8 @@ describe('DashboardService (Unit)', () => {
     });
   });
 
-  describe('getContainerCards', () => {    it('keeps container account balances separated by currency', async () => {
+  describe('getContainerCards', () => {
+    it('keeps container account balances separated by currency', async () => {
       mockPrisma.container.findMany.mockResolvedValue([
         {
           id: 'c1',
