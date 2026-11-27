@@ -1,37 +1,54 @@
-# Read-only Money Copilot
+# Money Copilot
 
 ## Scope
 
-Money Copilot answers natural-language questions about a signed-in user's recorded TrellisFlow finances. Phase 1 is deliberately read-only: it has no transaction, transfer, account, budget, holding, or business mutation capability.
+Money Copilot answers natural-language questions about a signed-in user's recorded TrellisFlow finances. Its chat/data-analysis path is read-only. A separate, narrow action workflow supports previewing and explicitly confirming ordinary income and expense transactions. It does not expose arbitrary database queries or unrestricted financial mutations.
 
-## API
+## API capabilities
 
-- `POST /api/money-copilot/chat`
-- JWT authentication is required.
-- Request body: `{ "message": "How much did I spend this month?", "history": [] }`
-- `message` is limited to 2,000 characters.
-- Optional conversation history is limited to eight messages, with each message limited to 1,000 characters.
-- Responses include `answer`, `readOnly: true`, and the local `asOf` date.
+- `POST /api/money-copilot/chat` — authenticated financial Q&A and supported deterministic what-if analysis.
+- Action preview and confirmation endpoints are exposed by the Money Copilot controller; the action service supports income and expense transaction creation only.
+- JWT authentication and throttling are required.
+- Chat message is limited to 2,000 characters; optional conversation history is bounded.
+- Action previews expire after 10 minutes and require explicit confirmation.
 
 ## Financial context
 
-The backend builds the context for the authenticated user only:
+The backend builds context for the authenticated user only:
 
 - Latest saved net-worth snapshot, with its snapshot date and currency.
 - Active account balances grouped by currency.
 - Current-month income, expenses, and net cash flow, grouped by currency.
 - Recent transaction descriptions and a bounded description-only transaction lookup.
-- Expense category analysis for the current month, last 7 days, last 30 days, previous month, or year-to-date.
-- Open investment holdings, cost basis, current recorded value, and unrealized gain grouped by currency.
-- Internal business profit and loss, net worth, and historical 90-day cash-runway estimate; external businesses use their latest saved summary.
+- Expense category analysis for supported date ranges.
+- Open investment holdings, cost basis, current recorded value, unrealized gain and return, allocation and concentration indicators grouped by currency.
+- Internal business profit and loss and a historical 90-day cash-runway estimate; external businesses use their latest saved summary.
+- Supported deterministic what-if sensitivities for personal expense reduction, internal-business revenue/expense changes and uniform portfolio-value changes.
 
-PostgreSQL `DATE` filters are widened by one day and then filtered by ISO date keys to avoid the database-session-timezone boundary issue. Transfers are excluded from income and expense aggregates. Different currencies are never added together or converted.
+PostgreSQL `DATE` filters are widened and then filtered by ISO date keys to avoid database-session-timezone boundary issues. Transfers are excluded from income and expense aggregates. Different currencies are never added together or converted.
+
+## Confirmed transaction actions
+
+The action workflow is deliberately constrained:
+
+1. The user requests an income or expense action.
+2. The API validates the active account and optional category against the authenticated user and account container.
+3. The API stores a short-lived preview and canonical payload hash.
+4. The user explicitly confirms the preview.
+5. The API atomically claims the pending action, revalidates account/category state, creates the transaction, applies the balance effect, writes the audit event and stores the resulting transaction ID in one database transaction.
+6. Repeated confirmation returns the existing transaction rather than repeating the financial write. If the initial snapshot refresh failed, a retry refreshes the snapshot without duplicating the transaction.
+
+Transfers, account mutations, budget changes, holding changes and arbitrary actions are not supported by this action workflow. Use their dedicated application workflows.
+
+## What-if limitations
+
+What-if results are deterministic sensitivities, not forecasts or predictions. Supported scenario families are limited to those explicitly recognized by the service and backed by available data. They do not model probability, future behavior, tax, fees, inflation or market-return assumptions. Unsupported or ambiguous scenario requests must not be treated as calculated outcomes.
 
 ## AI and privacy
 
-The existing provider abstraction is used; the provider API key stays on the server. Backend calculations supply financial facts and Gemini (or the configured provider) explains them. Prompts, chat messages, and transaction details are not written to AI usage tables. Usage accounting stores provider/model, token counts, success status, and optional estimated cost only.
+The existing provider abstraction is used; provider API keys stay on the server. Backend calculations supply financial facts and the configured provider explains them. Prompts, chat messages and transaction details are not written to AI usage tables. Usage accounting stores provider/model, token counts, success status and optional estimated cost only.
 
-The request is authenticated, rate limited, and subject to a separate per-user daily quota. User message and history content are treated as untrusted input. The model receives only the authenticated user's bounded financial context and cannot execute arbitrary SQL or call write services.
+Requests are authenticated, rate limited and subject to per-user quotas. User messages, history and transaction descriptions are untrusted input. The model cannot execute arbitrary SQL or directly invoke write services. All supported financial writes pass through the explicit action preview/confirmation service.
 
 ## Configuration
 
@@ -43,13 +60,16 @@ AI_MONEY_COPILOT_DAILY_LIMIT=20
 NEXT_PUBLIC_MONEY_COPILOT_ENABLED=false
 ```
 
-Keep the feature disabled until a valid server-side AI provider key is configured and the feature is validated in a non-production environment. Enable it by setting `AI_MONEY_COPILOT_ENABLED=true` in the backend environment and restarting/redeploying the API. Set `NEXT_PUBLIC_MONEY_COPILOT_ENABLED=true` in the web build environment and rebuild/redeploy the frontend to display the navigation entry. Increase the quota independently with `AI_MONEY_COPILOT_DAILY_LIMIT` (for example, 60); no database migration is needed because the existing usage feature column is a string.
+Keep the feature disabled until a valid server-side AI provider key is configured and the feature is validated in a non-production environment. Enable it by setting `AI_MONEY_COPILOT_ENABLED=true` in the backend environment and restarting/redeploying the API. Set `NEXT_PUBLIC_MONEY_COPILOT_ENABLED=true` in the web build environment and rebuild/redeploy the frontend to display the navigation entry. Configure quotas independently. Keep provider secrets exclusively in the backend environment.
 
 ## Known limitations
 
-- No personal cash-flow forecast is provided. The product does not currently have a reliable deterministic forecast model to support one.
-- Business runway is a historical 90-day burn-rate estimate, not a guaranteed forecast.
-- Investment gain is unrealized (current recorded value less recorded cost basis), not realized investment performance.
-- The latest net-worth snapshot can lag current account balances.
+- Business runway is a historical 90-day burn-rate estimate, not a guaranteed forward forecast.
+- Investment gain is based on recorded cost basis and current recorded value; it is not a time-weighted or money-weighted historical return series.
+- Concentration indicators are descriptive. Volatility, beta, Sharpe ratio, maximum drawdown and correlation are unavailable without reliable historical market-price series.
+- External businesses use saved summary data and do not have the same transaction-level analysis as internal businesses.
+- The latest net-worth snapshot can lag current account balances. Its components are breakdowns, not additional wealth to sum again.
 - Search of individual transactions matches description text only and returns a small bounded result set.
 - Reporting currency is a preference only; no foreign-exchange conversion is performed.
+- What-if simulations cover only the supported scenario families and are not probability-weighted forecasts.
+- Confirmed writes are limited to income and expense transactions; transfers and other mutations remain in their dedicated workflows.
