@@ -680,7 +680,7 @@ export class BusinessesService {
 
     const netWorth = isExternal
       ? this.netWorthFromSummary(latestSummary)
-      : this.calculateNetWorth(container.accounts);
+      : this.calculateNetWorth(container.accounts, container.currency);
 
     return {
       id: container.id,
