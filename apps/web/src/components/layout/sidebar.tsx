@@ -87,8 +87,9 @@ export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        <div className={cn('h-16 flex items-center border-b border-border-subtle', isCollapsed ? 'justify-center px-2' : 'justify-between px-6')}>
-          {(!isCollapsed || isOpen) ? <Logo /> : <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary text-white" aria-label="TrellisFlow"><Layers3 size={21} /></div>}
+        <div className="h-16 flex items-center justify-between px-6 border-b border-border-subtle">
+          <div className={cn(isCollapsed && 'md:hidden')}><Logo /></div>
+          {isCollapsed && <div className="hidden md:flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary text-white" aria-label="TrellisFlow"><Layers3 size={21} /></div>}
           {/* Close button (Mobile only) */}
           <button
             onClick={onClose}
@@ -101,9 +102,9 @@ export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
         <nav className={cn("flex-1 overflow-y-auto py-6 space-y-6", isCollapsed ? "px-2" : "px-3")}>
           {navSections.map((section) => (
             <div key={section.title} {...(section.tourId ? { id: section.tourId } : {})}>
-              {!isCollapsed && <h3 className="px-3 mb-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider">
+              <h3 className={cn("px-3 mb-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider", isCollapsed && "md:hidden")}>
                 {section.title}
-              </h3>}
+              </h3>
               <ul className="space-y-1">
                 {section.items.filter((item) => item.enabled !== false).map((item) => {
                   const isActive = pathname.startsWith(item.href);
@@ -113,7 +114,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
                       <Link
                         href={item.href}
                         title={isCollapsed ? item.label : undefined}
-                        aria-label={isCollapsed ? item.label : undefined}
+                        aria-label={item.label}
                         id={item.tourId ?? (
                           item.href === '/dashboard'
                             ? 'tour-dashboard'
@@ -130,14 +131,14 @@ export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
                         }}
                         className={cn(
                           'flex items-center rounded-md text-sm font-medium transition-colors',
-                          isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2',
+                          isCollapsed ? 'gap-3 px-3 py-2 md:justify-center md:px-2 md:py-3 md:gap-0' : 'gap-3 px-3 py-2',
                           isActive
                             ? 'bg-accent-subtle text-fg-primary'
                             : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary',
                         )}
                       >
                         <Icon size={19} className={isActive ? 'text-accent-primary' : ''} />
-                        {!isCollapsed && <span>{item.label}</span>}
+                        <span className={cn(isCollapsed && "md:hidden")}>{item.label}</span>
                       </Link>
                     </li>
                   );
@@ -151,19 +152,20 @@ export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
           <Link
             href="/settings"
             title={isCollapsed ? 'Settings' : undefined}
-            aria-label={isCollapsed ? 'Settings' : undefined}
+            aria-label='Settings'
             onClick={() => {
               if (window.innerWidth < 768) onClose();
             }}
             className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+              'flex items-center rounded-md text-sm font-medium transition-colors',
+              isCollapsed ? 'gap-3 px-3 py-2 md:justify-center md:px-2 md:py-3 md:gap-0' : 'gap-3 px-3 py-2',
               pathname.startsWith('/settings')
                 ? 'bg-accent-subtle text-fg-primary'
                 : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary',
             )}
           >
             <Settings size={19} />
-            {!isCollapsed && <span>Settings</span>}
+            <span className={cn(isCollapsed && "md:hidden")}>Settings</span>
           </Link>
         </div>
       </aside>
