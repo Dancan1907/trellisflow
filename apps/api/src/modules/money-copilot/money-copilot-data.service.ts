@@ -155,7 +155,13 @@ export class MoneyCopilotDataService {
     }
     if (/business|businesses|company|revenue|profit|runway|cash burn/.test(lower)) {
       const range = this.resolveDateRange(question, timezone);
-      context.businessPerformance = await this.getBusinessPerformance(userId, range);
+      const businessPerformance = await this.getBusinessPerformance(userId, range);
+      context.businessPerformance = businessPerformance.items;
+      if (businessPerformance.truncated) {
+        (context.dataLimitations as string[]).push(
+          'Business performance analysis reached its 15-business safety cap and may be incomplete.',
+        );
+      }
     }
     if (/spend|spent|transaction|transactions|payment|purchase|merchant|paid|deposit|withdrawal|transfer/.test(lower)) {
       context.transactionLookup = await this.lookupTransactions(userId, question);
@@ -424,9 +430,11 @@ export class MoneyCopilotDataService {
       },
       select: { id: true, name: true, type: true, currency: true },
       orderBy: { name: 'asc' },
-      take: 15,
+      take: 16,
     });
-    return Promise.all(businesses.map(async (business) => {
+    const truncated = businesses.length > 15;
+    const includedBusinesses = businesses.slice(0, 15);
+    const items = await Promise.all(includedBusinesses.map(async (business) => {
       try {
         const netWorth = await this.businesses.getNetWorth(userId, business.id);
         if (business.type === 'EXTERNAL_BUSINESS') {
@@ -461,6 +469,7 @@ export class MoneyCopilotDataService {
         };
       }
     }));
+    return { items, truncated };
   }
 
   private async lookupTransactions(userId: string, question: string) {
