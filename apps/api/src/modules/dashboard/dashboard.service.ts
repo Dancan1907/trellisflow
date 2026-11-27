@@ -152,10 +152,15 @@ export class DashboardService {
   async getNetWorthTrend(userId: string, days: number = 30) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { reportingCurrency: true },
+    });
 
     return this.prisma.netWorthSnapshot.findMany({
       where: {
         userId,
+        currency: user?.reportingCurrency ?? 'KES',
         date: { gte: startDate },
       },
       orderBy: { date: 'asc' },
