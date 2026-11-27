@@ -71,7 +71,7 @@ describe('Transactions (Integration)', () => {
   });
 
   it('allows only one write when duplicate M-Pesa confirmations race', async () => {
-    const reference = `RACE-${randomUUID()}`;
+    const reference = `R-${randomUUID().replace(/-/g, '').slice(0, 24)}`;
     const before = Number((await prisma.account.findUnique({ where: { id: accountId } }))?.currentBalance);
 
     const results = await Promise.allSettled([
