@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export function MarketingFooter() {
@@ -21,7 +20,7 @@ export function MarketingFooter() {
           <div>
             <p className="text-lg font-semibold text-fg-primary mb-2">TrellisFlow</p>
             <p className="text-sm text-fg-secondary max-w-xs">
-              See all your money in one place — even when it lives in many.
+              Connected finances. AI-assisted clarity. Better-informed decisions.
             </p>
           </div>
 
@@ -34,6 +33,10 @@ export function MarketingFooter() {
                   Product
                 </h4>
                 <ul className="space-y-2 text-sm text-fg-secondary">
+                  <li><Link href="/features" className="hover:text-fg-primary transition-colors">Features</Link></li>
+                  <li><Link href="/how-it-works" className="hover:text-fg-primary transition-colors">How it works</Link></li>
+                  <li><Link href="/pricing" className="hover:text-fg-primary transition-colors">Pricing</Link></li>
+                  <li><Link href="/about" className="hover:text-fg-primary transition-colors">About</Link></li>
                   <li>
                     <Link href="/signup" className="hover:text-fg-primary transition-colors">
                       Sign up
@@ -71,7 +74,7 @@ export function MarketingFooter() {
 
         <div className="mt-10 pt-6 border-t border-border-subtle flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-fg-tertiary">
           <span>© {new Date().getFullYear()} TrellisFlow. All rights reserved.</span>
-          <span>Built with care, for people with complex money.</span>
+          <span>Built for connected finances and clearer decisions.</span>
         </div>
       </div>
     </footer>
