@@ -137,16 +137,20 @@ export class HelpAssistantService {
         title: chunk.title,
         section: chunk.heading,
         source: chunk.source,
-        route: chunk.route,
+        route: this.resolveChunkRoute(chunk),
       }));
+      // A guide's frontmatter route is only its landing page. Resolve explicit
+      // navigation requests against the canonical route map before considering
+      // document metadata, which may point to a parent or sibling page.
+      const requestedDestination = this.resolveRequestedDestination(question);
       const destination = citedChunks.find((chunk) => this.isSafeRoute(chunk.route));
       succeeded = true;
       return {
         answer: (parsed.answer as string).trim().slice(0, 6000),
         sources,
-        navigation: destination?.route
+        navigation: requestedDestination ?? (destination?.route
           ? { label: destination.title, route: destination.route }
-          : null,
+          : null),
       };
     } catch (error) {
       this.logger.warn('Help Assistant request failed.');
@@ -217,6 +221,43 @@ export class HelpAssistantService {
     } catch {
       throw new BadGatewayException('The Help Assistant returned an invalid response. Please try again.');
     }
+  }
+
+  private resolveRequestedDestination(question: string): { label: string; route: string } | null {
+    const normalized = question.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const destinations: Array<{ label: string; route: string; terms: string[] }> = [
+      { label: 'Cash-flow Forecast', route: '/reports/cash-flow-forecast', terms: ['cash flow forecast', 'cashflow forecast', 'cash flow forecasting', 'cashflow forecasting'] },
+      { label: 'Money Copilot', route: '/money-copilot', terms: ['money copilot'] },
+      { label: 'Settings', route: '/settings', terms: ['settings', 'preferences'] },
+      { label: 'Businesses', route: '/businesses', terms: ['businesses', 'business page', 'business section'] },
+      { label: 'Investments', route: '/investments', terms: ['investments', 'investment page', 'investment section'] },
+      { label: 'Goals', route: '/goals', terms: ['goals', 'savings goal', 'savings goals'] },
+      { label: 'Debt', route: '/debts', terms: ['debts', 'debt page', 'debt section', 'debt payoff'] },
+      { label: 'Budgets', route: '/budgets', terms: ['budgets', 'budget page', 'budget section'] },
+      { label: 'Insights', route: '/insights', terms: ['insights', 'insight page'] },
+      { label: 'Personal', route: '/personal', terms: ['personal page', 'personal finance', 'personal section'] },
+      { label: 'Reports', route: '/reports', terms: ['reports', 'report page', 'report section'] },
+      { label: 'Dashboard', route: '/dashboard', terms: ['dashboard', 'home page'] },
+    ];
+    const match = destinations.find((destination) =>
+      destination.terms.some((term) => normalized.includes(term)),
+    );
+    return match ? { label: match.label, route: match.route } : null;
+  }
+
+  private resolveChunkRoute(chunk: RetrievedChunk): string | null {
+    const heading = (chunk.heading ?? '').toLowerCase();
+    const source = chunk.source.toLowerCase();
+    if (source.includes('07-navigation-and-feature-map')) return null;
+    if (heading.includes('cash-flow forecast')) return '/reports/cash-flow-forecast';
+    if (heading.includes('business')) return '/businesses';
+    if (heading.includes('investment')) return '/investments';
+    if (heading.includes('savings goal') || heading === 'goals') return '/goals';
+    if (heading.includes('debt')) return '/debts';
+    if (heading.includes('budget')) return '/budgets';
+    if (heading.includes('setting') || heading.includes('security')) return '/settings';
+    if (heading.includes('insight')) return '/insights';
+    return this.isSafeRoute(chunk.route) ? chunk.route : null;
   }
 
   private isSafeRoute(route: string | null): boolean {
