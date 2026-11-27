@@ -91,7 +91,8 @@ describe('AccountsService', () => {
     });
   });
 
-  it('does not add account balances from different currencies', async () => {
+  describe('multi-currency reporting', () => {
+    it('does not add account balances from different currencies', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({ reportingCurrency: 'KES' });
     mockPrisma.account.findMany.mockResolvedValue([
       { category: 'ASSET', currentBalance: '1000', currency: 'KES' },
@@ -106,5 +107,6 @@ describe('AccountsService', () => {
       expect.objectContaining({ currency: 'KES', totalNetWorth: 1000 }),
       expect.objectContaining({ currency: 'USD', totalNetWorth: 500 }),
     ]));
+    });
   });
 });
