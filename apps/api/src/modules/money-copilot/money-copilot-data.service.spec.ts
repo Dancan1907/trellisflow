@@ -165,6 +165,43 @@ describe('MoneyCopilotDataService', () => {
     expect(performance[0].cashRunwayEstimate.runwayMonths).toBe(2);
   });
 
+  it('accepts the 100 percent scenario boundary', async () => {
+    const date = new Date();
+    prisma.transaction.findMany.mockImplementation(async (args: any) => {
+      if (args.select?.account) return [];
+      if (args.select?.category) {
+        return [{ type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } }];
+      }
+      return [];
+    });
+
+    const result = await service.buildContext('user-1', 'What if I reduce my spending by 100%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.requestedChangePercent).toBe(100);
+    expect(simulation.result[0]).toMatchObject({
+      estimatedMonthlySavings: 120,
+      projectedExpensesAfterChange: 0,
+    });
+  });
+
+  it('rejects negative scenario percentages instead of treating them as positive changes', async () => {
+    const date = new Date();
+    prisma.transaction.findMany.mockImplementation(async (args: any) => {
+      if (args.select?.account) return [];
+      if (args.select?.category) {
+        return [{ type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } }];
+      }
+      return [];
+    });
+
+    const result = await service.buildContext('user-1', 'What if I reduce my spending by -10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.requestedChangePercent).toBe(-10);
+    expect(simulation.result).toBeNull();
+  });
+
   it('simulates a business revenue increase from the recorded P&L without writing changes', async () => {
     prisma.container.findMany.mockResolvedValue([
       { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
