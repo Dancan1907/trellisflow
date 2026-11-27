@@ -17,7 +17,7 @@ export interface AiUsageRecord {
   succeeded: boolean;
 }
 
-type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT' | 'MONEY_COPILOT' | 'INSIGHT_NARRATION';
+type AiUsageFeature = 'MPESA_IMPORT' | 'NATURAL_LANGUAGE_DRAFT' | 'MONEY_COPILOT' | 'INSIGHT_NARRATION' | 'HELP_ASSISTANT';
 
 @Injectable()
 export class AiUsageService {
@@ -71,6 +71,11 @@ export class AiUsageService {
       'AI_MONEY_COPILOT_DAILY_LIMIT',
       'Money Copilot',
     );
+  }
+
+  /** Reserves an independent daily allowance for product documentation help. */
+  async reserveHelpAssistant(userId: string): Promise<Date> {
+    return this.reserveFeature(userId, 'HELP_ASSISTANT', 'AI_HELP_ASSISTANT_DAILY_LIMIT', 'Help Assistant');
   }
 
   /**
@@ -180,6 +185,11 @@ export class AiUsageService {
     usage: AiUsageRecord,
   ): Promise<void> {
     return this.recordFeatureUsage(userId, usageDate, 'MONEY_COPILOT', usage);
+  }
+
+  /** Records privacy-safe token metadata for Help Assistant. */
+  async recordHelpAssistant(userId: string, usageDate: Date, usage: AiUsageRecord): Promise<void> {
+    return this.recordFeatureUsage(userId, usageDate, 'HELP_ASSISTANT', usage);
   }
 
   /**
