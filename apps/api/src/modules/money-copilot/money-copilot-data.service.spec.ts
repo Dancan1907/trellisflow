@@ -78,6 +78,145 @@ describe('MoneyCopilotDataService', () => {
     ]));
   });
 
+  it('calculates portfolio return and holding concentration without claiming volatility risk', async () => {
+    prisma.holding.findMany.mockResolvedValue([
+      { name: 'Holding A', symbol: 'AAA', assetClass: 'EQUITY', currency: 'KES', costBasisTotal: 100, currentValueTotal: 120 },
+      { name: 'Holding B', symbol: 'BBB', assetClass: 'EQUITY', currency: 'KES', costBasisTotal: 100, currentValueTotal: 30 },
+    ]);
+
+    const result = await service.buildContext('user-1', 'Analyze my investment portfolio risk');
+    const investments = result.investments as any;
+
+    expect(investments.byCurrency[0]).toMatchObject({
+      currency: 'KES',
+      costBasis: 200,
+      currentValue: 150,
+      unrealizedGain: -50,
+      unrealizedReturnPercent: -25,
+    });
+    expect(investments.byCurrency[0].concentration.largestHoldingPercent).toBe(80);
+    expect(investments.riskLimitations).toContain(
+      'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
+    );
+  });
+
+  it('provides a deterministic spending-reduction illustration from recorded expenses', async () => {
+    const date = new Date();
+    prisma.transaction.findMany.mockImplementation(async (args: any) => {
+      if (args.select?.account) return [];
+      if (args.select?.category) {
+        return [{ type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } }];
+      }
+      return [];
+    });
+
+    const result = await service.buildContext('user-1', 'What if I reduce my spending by 10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.requestedChangePercent).toBe(10);
+    expect(simulation.result).toEqual([
+      expect.objectContaining({
+        currency: 'KES',
+        baselineExpenses: 120,
+        estimatedMonthlySavings: 12,
+        projectedExpensesAfterChange: 108,
+      }),
+    ]);
+  });
+
+  it('uses the saved net-worth snapshot as the consolidated total without adding overlapping records', async () => {
+    prisma.netWorthSnapshot.findFirst.mockResolvedValue({
+      date: new Date('2026-11-20T00:00:00.000Z'),
+      totalNetWorth: 1000,
+      personalNetWorth: 600,
+      investmentsNetWorth: 250,
+      businessesNetWorth: 150,
+      currency: 'KES',
+    });
+
+    const result = await service.buildContext('user-1', 'Show my overall consolidated wealth');
+    expect(result.consolidatedWealth).toMatchObject({
+      currency: 'KES',
+      totalNetWorth: 1000,
+      components: { personal: 600, investments: 250, businesses: 150 },
+    });
+    expect((result.consolidatedWealth as any).aggregationRule).toContain('Do not add account balances');
+  });
+
+  it('calculates internal business profit margin from the trusted P&L service', async () => {
+    prisma.container.findMany.mockResolvedValue([
+      { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
+    ]);
+    businesses.getNetWorth.mockResolvedValue({ netWorth: 500 });
+    businesses.getPnl.mockResolvedValue({
+      from: '2026-11-01', to: '2026-11-27',
+      totalIncome: 400, totalExpenses: 300, netProfit: 100, byCategory: [],
+    });
+    businesses.getRunway.mockResolvedValue({
+      currency: 'KES', cashBalance: 200, monthlyBurn: 100, runwayMonths: 2,
+    });
+
+    const result = await service.buildContext('user-1', 'How profitable is my business and what is its cash runway?');
+    const performance = result.businessPerformance as any[];
+
+    expect(performance[0].profitAndLoss).toMatchObject({
+      income: 400, expenses: 300, netProfit: 100, netProfitMarginPercent: 25,
+    });
+    expect(performance[0].cashRunwayEstimate.runwayMonths).toBe(2);
+  });
+
+  it('simulates a business revenue increase from the recorded P&L without writing changes', async () => {
+    prisma.container.findMany.mockResolvedValue([
+      { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
+    ]);
+    businesses.getNetWorth.mockResolvedValue({ netWorth: 500 });
+    businesses.getPnl.mockResolvedValue({
+      from: '2026-11-01', to: '2026-11-27',
+      totalIncome: 400, totalExpenses: 300, netProfit: 100, byCategory: [],
+    });
+    businesses.getRunway.mockResolvedValue({ currency: 'KES', cashBalance: 200, monthlyBurn: 100, runwayMonths: 2 });
+
+    const result = await service.buildContext('user-1', 'What if my business revenue increases by 10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.scenarioType).toBe('BUSINESS_REVENUE_CHANGE');
+    expect(simulation.result[0]).toMatchObject({
+      currency: 'KES',
+      baselineRevenue: 400,
+      baselineExpenses: 300,
+      projectedRevenue: 440,
+      projectedExpenses: 300,
+      projectedNetProfit: 140,
+      projectedNetProfitMarginPercent: 31.82,
+    });
+    expect(businesses.getPnl).toHaveBeenCalledTimes(1);
+  });
+
+  it('simulates a portfolio value decline separately for each currency', async () => {
+    prisma.holding.findMany.mockResolvedValue([
+      { name: 'Holding KES', symbol: 'AAA', assetClass: 'EQUITY', currency: 'KES', costBasisTotal: 100, currentValueTotal: 200 },
+      { name: 'Holding USD', symbol: 'BBB', assetClass: 'EQUITY', currency: 'USD', costBasisTotal: 50, currentValueTotal: 100 },
+    ]);
+
+    const result = await service.buildContext('user-1', 'What if my portfolio drops by 10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.scenarioType).toBe('PORTFOLIO_VALUE_SENSITIVITY');
+    expect(simulation.result).toEqual(expect.arrayContaining([
+      expect.objectContaining({ currency: 'KES', currentValue: 200, hypotheticalValue: 180, hypotheticalGainOrLoss: -20 }),
+      expect.objectContaining({ currency: 'USD', currentValue: 100, hypotheticalValue: 90, hypotheticalGainOrLoss: -10 }),
+    ]));
+  });
+
+  it('does not invent a simulation for an unsupported scenario', async () => {
+    const result = await service.buildContext('user-1', 'What if I hire three more employees?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.scenarioType).toBe('UNSUPPORTED_SCENARIO');
+    expect(simulation.result).toBeNull();
+    expect(simulation.limitations.join(' ')).toContain('Supported scenarios');
+  });
+
   it('uses description-only transaction search and never selects private notes', async () => {
     await service.buildContext('user-1', 'Find my fuel transaction');
 

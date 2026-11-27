@@ -157,6 +157,134 @@ export class MoneyCopilotDataService {
       context.transactionLookup = await this.lookupTransactions(userId, question);
     }
 
+    if (/what[- ]if|what would happen|simulate|simulation|scenario|reduce.*spend|cut.*spend|increase.*spend/i.test(question)) {
+      const range = this.resolveDateRange('last 30 days', timezone);
+      const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
+      const percentage = match ? Number(match[1]) : null;
+      const validPercentage = percentage !== null && percentage >= 0 && percentage <= 100;
+      // Match natural-language inflections (e.g. increases, drops, growing), not only base verbs.
+      const asksReduction = /\b(reduc|cut|lower|decreas)\w*\b/i.test(question);
+      const asksIncrease = /\b(increas|rais|grow|ris)\w*\b/i.test(question);
+      const asksDrop = /\b(drop|fall|declin|decreas|reduc|cut)\w*\b/i.test(question);
+      const asksGrowth = asksIncrease;
+      const isBusinessRevenue = /\b(business|company|revenue|sales)\b/i.test(question) &&
+        /\b(revenue|sales)\b/i.test(question) && (asksReduction || asksIncrease || asksDrop);
+      const isBusinessExpense = /\b(business|company)\b/i.test(question) &&
+        /\b(expenses?|costs?)\b/i.test(question) && (asksReduction || asksIncrease);
+      const isPortfolioShock = /\b(portfolio|investments?|holdings)\b/i.test(question) &&
+        (asksDrop || asksGrowth);
+      const isPersonalExpenseReduction =
+        /(reduce|cut|lower|decrease)[\w\s]{0,30}(spending|expenses?)/i.test(question) ||
+        /(spending|expenses?)[\w\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
+
+      let scenarioType = 'UNSUPPORTED_SCENARIO';
+      let result: unknown = null;
+      let basedOn: Record<string, unknown> = { from: range.from, to: range.to };
+
+      if (isPersonalExpenseReduction) {
+        scenarioType = 'PERSONAL_EXPENSE_REDUCTION';
+        const spending = await this.getSpendingAnalysis(userId, range);
+        basedOn = { from: range.from, to: range.to, source: 'recorded personal expense transactions' };
+        result = validPercentage ? spending.totals.map((item) => ({
+          currency: item.currency,
+          baselineExpenses: item.totalExpenses,
+          assumedExpenseReductionPercent: percentage,
+          estimatedMonthlySavings: this.money(item.totalExpenses * percentage! / 100),
+          projectedExpensesAfterChange: this.money(item.totalExpenses * (1 - percentage! / 100)),
+        })) : null;
+      } else if (isBusinessRevenue || isBusinessExpense) {
+        scenarioType = isBusinessRevenue ? 'BUSINESS_REVENUE_CHANGE' : 'BUSINESS_EXPENSE_CHANGE';
+        const businesses = (context.businessPerformance as Array<Record<string, any>> | undefined) ?? [];
+        basedOn = {
+          from: range.from, to: range.to,
+          source: 'existing internal-business P&L service',
+        };
+        result = validPercentage ? businesses
+          .filter((business) => business.type === 'INTERNAL_BUSINESS' && business.profitAndLoss)
+          .map((business) => {
+            const pnl = business.profitAndLoss;
+            const income = Number(pnl.income);
+            const expenses = Number(pnl.expenses);
+            const revenueMultiplier = isBusinessRevenue
+              ? (asksReduction || asksDrop
+                ? 1 - percentage! / 100 : 1 + percentage! / 100)
+              : 1;
+            const expenseMultiplier = isBusinessExpense
+              ? (asksReduction ? 1 - percentage! / 100 : 1 + percentage! / 100)
+              : 1;
+            const projectedIncome = income * revenueMultiplier;
+            const projectedExpenses = expenses * expenseMultiplier;
+            const projectedProfit = projectedIncome - projectedExpenses;
+            return {
+              business: business.name,
+              currency: business.currency,
+              baselineRevenue: this.money(income),
+              baselineExpenses: this.money(expenses),
+              baselineNetProfit: this.money(Number(pnl.netProfit)),
+              projectedRevenue: this.money(projectedIncome),
+              projectedExpenses: this.money(projectedExpenses),
+              projectedNetProfit: this.money(projectedProfit),
+              projectedNetProfitMarginPercent: projectedIncome > 0
+                ? this.money((projectedProfit / projectedIncome) * 100) : null,
+              appliedChange: isBusinessRevenue
+                ? (revenueMultiplier < 1 ? 'REVENUE_REDUCTION' : 'REVENUE_INCREASE')
+                : (expenseMultiplier < 1 ? 'EXPENSE_REDUCTION' : 'EXPENSE_INCREASE'),
+            };
+          }) : null;
+      } else if (isPortfolioShock) {
+        scenarioType = 'PORTFOLIO_VALUE_SENSITIVITY';
+        const investments = context.investments as Record<string, any> | undefined;
+        basedOn = { source: 'recorded current holding values', asOf: today };
+        result = validPercentage ? (investments?.byCurrency ?? []).map((portfolio: any) => {
+          const multiplier = asksDrop ? 1 - percentage! / 100 : 1 + percentage! / 100;
+          const currentValue = Number(portfolio.currentValue);
+          const hypotheticalValue = currentValue * multiplier;
+          return {
+            currency: portfolio.currency,
+            currentValue: this.money(currentValue),
+            assumedChangePercent: asksDrop ? -percentage! : percentage!,
+            hypotheticalValue: this.money(hypotheticalValue),
+            hypotheticalGainOrLoss: this.money(hypotheticalValue - currentValue),
+          };
+        }) : null;
+      }
+
+      context.whatIfSimulation = {
+        scenarioType,
+        basedOn,
+        requestedChangePercent: percentage,
+        result,
+        limitations: [
+          'This is a deterministic sensitivity illustration using recorded historical or current values, not a prediction.',
+          'The percentage is applied uniformly to the selected baseline; no probability, future behavior, tax, fee, inflation or market-return assumptions are included.',
+          'Business scenarios use the requested P&L period and internal businesses only; external-business summaries do not contain transaction-level P&L.',
+          'Portfolio scenarios apply a hypothetical uniform change to recorded current holding values and do not estimate volatility or the likelihood of that change.',
+          ...(scenarioType === 'UNSUPPORTED_SCENARIO'
+            ? ['Supported scenarios: personal spending reduction, internal-business revenue or expense changes, and uniform portfolio value sensitivity.']
+            : []),
+          ...(!validPercentage ? ['Specify a percentage from 0% to 100%, for example: What if my business revenue increases by 10%?'] : []),
+        ],
+      };
+    }
+
+    // The latest saved net-worth snapshot is the sole consolidated wealth figure.
+    // Its components are presented as a breakdown only; current account balances,
+    // holdings and business values are deliberately not added to it again.
+    context.consolidatedWealth = snapshot ? {
+      asOf: this.dateKey(snapshot.date),
+      currency: snapshot.currency,
+      totalNetWorth: Number(snapshot.totalNetWorth),
+      components: {
+        personal: Number(snapshot.personalNetWorth),
+        investments: Number(snapshot.investmentsNetWorth),
+        businesses: Number(snapshot.businessesNetWorth),
+      },
+      aggregationRule: 'Use this saved snapshot as the consolidated total. Do not add account balances, investment holdings or business values to this total because those records may already be represented in the snapshot.',
+    } : {
+      available: false,
+      note: 'No saved net-worth snapshot is available. Do not construct a consolidated total by adding accounts, holdings and business values because overlap and ownership boundaries cannot be safely resolved.',
+    };
+
     return context;
   }
 
@@ -214,16 +342,20 @@ export class MoneyCopilotDataService {
     const groups = new Map<string, {
       costBasis: number; currentValue: number; count: number;
       byAssetClass: Map<string, { value: number; count: number }>;
+      byHolding: Array<{ name: string; symbol: string | null; value: number }>;
     }>();
     for (const holding of holdings) {
       const group = groups.get(holding.currency) ?? {
-        costBasis: 0, currentValue: 0, count: 0, byAssetClass: new Map(),
+        costBasis: 0, currentValue: 0, count: 0,
+        byAssetClass: new Map<string, { value: number; count: number }>(),
+        byHolding: [] as Array<{ name: string; symbol: string | null; value: number }>,
       };
       const cost = Number(holding.costBasisTotal);
       const value = Number(holding.currentValueTotal);
       group.costBasis += cost;
       group.currentValue += value;
       group.count += 1;
+      group.byHolding.push({ name: holding.name, symbol: holding.symbol, value });
       const asset = group.byAssetClass.get(holding.assetClass) ?? { value: 0, count: 0 };
       asset.value += value;
       asset.count += 1;
@@ -231,22 +363,49 @@ export class MoneyCopilotDataService {
       groups.set(holding.currency, group);
     }
     return {
-      byCurrency: Array.from(groups.entries()).map(([currency, group]) => ({
-        currency,
-        holdingCount: group.count,
-        costBasis: this.money(group.costBasis),
-        currentValue: this.money(group.currentValue),
-        unrealizedGain: this.money(group.currentValue - group.costBasis),
-        byAssetClass: Array.from(group.byAssetClass.entries()).map(([assetClass, value]) => ({
-          assetClass, currentValue: this.money(value.value), holdingCount: value.count,
-        })),
-      })),
+      byCurrency: Array.from(groups.entries()).map(([currency, group]) => {
+        const gain = group.currentValue - group.costBasis;
+        const total = group.currentValue;
+        const allocation = Array.from(group.byAssetClass.entries()).map(([assetClass, value]) => ({
+          assetClass,
+          currentValue: this.money(value.value),
+          holdingCount: value.count,
+          allocationPercent: total > 0 ? this.money((value.value / total) * 100) : null,
+        })).sort((a, b) => b.currentValue - a.currentValue);
+        const rankedHoldings = [...group.byHolding].sort((a, b) => b.value - a.value);
+        const topHolding = rankedHoldings[0];
+        const concentrationIndex = total > 0
+          ? rankedHoldings.reduce((sum, holding) => sum + Math.pow(holding.value / total, 2), 0)
+          : null;
+        return {
+          currency,
+          holdingCount: group.count,
+          costBasis: this.money(group.costBasis),
+          currentValue: this.money(total),
+          unrealizedGain: this.money(gain),
+          unrealizedReturnPercent: group.costBasis > 0
+            ? this.money((gain / group.costBasis) * 100) : null,
+          byAssetClass: allocation,
+          concentration: {
+            largestHolding: topHolding ? topHolding.name : null,
+            largestHoldingPercent: topHolding && total > 0
+              ? this.money((topHolding.value / total) * 100) : null,
+            holdingsHerfindahlIndex: concentrationIndex === null
+              ? null : this.money(concentrationIndex),
+            interpretation: 'Concentration indicators describe the distribution of recorded current values; they are not a measure of price volatility or investment risk.',
+          },
+        };
+      }),
       holdings: holdings.slice(0, 30).map((holding) => ({
         name: holding.name, symbol: holding.symbol, assetClass: holding.assetClass,
         currency: holding.currency, costBasis: Number(holding.costBasisTotal),
         currentValue: Number(holding.currentValueTotal),
       })),
-      note: 'Unrealized gain is current recorded value minus cost basis. It is not a realized return and does not include fees, taxes, or cash flows.',
+      riskLimitations: [
+        'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
+        'Asset-class allocation and largest-holding concentration are descriptive concentration indicators, not a complete risk assessment.',
+        'Unrealized gain is current recorded value minus cost basis; it is not realized profit and excludes fees, taxes and cash flows.',
+      ],
     };
   }
 
@@ -280,6 +439,9 @@ export class MoneyCopilotDataService {
           profitAndLoss: {
             from: pnl.from, to: pnl.to, income: pnl.totalIncome,
             expenses: pnl.totalExpenses, netProfit: pnl.netProfit,
+            netProfitMarginPercent: Number(pnl.totalIncome) > 0
+              ? this.money((Number(pnl.netProfit) / Number(pnl.totalIncome)) * 100)
+              : null,
             byCategory: pnl.byCategory.slice(0, 10),
           },
           cashRunwayEstimate: runway,
