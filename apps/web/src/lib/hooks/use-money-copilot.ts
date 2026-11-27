@@ -38,6 +38,7 @@ export interface MoneyCopilotActionPreview {
     account: string;
     accountId: string;
     categoryId: string | null;
+    category: string | null;
     date: string;
     description: string;
     notes: string | null;
