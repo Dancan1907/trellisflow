@@ -1,16 +1,6 @@
-'use client';
-
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 
-export function MarketingFooter() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // Check for the auth cookie on the client side to avoid layout hydration mismatch
-  useEffect(() => {
-    const hasCookie = document.cookie.includes('trellisflow-authenticated=true');
-    setIsAuthenticated(hasCookie);
-  }, []);
+export function MarketingFooter({ showProductLinks = true }: { showProductLinks?: boolean }) {
 
   return (
     <footer className="border-t border-border-subtle bg-bg-primary mt-16 w-full">
@@ -26,8 +16,8 @@ export function MarketingFooter() {
 
           {/* Links */}
           <div className="flex gap-12">
-            {/* ONLY show the Product links if the user is NOT logged in */}
-            {!isAuthenticated && (
+            {/* Public product links only; this footer never links to the authenticated Help Centre. */}
+            {showProductLinks && (
               <div>
                 <h4 className="text-xs font-semibold text-fg-primary uppercase tracking-wider mb-3">
                   Product
