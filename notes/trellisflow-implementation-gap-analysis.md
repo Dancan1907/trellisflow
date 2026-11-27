@@ -48,6 +48,20 @@ The default branch already contains implementation areas for all seven phases:
 - Money Copilot documentation must be checked against current code: the original read-only-only description and its old limitations are stale now that confirmed actions and what-if sensitivities exist.
 - Forecasting documentation and environment examples must be checked against current implementation and flags.
 
+## 2.1 Implementation work completed on this branch (verification pending)
+
+The following code changes have been made on `complete-implementation-gap-closure`. They remain **unverified until the current branch's CI and local validation complete**; related checklist items below stay unchecked until evidence is available.
+
+- **M-Pesa duplicate race handling:** transaction and transfer writers translate unique-constraint races on receipt fingerprints or M-Pesa references into explicit conflict responses. Regression coverage simulates the database uniqueness race.
+- **Natural-language confirmation retries:** income/expense and paired-transfer writes accept a per-user UUID idempotency key, compare replay payloads, return the original result for matching retries, and reject key reuse with altered details. The review form reuses one key across retries.
+- **Help Assistant grounding:** generated answers without a valid citation to a retrieved approved document are withheld in favor of a no-answer response.
+- **Money Copilot safety and analysis:** confirmed-action endpoints now fail closed behind `AI_MONEY_COPILOT_ENABLED`; scenario percentages accept the 0–100 boundary and reject negative/out-of-range values; account, portfolio-holding, business and investment-event safety caps disclose truncation.
+- **Investment event coverage:** `INTEREST` events now require a holding, create an income transaction, credit the linked account, record realized investment income, and reverse correctly if deleted. Money Copilot summarizes recorded sale gains/losses, dividends/interest, contributions and withdrawals separately by currency.
+- **Business accounting correctness:** P&L and runway exclude pending entries and calculate per currency. Business net worth is also grouped by currency; top-level totals represent only the configured business currency. Internal-to-external conversion is blocked when account currencies differ from that configured currency. The business detail UI displays additional-currency P&L, runway and net-worth values separately.
+- **Documentation/configuration:** natural-language drafts default to disabled in the API environment example; Money Copilot and help documentation describe the implemented gates, currency behavior and investment event handling.
+
+No Prisma schema or migration changes were made. The existing per-user transaction idempotency and duplicate-import unique constraints are reused. The Help Centre source document was updated; its RAG index must be re-ingested by the repository owner in the intended database environment.
+
 ## 3. Phase 1 — M-Pesa SMS and receipt parser
 
 **Baseline status: IMPLEMENTED. Closure focus: verification and duplicate safety.**
