@@ -135,6 +135,29 @@ describe('TransactionsService', () => {
       expect(mockBalanceService.applyTransactionEffect).not.toHaveBeenCalled();
     });
 
+    it('recovers a concurrent create race by returning the committed transaction', async () => {
+      const existing = {
+        id: 'tx-winner', type: 'EXPENSE', accountId: 'acc-1', amount: '100',
+        date: new Date('2026-10-20T00:00:00.000Z'), description: 'Test',
+        categoryId: null, notes: null,
+      };
+      mockPrisma.transaction.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existing);
+      mockPrisma.account.findFirst.mockResolvedValue({
+        id: 'acc-1', containerId: 'cont-1', currency: 'KES',
+      });
+      mockPrisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+
+      const result = await service.create('user-1', {
+        type: 'EXPENSE', amount: 100, date: '2026-10-20', description: 'Test',
+        accountId: 'acc-1', idempotencyKey: key,
+      });
+
+      expect(result).toBe(existing);
+      expect(mockBalanceService.applyTransactionEffect).not.toHaveBeenCalled();
+    });
+
     it('rejects reuse of a transaction key with a different payload', async () => {
       mockPrisma.transaction.findFirst.mockResolvedValue({
         id: 'tx-existing', type: 'EXPENSE', accountId: 'acc-1', amount: '100',
