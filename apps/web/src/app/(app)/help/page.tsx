@@ -17,6 +17,9 @@ import {
   Box,
   PieChart,
   Lock,
+  Sparkles,
+  MessageSquareText,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth/auth-store';
@@ -54,9 +57,22 @@ const SECTIONS = [
     title: 'Analyze & Manage',
     icon: BarChart3,
     items: [
-      { id: 'reports', label: 'Reports & Insights' },
-      { id: 'security', label: 'Security & Privacy' },
+      { id: 'reports', label: 'Reports, forecasts & insights' },
     ],
+  },
+  {
+    title: 'AI & Intelligence',
+    icon: Sparkles,
+    items: [
+      { id: 'money-copilot', label: 'Money Copilot' },
+      { id: 'help-assistant', label: 'RAG Help Assistant' },
+      { id: 'ai-transactions', label: 'AI transaction drafting' },
+    ],
+  },
+  {
+    title: 'Account & Privacy',
+    icon: ShieldCheck,
+    items: [{ id: 'security', label: 'Security & Privacy' }],
   },
 ];
 
@@ -146,8 +162,7 @@ export default function HelpPage() {
             together into a single, intelligent dashboard.
           </p>
           <p className="text-fg-secondary leading-relaxed">
-            This guide will walk you through every feature of the platform, explaining not just{' '}
-            <em>how</em> to use it, but <em>why</em> it matters for your financial health.
+            This guide covers the full product: recording transactions, managing personal and business finances, tracking investments, planning cash flow, and using AI-assisted tools safely. AI features may be unavailable when disabled by the account environment.
           </p>
         </section>
 
@@ -160,8 +175,7 @@ export default function HelpPage() {
             <h2 className="text-xl font-display font-semibold text-fg-primary">Your Dashboard</h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            The Dashboard is your command center. The moment you log in, you get a snapshot of your
-            entire net worth, updated in real-time based on the data in your containers.
+            The Dashboard is your command center. The moment you log in, you get a snapshot of your recorded net worth and a view of cash flow. Net worth uses the latest saved snapshot; cash flow can be filtered by a recent activity period. The snapshot may lag behind recent account changes until it is recomputed.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
@@ -169,12 +183,10 @@ export default function HelpPage() {
               across every container.
             </li>
             <li>
-              <strong>Cash Flow:</strong> Shows how much money came in versus how much went out this
-              month.
+              <strong>Cash Flow:</strong> Shows posted and reconciled income and expenses for the selected period and reporting currency. Other currencies remain separate.
             </li>
             <li>
-              <strong>Portfolio Overview:</strong> A visual breakdown of how your wealth is
-              distributed between Personal, Investments, and Businesses.
+              <strong>Portfolio Overview:</strong> A visual breakdown of the reporting-currency net worth across Personal, Investments, and Businesses. Additional currencies are shown separately and are not silently converted.
             </li>
           </ul>
         </section>
@@ -262,7 +274,7 @@ export default function HelpPage() {
               providers.
             </li>
             <li>
-              Record events like Buys, Sells, and Dividends to keep your portfolio history accurate.
+              Record events such as Buys, Sells, Dividends, Interest, Contributions, and Withdrawals to keep your portfolio history accurate. Interest and dividend events are recorded as income linked to the holding and its investment account. Keep realized gains separate from unrealized changes in holding value.
             </li>
           </ul>
         </section>
@@ -326,15 +338,71 @@ export default function HelpPage() {
             </h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            The <strong>Reports</strong> section gives you deep, historical views of your financial
-            life. You can generate Net Worth statements, view Cash Flow trends, and analyze your
-            Asset Allocation.
+            The <strong>Reports</strong> section gives you historical views of your financial life. You can review Net Worth statements, Cash Flow statements, and Allocation reports. The Cash-flow Forecast projects eligible liquid-account balances using deterministic rules, posted/reconciled history, pending movements, recurring rules, and known future-dated transactions. It supports scenarios, warnings, indicative uncertainty ranges, and backtesting where enough history exists. It is an estimate, not a guarantee; currencies are forecast separately.
           </p>
           <p className="text-fg-secondary leading-relaxed mb-4">
             Meanwhile, the <strong>Insights</strong> engine runs silently in the background,
             scanning your data to alert you to unusual spending, budget overruns, or opportunities
             to optimize your wealth.
           </p>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        {/* AI & Intelligence */}
+        <section id="money-copilot" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <Sparkles className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">Money Copilot</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            Money Copilot is an AI-powered financial explainer for your signed-in TrellisFlow data. Ask questions in natural language about recorded balances, cash flow, spending categories, investments, business performance, and supported what-if scenarios.
+          </p>
+          <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2 mb-4">
+            <li>It uses financial context assembled by the backend for your account and explains the facts it receives.</li>
+            <li>It keeps currencies separate and distinguishes saved snapshots, current balances, recorded transactions, unrealized gains, and estimates.</li>
+            <li>What-if calculations are deterministic sensitivities, not forecasts, probabilities, or personalized financial advice.</li>
+            <li>Chat analysis is read-only. A separate, limited income/expense workflow can create a preview; a financial record is written only after you review and explicitly confirm it.</li>
+            <li>It cannot make transfers, change accounts, edit holdings, or perform arbitrary financial actions.</li>
+          </ul>
+          <p className="text-sm text-fg-tertiary">Money Copilot must be enabled by the application operator. If it is not visible in your navigation, it may not be enabled for this deployment.</p>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        <section id="help-assistant" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <MessageSquareText className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">RAG Help Assistant</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            The Help Assistant answers product-usage questions by retrieving relevant passages from approved TrellisFlow documentation. This retrieval-augmented generation (RAG) process grounds answers in the Help Centre rather than searching your private financial records.
+          </p>
+          <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
+            <li>Ask how a feature works or where to find a workflow.</li>
+            <li>Review the source references attached to an answer to see which approved guide sections support it.</li>
+            <li>If the approved documentation does not support an answer, the assistant should say it cannot verify the answer instead of inventing product behavior.</li>
+            <li>It is informational only; it cannot create transactions or change account settings.</li>
+          </ul>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        <section id="ai-transactions" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <FileText className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">AI-assisted transaction drafting</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            Where enabled, natural-language transaction entry and M-Pesa message parsing can turn text you provide into a draft. The AI helps extract details; it does not make the draft a saved financial record.
+          </p>
+          <ol className="list-decimal list-inside text-fg-secondary space-y-2 ml-2">
+            <li>Paste or enter the transaction text in the relevant workflow.</li>
+            <li>Review the proposed amount, date, description, account, category, and transaction type.</li>
+            <li>Correct anything that was parsed incorrectly.</li>
+            <li>Confirm only when the details are accurate. Repeated confirmation requests are protected against duplicate writes when the same confirmation key and payload are retried.</li>
+          </ol>
+          <p className="mt-3 text-sm text-fg-tertiary">Never paste passwords, API keys, access tokens, or other secrets into an AI feature. Treat all extracted details as suggestions that require review.</p>
         </section>
 
         <hr className="border-border-subtle" />
