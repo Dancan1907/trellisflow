@@ -98,7 +98,7 @@ describe('Transactions (Integration)', () => {
     expect(rejected.reason.getStatus()).toBe(409);
 
     const matching = await prisma.transaction.findMany({
-      where: { userId: testUserId, mpesaReference: reference },
+      where: { userId: testUserId, mpesaReference: reference.toUpperCase() },
     });
     expect(matching).toHaveLength(1);
     const account = await prisma.account.findUnique({ where: { id: accountId } });
