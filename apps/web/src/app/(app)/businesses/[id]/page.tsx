@@ -255,6 +255,34 @@ export default function BusinessDetailPage() {
           </MetricCard>
         </div>
       )}
+      {!isExternal && business.netWorth.byCurrency.filter((item) => item.currency !== business.currency).length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-fg-secondary">Additional currency balances</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {business.netWorth.byCurrency
+              .filter((item) => item.currency !== business.currency)
+              .map((item) => (
+                <div key={item.currency} className="bg-bg-secondary border border-border-subtle rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-fg-primary mb-3">{item.currency}</h3>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <p className="text-xs text-fg-secondary">Assets</p>
+                      <AmountDisplay value={item.totalAssets} currency={item.currency} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-fg-secondary">Liabilities</p>
+                      <AmountDisplay value={item.totalLiabilities} currency={item.currency} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-fg-secondary">Net Worth</p>
+                      <AmountDisplay value={item.netWorth} currency={item.currency} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       {/* External Business Manual Summaries View */}
       {isExternal && (
