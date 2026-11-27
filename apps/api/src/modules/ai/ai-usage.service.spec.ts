@@ -71,6 +71,28 @@ describe('AiUsageService', () => {
     expect(prisma.$queryRaw.mock.calls[0].slice(1)).toContain(60);
   });
 
+  it('reserves an independent Help Assistant daily allowance', async () => {
+    config.get.mockImplementation((key: string, fallback?: string) =>
+      key === 'AI_HELP_ASSISTANT_DAILY_LIMIT' ? '25' : fallback,
+    );
+    await expect(service.reserveHelpAssistant('00000000-0000-4000-8000-000000000001'))
+      .resolves.toBeInstanceOf(Date);
+    expect(prisma.$queryRaw.mock.calls[0].slice(1)).toContain('HELP_ASSISTANT');
+    expect(prisma.$queryRaw.mock.calls[0].slice(1)).toContain(25);
+  });
+
+  it('records Help Assistant usage without storing user prompts', async () => {
+    await service.recordHelpAssistant(
+      '00000000-0000-4000-8000-000000000001',
+      usageDate,
+      { provider: 'gemini', model: 'embedding-chat-model', inputTokens: 12, outputTokens: 8, succeeded: true },
+    );
+    expect(eventCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ feature: 'HELP_ASSISTANT', succeeded: true }),
+    }));
+    expect(JSON.stringify(eventCreate.mock.calls[0])).not.toContain('How do I');
+  });
+
   it('records Money Copilot usage under its independent feature key', async () => {
     await service.recordMoneyCopilot(
       '00000000-0000-4000-8000-000000000001', usageDate,

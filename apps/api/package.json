@@ -17,7 +17,8 @@
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "test:integration": "jest --config jest.config.js --testPathPattern=integration.spec.ts",
-    "evaluate:mpesa": "ts-node src/scripts/evaluate-mpesa.ts"
+    "evaluate:mpesa": "ts-node src/scripts/evaluate-mpesa.ts",
+    "ingest:help-docs": "ts-node src/scripts/ingest-help-docs.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

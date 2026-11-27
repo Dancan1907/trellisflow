@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000',
     NEXT_PUBLIC_MONEY_COPILOT_ENABLED: process.env.NEXT_PUBLIC_MONEY_COPILOT_ENABLED ?? 'false',
+    NEXT_PUBLIC_HELP_ASSISTANT_ENABLED: process.env.NEXT_PUBLIC_HELP_ASSISTANT_ENABLED ?? 'false',
   },
   typescript: { ignoreBuildErrors: false },
   // ESLint runs separately via `pnpm lint`. Disabling it during build
