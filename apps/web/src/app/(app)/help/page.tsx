@@ -21,7 +21,6 @@ import {
   PanelLeftClose,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Logo } from '@/components/shared/logo';
 
 const SECTIONS = [
   {
@@ -81,7 +80,7 @@ export default function HelpPage() {
   return (
     <>
       <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">
-      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">"Use the Help Assistant to ask questions and find the right TrellisFlow page."</p></section>
+      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">Use the Help Assistant to ask questions and find the right TrellisFlow page.</p></section>
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-64 shrink-0">
         <div className="sticky top-24 space-y-6">
