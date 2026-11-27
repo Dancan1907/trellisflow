@@ -21,7 +21,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   const pathname = usePathname();
   const router = useRouter();
-  const isPublicHelpPage = pathname === '/help';
 
   // Restore the user's desktop sidebar preference without changing server-rendered markup.
   useEffect(() => {
@@ -80,10 +79,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [hasHydrated, token]);
 
   useEffect(() => {
-    if (hasHydrated && sessionState === 'anonymous' && !isPublicHelpPage) {
+    if (hasHydrated && sessionState === 'anonymous') {
       router.replace('/login');
     }
-  }, [hasHydrated, sessionState, isPublicHelpPage, router]);
+  }, [hasHydrated, sessionState, router]);
 
   if (!hasHydrated || sessionState === 'checking') {
     return (
@@ -91,12 +90,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         Verifying your session…
       </div>
     );
-  }
-
-  // The Help Centre is intentionally public. Anonymous visitors receive its
-  // public documentation only and never receive the authenticated app shell.
-  if (sessionState === 'anonymous' && isPublicHelpPage) {
-    return <>{children}</>;
   }
 
   if (sessionState === 'anonymous') {
