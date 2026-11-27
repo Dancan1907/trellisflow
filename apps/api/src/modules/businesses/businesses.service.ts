@@ -35,10 +35,18 @@ const businessInclude = {
 
 type BusinessWithDetails = Prisma.ContainerGetPayload<{ include: typeof businessInclude }>;
 
+type BusinessNetWorthCurrency = {
+  currency: string;
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+};
+
 type BusinessNetWorth = {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
+  byCurrency: BusinessNetWorthCurrency[];
 };
 
 type BusinessWithProfile = Container & {
@@ -292,8 +300,19 @@ export class BusinessesService {
       throw new BadRequestException('Only internal businesses can be converted to external');
     }
 
+    // A single external summary has one currency. Refuse conversion rather
+    // than silently seed it with balances from incompatible currencies.
+    const incompatibleCurrencies = [...new Set(
+      container.accounts.map((account) => account.currency).filter((currency) => currency !== container.currency),
+    )];
+    if (incompatibleCurrencies.length) {
+      throw new BadRequestException(
+        `This business has accounts in currencies other than ${container.currency}. Consolidate them before converting to an external business; no FX conversion is performed.`,
+      );
+    }
+
     // Compute the final internal net worth to seed the first external summary.
-    const seedNetWorth = this.calculateNetWorth(container.accounts);
+    const seedNetWorth = this.calculateNetWorth(container.accounts, container.currency);
     const today = this.startOfUtcDay(new Date());
     const auditId = randomUUID();
 
@@ -415,7 +434,7 @@ export class BusinessesService {
     const netWorth =
       container.type === 'EXTERNAL_BUSINESS'
         ? this.netWorthFromSummary(container.summaries[0] ?? null)
-        : this.calculateNetWorth(container.accounts);
+        : this.calculateNetWorth(container.accounts, container.currency);
 
     return {
       businessId: container.id,
@@ -683,35 +702,53 @@ export class BusinessesService {
     };
   }
 
-  private calculateNetWorth(accounts: Account[]): BusinessNetWorth {
-    let totalAssets = 0;
-    let totalLiabilities = 0;
-
+  private calculateNetWorth(accounts: Account[], primaryCurrency: string): BusinessNetWorth {
+    const groups = new Map<string, { totalAssets: number; totalLiabilities: number }>();
     for (const account of accounts) {
+      const group = groups.get(account.currency) ?? { totalAssets: 0, totalLiabilities: 0 };
       const balance = Number(account.currentBalance);
-      if (account.category === 'ASSET') totalAssets += balance;
-      else if (account.category === 'LIABILITY') totalLiabilities += balance;
+      if (account.category === 'ASSET') group.totalAssets += balance;
+      else if (account.category === 'LIABILITY') group.totalLiabilities += balance;
+      groups.set(account.currency, group);
     }
 
+    const byCurrency = Array.from(groups.entries()).map(([currency, group]) => ({
+      currency,
+      totalAssets: this.money(group.totalAssets),
+      totalLiabilities: this.money(group.totalLiabilities),
+      netWorth: this.money(group.totalAssets - group.totalLiabilities),
+    })).sort((left, right) => left.currency.localeCompare(right.currency));
+    const primary = byCurrency.find((group) => group.currency === primaryCurrency) ?? {
+      currency: primaryCurrency, totalAssets: 0, totalLiabilities: 0, netWorth: 0,
+    };
+
     return {
-      totalAssets: this.money(totalAssets),
-      totalLiabilities: this.money(totalLiabilities),
-      netWorth: this.money(totalAssets - totalLiabilities),
+      totalAssets: primary.totalAssets,
+      totalLiabilities: primary.totalLiabilities,
+      netWorth: primary.netWorth,
+      byCurrency,
     };
   }
 
   private netWorthFromSummary(summary: Summary | null): BusinessNetWorth {
     if (!summary) {
-      return { totalAssets: 0, totalLiabilities: 0, netWorth: 0 };
+      return { totalAssets: 0, totalLiabilities: 0, netWorth: 0, byCurrency: [] };
     }
 
     const totalAssets = Number(summary.assetsValue);
     const totalLiabilities = Number(summary.liabilitiesValue);
-
-    return {
+    const group = {
+      currency: summary.currency,
       totalAssets: this.money(totalAssets),
       totalLiabilities: this.money(totalLiabilities),
       netWorth: this.money(totalAssets - totalLiabilities),
+    };
+
+    return {
+      totalAssets: group.totalAssets,
+      totalLiabilities: group.totalLiabilities,
+      netWorth: group.netWorth,
+      byCurrency: [group],
     };
   }
 
