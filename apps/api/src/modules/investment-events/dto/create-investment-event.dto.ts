@@ -19,7 +19,7 @@ export class CreateInvestmentEventDto {
 
   @ApiPropertyOptional({
     description:
-      'The holding this event affects. Required for BUY, SELL, DIVIDEND. Null for CONTRIBUTION, WITHDRAWAL.',
+      'The holding this event affects. Required for BUY, SELL, DIVIDEND, INTEREST. Null for CONTRIBUTION, WITHDRAWAL.',
   })
   @IsOptional()
   @IsUUID()

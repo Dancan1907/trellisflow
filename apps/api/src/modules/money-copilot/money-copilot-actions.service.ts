@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   GoneException,
   Injectable,
   NotFoundException,
@@ -8,6 +9,7 @@ import {
 import { AuditAction } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ConfigService } from '@nestjs/config';
 import { BalanceService } from '../transactions/balance.service';
 import { AuditLogService } from '../../common/services/audit.service';
 import { SnapshotsService } from '../snapshots/snapshots.service';
@@ -49,9 +51,17 @@ export class MoneyCopilotActionsService {
     private readonly balances: BalanceService,
     private readonly audit: AuditLogService,
     private readonly snapshots: SnapshotsService,
+    private readonly config: ConfigService,
   ) {}
 
+  private assertEnabled(): void {
+    if (this.config.get<string>('AI_MONEY_COPILOT_ENABLED', 'false') !== 'true') {
+      throw new ForbiddenException('Money Copilot actions are not enabled yet.');
+    }
+  }
+
   async preview(userId: string, dto: PreviewMoneyCopilotActionDto) {
+    this.assertEnabled();
     const account = await this.prisma.account.findFirst({
       where: { id: dto.accountId, userId, status: 'ACTIVE', deletedAt: null },
       select: { id: true, name: true, currency: true, containerId: true },
@@ -123,6 +133,7 @@ export class MoneyCopilotActionsService {
   }
 
   async confirm(userId: string, actionId: string) {
+    this.assertEnabled();
     const existing = await this.prisma.moneyCopilotAction.findFirst({
       where: { id: actionId, userId },
     });

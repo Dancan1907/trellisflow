@@ -44,6 +44,7 @@ export class MoneyCopilotDataService {
           investmentsNetWorth: true,
           businessesNetWorth: true,
           currency: true,
+          breakdown: true,
         },
       }),
       this.prisma.account.findMany({
@@ -57,7 +58,7 @@ export class MoneyCopilotDataService {
           container: { select: { name: true, type: true, status: true } },
         },
         orderBy: { name: 'asc' },
-        take: 100,
+        take: 101,
       }),
       this.findTransactionsInRange(userId, monthStart, today, {
         type: true,
@@ -81,10 +82,13 @@ export class MoneyCopilotDataService {
       }),
     ]);
 
+    const accountLimit = 100;
+    const accountsTruncated = accounts.length > accountLimit;
+    const includedAccounts = accounts.slice(0, accountLimit);
     const accountBalancesByCurrency = new Map<string, {
       assets: number; liabilities: number; net: number; accounts: Array<Record<string, unknown>>;
     }>();
-    for (const account of accounts) {
+    for (const account of includedAccounts) {
       if (account.container.status !== 'ACTIVE') continue;
       const currency = account.currency;
       const group = accountBalancesByCurrency.get(currency) ?? {
@@ -105,6 +109,9 @@ export class MoneyCopilotDataService {
     }
 
     const monthCashFlow = this.aggregateCashFlow(monthTransactionResult.transactions, monthStart, today);
+    const snapshotBreakdown = snapshot?.breakdown as {
+      byCurrency?: Array<Record<string, unknown>>;
+    } | null;
     const context: Record<string, unknown> = {
       asOf: today,
       timezone,
@@ -116,7 +123,8 @@ export class MoneyCopilotDataService {
         investments: Number(snapshot.investmentsNetWorth),
         businesses: Number(snapshot.businessesNetWorth),
         currency: snapshot.currency,
-        source: 'latest saved net-worth snapshot',
+        byCurrency: snapshotBreakdown?.byCurrency ?? [],
+        source: "latest saved net-worth snapshot; headline totals use the user's reporting currency only",
       } : null,
       accountBalancesByCurrency: Array.from(accountBalancesByCurrency.entries()).map(([currency, data]) => ({
         currency, assets: this.money(data.assets), liabilities: this.money(data.liabilities),
@@ -135,8 +143,13 @@ export class MoneyCopilotDataService {
       dataLimitations: [
         'Amounts in different currencies are not converted or added together.',
         'Net worth is taken from the latest saved snapshot and may not reflect changes after its date.',
+        'The snapshot headline is expressed only in the user reporting currency; other currencies remain separate in its breakdown and are not converted.',
+        ...(snapshot && !snapshotBreakdown?.byCurrency
+          ? ['The latest saved snapshot predates the per-currency breakdown and may need to be refreshed before its headline can be trusted for multi-currency accounts.']
+          : []),
         'Account balances are current account records and are not the same as a historical net-worth snapshot.',
         'Transfers are excluded from income and expense cash-flow totals.',
+        ...(accountsTruncated ? ['The account-balance overview reached its 100-account safety cap and may be incomplete.'] : []),
         ...(monthTransactionResult.truncated ? ['The current-month transaction calculation reached its 5,000-record safety cap and may be incomplete.'] : []),
       ],
     };
@@ -151,7 +164,13 @@ export class MoneyCopilotDataService {
     }
     if (/business|businesses|company|revenue|profit|runway|cash burn/.test(lower)) {
       const range = this.resolveDateRange(question, timezone);
-      context.businessPerformance = await this.getBusinessPerformance(userId, range);
+      const businessPerformance = await this.getBusinessPerformance(userId, range);
+      context.businessPerformance = businessPerformance.items;
+      if (businessPerformance.truncated) {
+        (context.dataLimitations as string[]).push(
+          'Business performance analysis reached its 15-business safety cap and may be incomplete.',
+        );
+      }
     }
     if (/spend|spent|transaction|transactions|payment|purchase|merchant|paid|deposit|withdrawal|transfer/.test(lower)) {
       context.transactionLookup = await this.lookupTransactions(userId, question);
@@ -159,7 +178,7 @@ export class MoneyCopilotDataService {
 
     if (/what[- ]if|what would happen|simulate|simulation|scenario|reduce.*spend|cut.*spend|increase.*spend/i.test(question)) {
       const range = this.resolveDateRange('last 30 days', timezone);
-      const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
+      const match = question.match(/(-?\d+(?:\.\d+)?)\s*%/);
       const percentage = match ? Number(match[1]) : null;
       const validPercentage = percentage !== null && percentage >= 0 && percentage <= 100;
       // Match natural-language inflections (e.g. increases, drops, growing), not only base verbs.
@@ -201,35 +220,45 @@ export class MoneyCopilotDataService {
         };
         result = validPercentage ? businesses
           .filter((business) => business.type === 'INTERNAL_BUSINESS' && business.profitAndLoss)
-          .map((business) => {
+          .flatMap((business) => {
             const pnl = business.profitAndLoss;
-            const income = Number(pnl.income);
-            const expenses = Number(pnl.expenses);
-            const revenueMultiplier = isBusinessRevenue
-              ? (asksReduction || asksDrop
-                ? 1 - percentage! / 100 : 1 + percentage! / 100)
-              : 1;
-            const expenseMultiplier = isBusinessExpense
-              ? (asksReduction ? 1 - percentage! / 100 : 1 + percentage! / 100)
-              : 1;
-            const projectedIncome = income * revenueMultiplier;
-            const projectedExpenses = expenses * expenseMultiplier;
-            const projectedProfit = projectedIncome - projectedExpenses;
-            return {
-              business: business.name,
-              currency: business.currency,
-              baselineRevenue: this.money(income),
-              baselineExpenses: this.money(expenses),
-              baselineNetProfit: this.money(Number(pnl.netProfit)),
-              projectedRevenue: this.money(projectedIncome),
-              projectedExpenses: this.money(projectedExpenses),
-              projectedNetProfit: this.money(projectedProfit),
-              projectedNetProfitMarginPercent: projectedIncome > 0
-                ? this.money((projectedProfit / projectedIncome) * 100) : null,
-              appliedChange: isBusinessRevenue
-                ? (revenueMultiplier < 1 ? 'REVENUE_REDUCTION' : 'REVENUE_INCREASE')
-                : (expenseMultiplier < 1 ? 'EXPENSE_REDUCTION' : 'EXPENSE_INCREASE'),
-            };
+            const currencyGroups = Array.isArray(pnl.byCurrency) && pnl.byCurrency.length
+              ? pnl.byCurrency
+              : [{
+                  currency: business.currency,
+                  totalIncome: pnl.income,
+                  totalExpenses: pnl.expenses,
+                  netProfit: pnl.netProfit,
+                }];
+            return currencyGroups.map((currencyPnl: Record<string, any>) => {
+              const income = Number(currencyPnl.totalIncome ?? currencyPnl.income ?? 0);
+              const expenses = Number(currencyPnl.totalExpenses ?? currencyPnl.expenses ?? 0);
+              const revenueMultiplier = isBusinessRevenue
+                ? (asksReduction || asksDrop
+                  ? 1 - percentage! / 100 : 1 + percentage! / 100)
+                : 1;
+              const expenseMultiplier = isBusinessExpense
+                ? (asksReduction ? 1 - percentage! / 100 : 1 + percentage! / 100)
+                : 1;
+              const projectedIncome = income * revenueMultiplier;
+              const projectedExpenses = expenses * expenseMultiplier;
+              const projectedProfit = projectedIncome - projectedExpenses;
+              return {
+                business: business.name,
+                currency: currencyPnl.currency ?? business.currency,
+                baselineRevenue: this.money(income),
+                baselineExpenses: this.money(expenses),
+                baselineNetProfit: this.money(Number(currencyPnl.netProfit ?? (income - expenses))),
+                projectedRevenue: this.money(projectedIncome),
+                projectedExpenses: this.money(projectedExpenses),
+                projectedNetProfit: this.money(projectedProfit),
+                projectedNetProfitMarginPercent: projectedIncome > 0
+                  ? this.money((projectedProfit / projectedIncome) * 100) : null,
+                appliedChange: isBusinessRevenue
+                  ? (revenueMultiplier < 1 ? 'REVENUE_REDUCTION' : 'REVENUE_INCREASE')
+                  : (expenseMultiplier < 1 ? 'EXPENSE_REDUCTION' : 'EXPENSE_INCREASE'),
+              };
+            });
           }) : null;
       } else if (isPortfolioShock) {
         scenarioType = 'PORTFOLIO_VALUE_SENSITIVITY';
@@ -330,15 +359,44 @@ export class MoneyCopilotDataService {
   }
 
   private async getInvestmentSummary(userId: string) {
-    const holdings = await this.prisma.holding.findMany({
+    const fetchedHoldings = await this.prisma.holding.findMany({
       where: { userId, status: 'OPEN', deletedAt: null },
       orderBy: { updatedAt: 'desc' },
-      take: 100,
+      take: 5001,
       select: {
         name: true, symbol: true, assetClass: true, currency: true,
         costBasisTotal: true, currentValueTotal: true,
       },
     });
+    const holdingsTruncated = fetchedHoldings.length > 5000;
+    const holdings = fetchedHoldings.slice(0, 5000);
+    const fetchedEvents = await this.prisma.investmentEvent.findMany({
+      where: {
+        userId,
+        eventType: { in: ['SELL', 'DIVIDEND', 'INTEREST', 'CONTRIBUTION', 'WITHDRAWAL'] },
+      },
+      orderBy: { date: 'desc' },
+      take: 5001,
+      select: { eventType: true, totalAmount: true, realizedGain: true, currency: true },
+    });
+    const eventsTruncated = fetchedEvents.length > 5000;
+    const events = fetchedEvents.slice(0, 5000);
+    const eventGroups = new Map<string, {
+      realizedGainLoss: number; investmentIncome: number;
+      contributions: number; withdrawals: number; eventCount: number;
+    }>();
+    for (const event of events) {
+      const group = eventGroups.get(event.currency) ?? {
+        realizedGainLoss: 0, investmentIncome: 0, contributions: 0, withdrawals: 0, eventCount: 0,
+      };
+      const amount = Number(event.totalAmount);
+      if (event.eventType === 'SELL') group.realizedGainLoss += Number(event.realizedGain ?? 0);
+      if (event.eventType === 'DIVIDEND' || event.eventType === 'INTEREST') group.investmentIncome += amount;
+      if (event.eventType === 'CONTRIBUTION') group.contributions += amount;
+      if (event.eventType === 'WITHDRAWAL') group.withdrawals += amount;
+      group.eventCount++;
+      eventGroups.set(event.currency, group);
+    }
     const groups = new Map<string, {
       costBasis: number; currentValue: number; count: number;
       byAssetClass: Map<string, { value: number; count: number }>;
@@ -401,10 +459,21 @@ export class MoneyCopilotDataService {
         currency: holding.currency, costBasis: Number(holding.costBasisTotal),
         currentValue: Number(holding.currentValueTotal),
       })),
+      investmentEventsByCurrency: Array.from(eventGroups.entries()).map(([currency, group]) => ({
+        currency,
+        realizedGainLoss: this.money(group.realizedGainLoss),
+        investmentIncome: this.money(group.investmentIncome),
+        contributions: this.money(group.contributions),
+        withdrawals: this.money(group.withdrawals),
+        eventCount: group.eventCount,
+      })),
       riskLimitations: [
         'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
         'Asset-class allocation and largest-holding concentration are descriptive concentration indicators, not a complete risk assessment.',
         'Unrealized gain is current recorded value minus cost basis; it is not realized profit and excludes fees, taxes and cash flows.',
+        ...(holdingsTruncated ? ['The portfolio analysis reached its 5,000-holding safety cap; totals and allocations may be incomplete.'] : []),
+        ...(eventsTruncated ? ['Investment-event analysis reached its 5,000-event safety cap; realized gains and investment income may be incomplete.'] : []),
+        'Realized gain/loss and investment income are reported only from explicitly recorded investment events; missing events are not inferred from current holding values.',
       ],
     };
   }
@@ -417,15 +486,18 @@ export class MoneyCopilotDataService {
       },
       select: { id: true, name: true, type: true, currency: true },
       orderBy: { name: 'asc' },
-      take: 15,
+      take: 16,
     });
-    return Promise.all(businesses.map(async (business) => {
+    const truncated = businesses.length > 15;
+    const includedBusinesses = businesses.slice(0, 15);
+    const items = await Promise.all(includedBusinesses.map(async (business) => {
       try {
         const netWorth = await this.businesses.getNetWorth(userId, business.id);
         if (business.type === 'EXTERNAL_BUSINESS') {
           return {
             name: business.name, type: business.type, currency: business.currency,
             netWorth: netWorth.netWorth,
+            netWorthByCurrency: netWorth.byCurrency ?? [],
             note: 'External business net worth comes from its latest saved summary; transaction-level P&L and runway are not available here.',
           };
         }
@@ -436,6 +508,7 @@ export class MoneyCopilotDataService {
         return {
           name: business.name, type: business.type, currency: business.currency,
           netWorth: netWorth.netWorth,
+          netWorthByCurrency: netWorth.byCurrency ?? [],
           profitAndLoss: {
             from: pnl.from, to: pnl.to, income: pnl.totalIncome,
             expenses: pnl.totalExpenses, netProfit: pnl.netProfit,
@@ -443,6 +516,7 @@ export class MoneyCopilotDataService {
               ? this.money((Number(pnl.netProfit) / Number(pnl.totalIncome)) * 100)
               : null,
             byCategory: pnl.byCategory.slice(0, 10),
+            byCurrency: pnl.byCurrency ?? [],
           },
           cashRunwayEstimate: runway,
           note: 'Runway is an estimate based on the last 90 days of recorded expenses and current liquid account balances; it is not a guaranteed forecast.',
@@ -454,6 +528,7 @@ export class MoneyCopilotDataService {
         };
       }
     }));
+    return { items, truncated };
   }
 
   private async lookupTransactions(userId: string, question: string) {

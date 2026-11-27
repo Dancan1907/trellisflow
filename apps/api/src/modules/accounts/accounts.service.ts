@@ -128,25 +128,45 @@ export class AccountsService {
    * Assets - Liabilities = Net Worth.
    */
   async getNetWorth(userId: string) {
-    const accounts = await this.prisma.account.findMany({
-      where: { userId, status: 'ACTIVE' },
-    });
+    const [user, accounts] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { reportingCurrency: true },
+      }),
+      this.prisma.account.findMany({
+        where: { userId, status: 'ACTIVE' },
+      }),
+    ]);
+    const reportingCurrency = user?.reportingCurrency ?? 'KES';
+    const groups = new Map<string, { assets: number; liabilities: number }>();
 
-    let assets = 0;
-    let liabilities = 0;
-
-    for (const acc of accounts) {
-      if (acc.category === 'ASSET') {
-        assets += Number(acc.currentBalance);
-      } else if (acc.category === 'LIABILITY') {
-        liabilities += Number(acc.currentBalance);
-      }
+    for (const account of accounts) {
+      const group = groups.get(account.currency) ?? { assets: 0, liabilities: 0 };
+      const balance = Number(account.currentBalance);
+      if (account.category === 'ASSET') group.assets += balance;
+      else if (account.category === 'LIABILITY') group.liabilities += balance;
+      groups.set(account.currency, group);
     }
 
+    const byCurrency = Array.from(groups.entries()).map(([currency, group]) => ({
+      currency,
+      totalAssets: group.assets,
+      totalLiabilities: group.liabilities,
+      totalNetWorth: group.assets - group.liabilities,
+    })).sort((left, right) => left.currency.localeCompare(right.currency));
+    const primary = byCurrency.find((group) => group.currency === reportingCurrency) ?? {
+      currency: reportingCurrency,
+      totalAssets: 0,
+      totalLiabilities: 0,
+      totalNetWorth: 0,
+    };
+
     return {
-      totalNetWorth: assets - liabilities,
-      totalAssets: assets,
-      totalLiabilities: liabilities,
+      currency: reportingCurrency,
+      totalNetWorth: primary.totalNetWorth,
+      totalAssets: primary.totalAssets,
+      totalLiabilities: primary.totalLiabilities,
+      byCurrency,
     };
   }
 }

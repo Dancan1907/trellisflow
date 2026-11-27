@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { showToast } from '@/components/ui/toast';
 import { useCreateInvestmentEvent } from '@/lib/hooks/use-investment-events';
 
-type EventType = 'BUY' | 'SELL' | 'DIVIDEND' | 'CONTRIBUTION' | 'WITHDRAWAL';
+type EventType = 'BUY' | 'SELL' | 'DIVIDEND' | 'INTEREST' | 'CONTRIBUTION' | 'WITHDRAWAL';
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -35,7 +35,7 @@ export function CreateEventModal({
 
   const createEvent = useCreateInvestmentEvent();
 
-  // BUY and SELL need quantity and price; DIVIDEND just needs total amount
+  // BUY and SELL need quantity and price; DIVIDEND and INTEREST need only total amount
   const needsQuantity = eventType === 'BUY' || eventType === 'SELL';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,8 +81,8 @@ export function CreateEventModal({
         {/* Event type */}
         <div>
           <label className="block text-sm font-medium text-fg-primary mb-1">Event Type</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['BUY', 'SELL', 'DIVIDEND'] as EventType[]).map((type) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {(['BUY', 'SELL', 'DIVIDEND', 'INTEREST'] as EventType[]).map((type) => (
               <button
                 key={type}
                 type="button"

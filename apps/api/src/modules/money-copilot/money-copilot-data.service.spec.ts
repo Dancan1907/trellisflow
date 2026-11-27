@@ -10,6 +10,7 @@ describe('MoneyCopilotDataService', () => {
     account: { findMany: jest.fn() },
     transaction: { findMany: jest.fn() },
     holding: { findMany: jest.fn() },
+    investmentEvent: { findMany: jest.fn() },
     container: { findMany: jest.fn() },
   };
   const businesses = {
@@ -25,6 +26,7 @@ describe('MoneyCopilotDataService', () => {
     prisma.account.findMany.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
     prisma.holding.findMany.mockResolvedValue([]);
+    prisma.investmentEvent.findMany.mockResolvedValue([]);
     prisma.container.findMany.mockResolvedValue([]);
     service = new MoneyCopilotDataService(
       prisma as unknown as PrismaService,
@@ -42,6 +44,74 @@ describe('MoneyCopilotDataService', () => {
     expect(prisma.account.findMany.mock.calls[0][0].where).toMatchObject({ userId: 'user-1' });
     expect(prisma.transaction.findMany.mock.calls[0][0].where).toMatchObject({ userId: 'user-1' });
     expect(JSON.stringify(result)).not.toContain('notes');
+  });
+
+  it('discloses when the account overview reaches its safety cap', async () => {
+    prisma.account.findMany.mockResolvedValue(Array.from({ length: 101 }, (_, index) => ({
+      name: 'Account ' + index,
+      category: 'ASSET',
+      accountType: 'CHECKING',
+      currency: 'KES',
+      currentBalance: 100,
+      container: { name: 'Personal', type: 'PERSONAL', status: 'ACTIVE' },
+    })));
+
+    const result = await service.buildContext('user-1', 'Summarize my finances');
+
+    expect(result.dataLimitations).toContain(
+      'The account-balance overview reached its 100-account safety cap and may be incomplete.',
+    );
+    expect(prisma.account.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 101 }));
+  });
+
+  it('discloses when portfolio totals reach the holding safety cap', async () => {
+    prisma.holding.findMany.mockResolvedValue(Array.from({ length: 5001 }, (_, index) => ({
+      name: 'Holding ' + index,
+      symbol: null,
+      assetClass: 'STOCK',
+      currency: 'KES',
+      costBasisTotal: 10,
+      currentValueTotal: 12,
+    })));
+
+    const result = await service.buildContext('user-1', 'Analyze my investment portfolio');
+    const investments = result.investments as any;
+
+    expect(investments.riskLimitations).toContain(
+      'The portfolio analysis reached its 5,000-holding safety cap; totals and allocations may be incomplete.',
+    );
+    expect(prisma.holding.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 5001 }));
+  });
+
+  it('exposes per-currency snapshot totals without combining them', async () => {
+    prisma.netWorthSnapshot.findFirst.mockResolvedValue({
+      date: new Date('2026-11-20T00:00:00.000Z'),
+      totalNetWorth: 1000,
+      personalNetWorth: 800,
+      investmentsNetWorth: 100,
+      businessesNetWorth: 100,
+      currency: 'KES',
+      breakdown: {
+        byCurrency: [
+          { currency: 'KES', totalNetWorth: 1000 },
+          { currency: 'USD', totalNetWorth: 500 },
+        ],
+      },
+    });
+
+    const result = await service.buildContext('user-1', 'Summarize my overall net worth');
+
+    expect(result.netWorthSnapshot).toMatchObject({
+      total: 1000,
+      currency: 'KES',
+      byCurrency: [
+        { currency: 'KES', totalNetWorth: 1000 },
+        { currency: 'USD', totalNetWorth: 500 },
+      ],
+    });
+    expect((result.dataLimitations as string[]).join(' ')).toContain(
+      'other currencies remain separate',
+    );
   });
 
   it('only requests investment records when the question concerns investments', async () => {
@@ -100,6 +170,37 @@ describe('MoneyCopilotDataService', () => {
     );
   });
 
+  it('reports realized gains, investment income and capital flows separately by currency', async () => {
+    prisma.investmentEvent.findMany.mockResolvedValue([
+      { eventType: 'SELL', totalAmount: 200, realizedGain: 50, currency: 'KES' },
+      { eventType: 'DIVIDEND', totalAmount: 10, realizedGain: 10, currency: 'KES' },
+      { eventType: 'INTEREST', totalAmount: 5, realizedGain: 5, currency: 'USD' },
+      { eventType: 'CONTRIBUTION', totalAmount: 100, realizedGain: null, currency: 'KES' },
+      { eventType: 'WITHDRAWAL', totalAmount: 25, realizedGain: null, currency: 'KES' },
+    ]);
+
+    const result = await service.buildContext('user-1', 'Analyze my investment portfolio');
+    const investments = result.investments as any;
+
+    expect(investments.investmentEventsByCurrency).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        currency: 'KES', realizedGainLoss: 50, investmentIncome: 10,
+        contributions: 100, withdrawals: 25, eventCount: 4,
+      }),
+      expect.objectContaining({
+        currency: 'USD', realizedGainLoss: 0, investmentIncome: 5,
+        contributions: 0, withdrawals: 0, eventCount: 1,
+      }),
+    ]));
+    expect(prisma.investmentEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        userId: 'user-1',
+        eventType: { in: ['SELL', 'DIVIDEND', 'INTEREST', 'CONTRIBUTION', 'WITHDRAWAL'] },
+      },
+      take: 5001,
+    }));
+  });
+
   it('provides a deterministic spending-reduction illustration from recorded expenses', async () => {
     const date = new Date();
     prisma.transaction.findMany.mockImplementation(async (args: any) => {
@@ -143,6 +244,23 @@ describe('MoneyCopilotDataService', () => {
     expect((result.consolidatedWealth as any).aggregationRule).toContain('Do not add account balances');
   });
 
+  it('discloses when business performance analysis reaches its safety cap', async () => {
+    prisma.container.findMany.mockResolvedValue(Array.from({ length: 16 }, (_, index) => ({
+      id: 'external-' + index,
+      name: 'External business ' + index,
+      type: 'EXTERNAL_BUSINESS',
+      currency: 'KES',
+    })));
+    businesses.getNetWorth.mockResolvedValue({ netWorth: 100 });
+
+    const result = await service.buildContext('user-1', 'Summarize my businesses');
+
+    expect(result.businessPerformance).toHaveLength(15);
+    expect(result.dataLimitations).toContain(
+      'Business performance analysis reached its 15-business safety cap and may be incomplete.',
+    );
+  });
+
   it('calculates internal business profit margin from the trusted P&L service', async () => {
     prisma.container.findMany.mockResolvedValue([
       { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
@@ -163,6 +281,43 @@ describe('MoneyCopilotDataService', () => {
       income: 400, expenses: 300, netProfit: 100, netProfitMarginPercent: 25,
     });
     expect(performance[0].cashRunwayEstimate.runwayMonths).toBe(2);
+  });
+
+  it('accepts the 100 percent scenario boundary', async () => {
+    const date = new Date();
+    prisma.transaction.findMany.mockImplementation(async (args: any) => {
+      if (args.select?.account) return [];
+      if (args.select?.category) {
+        return [{ type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } }];
+      }
+      return [];
+    });
+
+    const result = await service.buildContext('user-1', 'What if I reduce my spending by 100%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.requestedChangePercent).toBe(100);
+    expect(simulation.result[0]).toMatchObject({
+      estimatedMonthlySavings: 120,
+      projectedExpensesAfterChange: 0,
+    });
+  });
+
+  it('rejects negative scenario percentages instead of treating them as positive changes', async () => {
+    const date = new Date();
+    prisma.transaction.findMany.mockImplementation(async (args: any) => {
+      if (args.select?.account) return [];
+      if (args.select?.category) {
+        return [{ type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } }];
+      }
+      return [];
+    });
+
+    const result = await service.buildContext('user-1', 'What if I reduce my spending by -10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.requestedChangePercent).toBe(-10);
+    expect(simulation.result).toBeNull();
   });
 
   it('simulates a business revenue increase from the recorded P&L without writing changes', async () => {
@@ -190,6 +345,30 @@ describe('MoneyCopilotDataService', () => {
       projectedNetProfitMarginPercent: 31.82,
     });
     expect(businesses.getPnl).toHaveBeenCalledTimes(1);
+  });
+
+  it('simulates business revenue changes separately for every recorded currency', async () => {
+    prisma.container.findMany.mockResolvedValue([
+      { id: 'business-1', name: 'My Business', type: 'INTERNAL_BUSINESS', currency: 'KES' },
+    ]);
+    businesses.getNetWorth.mockResolvedValue({ netWorth: 500 });
+    businesses.getPnl.mockResolvedValue({
+      from: '2026-11-01', to: '2026-11-27',
+      totalIncome: 400, totalExpenses: 300, netProfit: 100, byCategory: [],
+      byCurrency: [
+        { currency: 'KES', totalIncome: 400, totalExpenses: 300, netProfit: 100, byCategory: [] },
+        { currency: 'USD', totalIncome: 200, totalExpenses: 100, netProfit: 100, byCategory: [] },
+      ],
+    });
+    businesses.getRunway.mockResolvedValue({ currency: 'KES', cashBalance: 200, monthlyBurn: 100, runwayMonths: 2 });
+
+    const result = await service.buildContext('user-1', 'What if my business revenue increases by 10%?');
+    const simulation = result.whatIfSimulation as any;
+
+    expect(simulation.result).toEqual(expect.arrayContaining([
+      expect.objectContaining({ currency: 'KES', projectedRevenue: 440, projectedExpenses: 300, projectedNetProfit: 140 }),
+      expect.objectContaining({ currency: 'USD', projectedRevenue: 220, projectedExpenses: 100, projectedNetProfit: 120 }),
+    ]));
   });
 
   it('simulates a portfolio value decline separately for each currency', async () => {

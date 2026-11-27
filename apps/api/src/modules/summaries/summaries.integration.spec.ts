@@ -35,6 +35,7 @@ describe('Summaries (Integration)', () => {
         email: `summaries-int-${Date.now()}@trellisflow.test`,
         passwordHash: 'x',
         name: 'Summaries Integration Test',
+        reportingCurrency: 'KES',
       },
     });
   });

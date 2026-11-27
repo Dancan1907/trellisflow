@@ -33,6 +33,7 @@ export function NaturalLanguageTransactionForm({
   const [categoryId, setCategoryId] = useState('');
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
+  const [confirmationKey, setConfirmationKey] = useState('');
 
   const inputClass =
     'w-full h-10 px-3 rounded-md border border-border-subtle bg-bg-primary text-fg-primary placeholder:text-fg-tertiary focus:outline-none focus:border-accent-primary transition-colors';
@@ -65,6 +66,7 @@ export function NaturalLanguageTransactionForm({
     try {
       const draft = await createDraft.mutateAsync(text.trim());
       setResult(draft);
+      setConfirmationKey(crypto.randomUUID());
       setType(draft.draft.type);
       setAmount(String(draft.draft.amount));
       setDate(draft.draft.date);
@@ -93,6 +95,7 @@ export function NaturalLanguageTransactionForm({
           return;
         }
         await confirmDraft.mutateAsync({
+          idempotencyKey: confirmationKey,
           type: 'TRANSFER',
           transaction: {
             fromAccountId,
@@ -109,6 +112,7 @@ export function NaturalLanguageTransactionForm({
           return;
         }
         await confirmDraft.mutateAsync({
+          idempotencyKey: confirmationKey,
           type,
           transaction: {
             type,
@@ -291,7 +295,7 @@ export function NaturalLanguageTransactionForm({
       <div className="flex justify-between gap-3 pt-2">
         <button
           type="button"
-          onClick={() => setResult(null)}
+          onClick={() => { setResult(null); setConfirmationKey(''); }}
           className="px-3 py-2 rounded-md text-sm text-fg-secondary hover:bg-bg-tertiary"
         >
           Try another sentence

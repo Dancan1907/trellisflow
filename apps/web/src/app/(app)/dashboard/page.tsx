@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar, ArrowRight, TrendingUp } from 'lucide-react';
+import { Calendar, ArrowRight, TrendingUp, PlusCircle, BarChart3, Wallet, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth/auth-store';
 import {
   useDashboardSummary,
@@ -48,9 +48,38 @@ export default function DashboardPage() {
 
           {/* Row 2: Portfolio & Recent Activity */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ContainerCards isLoading={isLoadingContainers} containers={containers} />
+            <ContainerCards
+              isLoading={isLoadingContainers}
+              containers={containers}
+              reportingCurrency={summary?.netWorth.currency ?? 'KES'}
+            />
             <CashFlowWidget isLoading={isLoadingSummary} data={summary?.cashFlow} />
           </div>
+
+          {/* Useful shortcuts fill the dashboard's lower-left space without duplicating insights. */}
+          <section className="rounded-xl border border-border-subtle bg-bg-secondary p-5">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold text-fg-primary">Quick actions</h2>
+              <p className="mt-1 text-xs text-fg-secondary">Jump straight to the tools you use most.</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Add transaction', href: '/personal', icon: PlusCircle },
+                { label: 'View accounts', href: '/personal', icon: Wallet },
+                { label: 'Open reports', href: '/reports', icon: BarChart3 },
+                { label: 'Money Copilot', href: '/money-copilot', icon: Sparkles },
+              ].map((action) => (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className="flex min-w-0 items-center gap-2 rounded-lg border border-border-subtle bg-bg-tertiary px-3 py-3 text-sm font-medium text-fg-secondary transition-colors hover:border-accent-primary hover:text-fg-primary"
+                >
+                  <action.icon size={17} className="shrink-0 text-accent-primary" />
+                  <span className="min-w-0">{action.label}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
         </div>
 
         {/* Right Side (Takes 1 column) */}

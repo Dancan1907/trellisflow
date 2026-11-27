@@ -1,4 +1,4 @@
-import { BadRequestException, GoneException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, GoneException, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { MoneyCopilotActionsService } from './money-copilot-actions.service';
 
@@ -32,11 +32,13 @@ describe('MoneyCopilotActionsService', () => {
   const balances = { applyTransactionEffect: jest.fn() };
   const audit = { log: jest.fn() };
   const snapshots = { computeAndSaveForUser: jest.fn() };
+  const config = { get: jest.fn().mockReturnValue('true') };
   let service: MoneyCopilotActionsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new MoneyCopilotActionsService(prisma, balances as any, audit as any, snapshots as any);
+    config.get.mockReturnValue('true');
+    service = new MoneyCopilotActionsService(prisma, balances as any, audit as any, snapshots as any, config as any);
     prisma.account.findFirst.mockResolvedValue({
       id: 'account-1', name: 'Main account', currency: 'KES', containerId: 'container-1',
     });
@@ -53,6 +55,19 @@ describe('MoneyCopilotActionsService', () => {
     audit.log.mockResolvedValue(undefined);
     snapshots.computeAndSaveForUser.mockResolvedValue(undefined);
     prisma.$transaction.mockImplementation((callback: any) => callback(tx));
+  });
+
+  it('fails closed for preview and confirmation while Money Copilot is disabled', async () => {
+    config.get.mockReturnValue('false');
+
+    await expect(service.preview('user-1', {
+      type: 'EXPENSE', amount: 100, accountId: 'account-1',
+      date: '2026-11-27', description: 'Groceries',
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.confirm('user-1', 'action-1')).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.moneyCopilotAction.create).not.toHaveBeenCalled();
+    expect(prisma.moneyCopilotAction.findFirst).not.toHaveBeenCalled();
   });
 
   it('creates a user-scoped, expiring preview and exposes the exact details', async () => {

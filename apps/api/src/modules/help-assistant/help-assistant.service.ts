@@ -134,6 +134,16 @@ export class HelpAssistantService {
         const chunk = relevant[index - 1];
         return chunk ? [chunk] : [];
       });
+      // A generated answer without at least one citation to a retrieved chunk
+      // is not grounded enough to present as approved product guidance.
+      if (citedChunks.length === 0) {
+        succeeded = true;
+        return {
+          answer: "I couldn't verify an answer in the approved TrellisFlow help documentation. Try rephrasing your question or browse the Help Centre.",
+          sources: [],
+          navigation: null,
+        };
+      }
       const sources = citedChunks.map((chunk) => ({
         title: chunk.title,
         section: chunk.heading,
