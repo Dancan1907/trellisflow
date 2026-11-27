@@ -7,6 +7,7 @@ const mockPrisma = {
   netWorthSnapshot: { findFirst: jest.fn(), findMany: jest.fn() },
   transaction: { findMany: jest.fn() },
   container: { findMany: jest.fn() },
+  holding: { findMany: jest.fn() },
   insight: { findMany: jest.fn() },
 };
 
@@ -16,6 +17,7 @@ describe('DashboardService (Unit)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockPrisma.user.findUnique.mockResolvedValue({ reportingCurrency: 'KES' });
+    mockPrisma.holding.findMany.mockResolvedValue([]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [DashboardService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
@@ -111,6 +113,31 @@ describe('DashboardService (Unit)', () => {
       ]));
     });
 
+
+    it('includes open investment holdings separately from investment account cash', async () => {
+      mockPrisma.container.findMany.mockResolvedValue([
+        {
+          id: 'investment-1',
+          name: 'Investments',
+          type: 'INVESTMENT',
+          currency: 'KES',
+          accounts: [{ category: 'ASSET', currentBalance: 100, currency: 'KES' }],
+          summaries: [],
+          _count: { accounts: 1 },
+          updatedAt: new Date(),
+        },
+      ]);
+      mockPrisma.holding.findMany.mockResolvedValue([
+        { containerId: 'investment-1', currency: 'KES', currentValueTotal: 200 },
+      ]);
+
+      const result = await service.getContainerCards('u1');
+
+      expect(result[0]!.netWorth).toBe(300);
+      expect(result[0]!.byCurrency).toEqual([
+        { currency: 'KES', netWorth: 300 },
+      ]);
+    });
 
     it('should compute net worth for asset and liability accounts', async () => {
       mockPrisma.container.findMany.mockResolvedValue([
