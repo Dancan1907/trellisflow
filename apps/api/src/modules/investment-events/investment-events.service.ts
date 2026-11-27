@@ -23,7 +23,7 @@ export class InvestmentEventsService {
     // ============================================================
     // 2. Fetch the holding (required for BUY, SELL, DIVIDEND)
     // ============================================================
-    const needsHolding = ['BUY', 'SELL', 'DIVIDEND'].includes(dto.eventType);
+    const needsHolding = ['BUY', 'SELL', 'DIVIDEND', 'INTEREST'].includes(dto.eventType);
 
     if (needsHolding && !dto.holdingId) {
       throw new BadRequestException(`${dto.eventType} events require a holdingId`);
@@ -121,8 +121,9 @@ export class InvestmentEventsService {
         break;
       }
 
-      case 'DIVIDEND': {
-        // No change to holding. Dividend is realized income.
+      case 'DIVIDEND':
+      case 'INTEREST': {
+        // Income events do not change holding quantity or valuation.
         realizedGain = dto.totalAmount;
         break;
       }
@@ -238,6 +239,12 @@ export class InvestmentEventsService {
         return {
           type: 'INCOME',
           description: `Dividend from ${holding.name}`,
+        };
+
+      case 'INTEREST':
+        return {
+          type: 'INCOME',
+          description: `Interest from ${holding.name}`,
         };
 
       case 'CONTRIBUTION':
