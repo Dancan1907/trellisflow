@@ -19,6 +19,7 @@ import {
   Lock,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuthStore } from '@/lib/auth/auth-store';
 
 const SECTIONS = [
   {
@@ -60,10 +61,11 @@ const SECTIONS = [
 
 export default function HelpPage() {
   const [activeSection, setActiveSection] = useState('introduction');
+  const isAuthenticated = Boolean(useAuthStore((state) => state.token));
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">
-      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">Open the Help button at the bottom-right to ask questions and get links to the right TrellisFlow page.</p></section>
+      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">{isAuthenticated ? "Use the Help Assistant to ask questions and find the right TrellisFlow page." : "Sign in to unlock the complete user guide and the Help Assistant."}</p>{!isAuthenticated && <Link href="/login" className="mt-2 inline-flex text-sm font-semibold text-accent-primary">Sign in →</Link>}</section>
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-64 shrink-0">
         <div className="sticky top-24 space-y-6">
@@ -81,7 +83,7 @@ export default function HelpPage() {
                     </h3>
                   </div>
                   <ul className="space-y-1">
-                    {section.items.map((item) => (
+                    {section.items.filter((item) => isAuthenticated || ['introduction', 'dashboard', 'containers'].includes(item.id)).map((item) => (
                       <li key={item.id}>
                         <a
                           href={`#${item.id}`}
@@ -103,14 +105,14 @@ export default function HelpPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-bg-secondary border border-border-subtle rounded-xl p-4 space-y-2">
+          {isAuthenticated && <div className="bg-bg-secondary border border-border-subtle rounded-xl p-4 space-y-2">
             <button
               onClick={() => (window.location.href = '/dashboard?tour=true')}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-fg-primary bg-bg-tertiary rounded-md hover:bg-border-subtle transition-colors"
             >
               <PlayCircle size={16} className="text-accent-primary" /> Restart Quick Tour
             </button>
-          </div>
+          </div>}
         </div>
       </aside>
 
@@ -197,6 +199,8 @@ export default function HelpPage() {
 
         <hr className="border-border-subtle" />
 
+        {isAuthenticated && (
+          <>
         {/* Personal Finance */}
         <section id="personal" className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-4">
@@ -351,6 +355,8 @@ export default function HelpPage() {
               You can view this history to see exactly when a transaction or account was modified.
             </li>
           </ul>
+          </>
+        )}
         </section>
       </main>
     </div>
