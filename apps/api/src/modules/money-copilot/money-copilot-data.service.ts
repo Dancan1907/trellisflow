@@ -160,7 +160,7 @@ export class MoneyCopilotDataService {
     if (/what[- ]if|what would happen|simulate|simulation|scenario|reduce.*spend|cut.*spend|increase.*spend/i.test(question)) {
       const range = this.resolveDateRange('last 30 days', timezone);
       const spending = await this.getSpendingAnalysis(userId, range);
-      const match = question.match(/(\\d{1,2}(?:\\.\\d+)?)\\s*%/);
+      const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
       const percentage = match ? Number(match[1]) : null;
       context.whatIfSimulation = {
         basedOn: { from: range.from, to: range.to },
