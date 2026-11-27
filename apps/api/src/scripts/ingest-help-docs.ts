@@ -141,8 +141,9 @@ async function main() {
     process.stdout.write('Prepared ' + source + ': ' + embedded.length + ' chunks\n');
   }
 
-  // Build one parameterized INSERT before opening the transaction. This avoids
-  // dozens of sequential round trips inside a short-lived pooled transaction.
+  // Build a single parameterized INSERT. Embeddings are prepared before the
+  // transaction, keeping the database transaction short and avoiding pool
+  // timeouts caused by one INSERT round-trip per chunk.
   const rows = indexed.flatMap((item) =>
     item.chunks.map((entry) => [
       item.document.source,
@@ -155,42 +156,36 @@ async function main() {
       '[' + entry.vector.join(',') + ']',
     ] as const),
   );
-  const columns = 8;
+
+  const columnCount = 8;
   const parameters = rows.flat();
   const valuesSql = rows
-    .map((_, rowIndex) => {
+    .map((_row, rowIndex) => {
       const placeholders = Array.from(
-        { length: columns },
-        (_unused, columnIndex) => '
-  process.stdout.write('Help documentation ingestion complete: ' + files.length + ' files, ' + totalChunks + ' chunks.\n');
-}
-
-main()
-  .catch((error: unknown) => {
-    process.stderr.write('Help documentation ingestion failed: ' + (error instanceof Error ? error.message : 'unknown error') + '\n');
-    process.exitCode = 1;
-  })
-  .finally(async () => prisma.$disconnect());
- + (rowIndex * columns + columnIndex + 1) + (columnIndex === 7 ? '::vector' : ''),
+        { length: columnCount },
+        (_unused, columnIndex) =>
+          '$' + (rowIndex * columnCount + columnIndex + 1) +
+          (columnIndex === 7 ? '::vector' : ''),
       );
       return '(' + placeholders.join(', ') + ')';
     })
     .join(', ');
+
   const insertSql = rows.length
     ? 'INSERT INTO "document_chunks" ("source", "title", "heading", "route", "chunk_index", "content", "content_hash", "embedding") VALUES ' + valuesSql
     : null;
 
   // Replace the complete index atomically only after every embedding succeeds.
-  await prisma.$transaction(async (tx) => {
-    await tx.$executeRawUnsafe('DELETE FROM "document_chunks"');
-    if (insertSql) await tx.$executeRawUnsafe(insertSql, ...parameters);
-  }, { maxWait: 10_000, timeout: 60_000 });
-  process.stdout.write('Help documentation ingestion complete: ' + files.length + ' files, ' + totalChunks + ' chunks.\n');
-}
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe('DELETE FROM "document_chunks"'),
+    ...(insertSql ? [prisma.$executeRawUnsafe(insertSql, ...parameters)] : []),
+  ]);
 
-main()
-  .catch((error: unknown) => {
-    process.stderr.write('Help documentation ingestion failed: ' + (error instanceof Error ? error.message : 'unknown error') + '\n');
-    process.exitCode = 1;
-  })
-  .finally(async () => prisma.$disconnect());
+  process.stdout.write(
+    'Help documentation ingestion complete: ' +
+      files.length +
+      ' files, ' +
+      totalChunks +
+      ' chunks.\\n',
+  );
+}
