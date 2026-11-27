@@ -12,7 +12,7 @@ The Help Assistant is an authenticated, documentation-only product guide. It doe
 4. PostgreSQL/pgvector retrieves the six closest documentation chunks using cosine distance.
 5. Chunks outside the relevance threshold are discarded. If none remain, the API returns a no-answer response without calling the generation model.
 6. The existing server-side AI provider generates a JSON answer and numeric source references.
-7. The API validates source references against the retrieved result set and only returns navigation routes from a fixed allowlist.
+7. The API validates source references against the retrieved result set, resolves explicit page-navigation requests against a canonical destination map (rather than trusting a document's default route), and only returns routes from a fixed allowlist.
 8. Token usage metadata is recorded without storing the question, chat history or retrieved content.
 
 ## Document ingestion
@@ -43,6 +43,8 @@ The vector table is managed with parameterized raw SQL because the Prisma schema
 - Retrieved documents and user messages are explicitly untrusted in the system prompt.
 - No tool calling or write-capable actions.
 - Source indexes are validated against retrieved chunks.
+- Explicit navigation requests resolve to canonical page routes; per-document frontmatter routes are not treated as the requested destination.
+- Section-level source links use the section's destination where it is known, not an unrelated parent or sibling page.
 - Navigation routes are allowlisted server-side.
 - Provider and embedding keys remain in the backend environment.
 - Usage records contain provider/model/token metadata only, never prompt content.
