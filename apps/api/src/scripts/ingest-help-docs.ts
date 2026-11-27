@@ -141,20 +141,50 @@ async function main() {
     process.stdout.write('Prepared ' + source + ': ' + embedded.length + ' chunks\n');
   }
 
+  // Build one parameterized INSERT before opening the transaction. This avoids
+  // dozens of sequential round trips inside a short-lived pooled transaction.
+  const rows = indexed.flatMap((item) =>
+    item.chunks.map((entry) => [
+      item.document.source,
+      item.document.title,
+      entry.chunk.heading,
+      item.document.route,
+      entry.chunk.index,
+      entry.chunk.content,
+      entry.hash,
+      '[' + entry.vector.join(',') + ']',
+    ] as const),
+  );
+  const columns = 8;
+  const parameters = rows.flat();
+  const valuesSql = rows
+    .map((_, rowIndex) => {
+      const placeholders = Array.from(
+        { length: columns },
+        (_unused, columnIndex) => '
+  process.stdout.write('Help documentation ingestion complete: ' + files.length + ' files, ' + totalChunks + ' chunks.\n');
+}
+
+main()
+  .catch((error: unknown) => {
+    process.stderr.write('Help documentation ingestion failed: ' + (error instanceof Error ? error.message : 'unknown error') + '\n');
+    process.exitCode = 1;
+  })
+  .finally(async () => prisma.$disconnect());
+ + (rowIndex * columns + columnIndex + 1) + (columnIndex === 7 ? '::vector' : ''),
+      );
+      return '(' + placeholders.join(', ') + ')';
+    })
+    .join(', ');
+  const insertSql = rows.length
+    ? 'INSERT INTO "document_chunks" ("source", "title", "heading", "route", "chunk_index", "content", "content_hash", "embedding") VALUES ' + valuesSql
+    : null;
+
   // Replace the complete index atomically only after every embedding succeeds.
   await prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe('DELETE FROM "document_chunks"');
-    for (const item of indexed) {
-      for (const entry of item.chunks) {
-        const vectorLiteral = '[' + entry.vector.join(',') + ']';
-        await tx.$executeRawUnsafe(
-          'INSERT INTO "document_chunks" ("source", "title", "heading", "route", "chunk_index", "content", "content_hash", "embedding") VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector)',
-          item.document.source, item.document.title, entry.chunk.heading, item.document.route,
-          entry.chunk.index, entry.chunk.content, entry.hash, vectorLiteral,
-        );
-      }
-    }
-  });
+    if (insertSql) await tx.$executeRawUnsafe(insertSql, ...parameters);
+  }, { maxWait: 10_000, timeout: 60_000 });
   process.stdout.write('Help documentation ingestion complete: ' + files.length + ' files, ' + totalChunks + ' chunks.\n');
 }
 
