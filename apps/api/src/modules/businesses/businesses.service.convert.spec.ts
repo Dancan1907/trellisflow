@@ -36,9 +36,9 @@ describe('BusinessesService.convertToExternal', () => {
     currency: 'KES',
     status: 'ACTIVE',
     accounts: [
-      { category: 'ASSET', currentBalance: '60000' },
-      { category: 'ASSET', currentBalance: '40000' },
-      { category: 'LIABILITY', currentBalance: '25000' },
+      { category: 'ASSET', currentBalance: '60000', currency: 'KES' },
+      { category: 'ASSET', currentBalance: '40000', currency: 'KES' },
+      { category: 'LIABILITY', currentBalance: '25000', currency: 'KES' },
     ],
   };
 
