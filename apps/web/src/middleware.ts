@@ -2,25 +2,22 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // We use a lightweight cookie to know if a user is logged in
+  // This cookie is a lightweight routing hint only. The app layout verifies
+  // the JWT with the API before rendering authenticated UI.
   const isAuthenticated = request.cookies.has('trellisflow-authenticated');
   const pathname = request.nextUrl.pathname;
 
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
   const isLandingPage = pathname === '/';
 
-  // 1. If the user is logged in and tries to go to login/signup, send them to the dashboard
   if (isAuthenticated && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 2. If the user is logged in and visits the landing page, send them to the dashboard
   if (isAuthenticated && isLandingPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 3. If the user is trying to access a protected app route without being logged in
-  // We protect /dashboard, /personal, /budgets, etc.
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/personal') ||
@@ -28,18 +25,20 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/businesses') ||
     pathname.startsWith('/budgets') ||
     pathname.startsWith('/goals') ||
+    pathname.startsWith('/debts') ||
     pathname.startsWith('/reports') ||
     pathname.startsWith('/insights') ||
-    pathname.startsWith('/settings');
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/money-copilot');
 
   if (!isAuthenticated && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // /help is intentionally public; its page filters documentation by session.
   return NextResponse.next();
 }
 
-// Run middleware on the landing page, auth pages, and all protected app routes
 export const config = {
   matcher: [
     '/',
@@ -51,8 +50,10 @@ export const config = {
     '/businesses/:path*',
     '/budgets/:path*',
     '/goals/:path*',
+    '/debts/:path*',
     '/reports/:path*',
     '/insights/:path*',
     '/settings/:path*',
+    '/money-copilot/:path*',
   ],
 };
