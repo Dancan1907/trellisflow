@@ -1,6 +1,5 @@
 ---
 title: TrellisFlow navigation and feature map
-route: /dashboard
 visibility: authenticated
 ---
 
