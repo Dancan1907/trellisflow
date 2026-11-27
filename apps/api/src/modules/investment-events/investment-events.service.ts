@@ -373,6 +373,7 @@ export class InvestmentEventsService {
           }
 
           case 'DIVIDEND':
+          case 'INTEREST':
           case 'CONTRIBUTION':
           case 'WITHDRAWAL': {
             // No math to reverse
