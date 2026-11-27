@@ -58,7 +58,7 @@ export default function MoneyCopilotPage() {
   const [actionAmount, setActionAmount] = useState('');
   const [actionAccountId, setActionAccountId] = useState('');
   const [actionCategoryId, setActionCategoryId] = useState('');
-  const [actionDate, setActionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [actionDate, setActionDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
   const [actionDescription, setActionDescription] = useState('');
   const [actionNotes, setActionNotes] = useState('');
   const [actionPreview, setActionPreview] = useState<MoneyCopilotActionPreview | null>(null);
@@ -194,6 +194,7 @@ export default function MoneyCopilotPage() {
                   setActionAmount('');
                   setActionDescription('');
                   setActionNotes('');
+                  setShowActionForm(false);
                 } catch (error) {
                   setActionMessage(error instanceof Error ? error.message : 'Confirmation failed. Review your transactions before retrying.');
                 }
