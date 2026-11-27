@@ -11,6 +11,8 @@ import {
   Wallet,
   TrendingUp,
   Building2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth/auth-store';
 import { useRouter } from 'next/navigation';
@@ -20,6 +22,8 @@ import { AmountDisplay } from '@/components/shared/amount-display';
 
 interface TopbarProps {
   onMenuClick: () => void;
+  isSidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
 }
 
 interface Container {
@@ -38,7 +42,7 @@ interface TransactionResult {
   date: string;
 }
 
-export function Topbar({ onMenuClick }: TopbarProps) {
+export function Topbar({ onMenuClick, isSidebarCollapsed, onToggleSidebar }: TopbarProps) {
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
 
@@ -50,12 +54,25 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   return (
     <header className="h-16 flex items-center justify-between px-4 md:px-6 border-b border-border-subtle bg-bg-secondary relative z-40">
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Hamburger Menu Button - Mobile Only */}
+        {/* Mobile drawer and desktop compact-sidebar controls */}
         <button
+          type="button"
           onClick={onMenuClick}
+          aria-label="Open navigation menu"
+          title="Open navigation menu"
           className="p-2 rounded-md md:hidden hover:bg-bg-tertiary text-fg-primary transition-colors"
         >
           <Menu size={24} />
+        </button>
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-pressed={isSidebarCollapsed}
+          className="hidden md:inline-flex p-2 rounded-md hover:bg-bg-tertiary text-fg-primary transition-colors"
+        >
+          {isSidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
 
         {/* Container Switcher Dropdown */}

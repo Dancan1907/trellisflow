@@ -23,9 +23,10 @@ interface CashFlowWidgetData {
 interface CashFlowWidgetProps {
   isLoading: boolean;
   data?: CashFlowWidgetData;
+  periodLabel?: string;
 }
 
-export function CashFlowWidget({ isLoading, data }: CashFlowWidgetProps) {
+export function CashFlowWidget({ isLoading, data, periodLabel = 'Last 30 days' }: CashFlowWidgetProps) {
   if (isLoading) {
     return (
       <div className="bg-bg-secondary border border-border-subtle rounded-xl p-6 h-full min-h-[300px]">
@@ -45,7 +46,7 @@ export function CashFlowWidget({ isLoading, data }: CashFlowWidgetProps) {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-base font-semibold text-fg-primary">Cash Flow</h2>
-          <p className="text-xs text-fg-secondary mt-1">This month · {data?.currency ?? '—'}</p>
+          <p className="text-xs text-fg-secondary mt-1">{periodLabel} · {data?.currency ?? '—'}</p>
         </div>
         <Link
           href="/personal"
@@ -102,7 +103,7 @@ export function CashFlowWidget({ isLoading, data }: CashFlowWidgetProps) {
           {!hasActivity && otherCurrencies.length === 0 && (
             <div className="flex items-center gap-2 text-xs text-fg-secondary mt-4">
               <Receipt size={14} />
-              No posted income or expenses recorded this month.
+              No posted income or expenses recorded in this period.
             </div>
           )}
         </>
@@ -110,7 +111,7 @@ export function CashFlowWidget({ isLoading, data }: CashFlowWidgetProps) {
         <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
           <Receipt className="text-fg-secondary mb-3" size={28} />
           <p className="text-sm font-medium text-fg-primary mb-1">Cash flow unavailable</p>
-          <p className="text-xs text-fg-secondary">Your monthly cash flow summary could not be loaded.</p>
+          <p className="text-xs text-fg-secondary">Your cash flow summary for this period could not be loaded.</p>
         </div>
       )}
 

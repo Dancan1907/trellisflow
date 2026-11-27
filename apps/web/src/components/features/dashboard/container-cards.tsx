@@ -109,9 +109,9 @@ export function ContainerCards({
             aria-label={`Portfolio allocation in ${reportingCurrency}`}
           >
             <div className="absolute inset-0 m-auto w-[4.75rem] h-[4.75rem] px-1 bg-bg-secondary rounded-full flex flex-col items-center justify-center overflow-hidden">
-              <span className="text-[10px] leading-tight text-fg-secondary">Total</span>
-              <span className="w-full text-center text-[9px] leading-tight font-bold text-fg-primary break-all">
-                <AmountDisplay value={primary.total} currency={reportingCurrency} className="text-[9px] whitespace-normal break-all" />
+              <span className="text-xs leading-tight text-fg-secondary">Total</span>
+              <span className="w-full text-center text-[11px] leading-tight font-bold text-fg-primary break-all">
+                <AmountDisplay value={primary.total} currency={reportingCurrency} className="text-[11px] whitespace-normal break-all" />
               </span>
             </div>
           </div>
@@ -125,14 +125,14 @@ export function ContainerCards({
               <div key={item.label} className="flex items-center justify-between gap-2 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.color}`} />
-                  <span className="text-xs text-fg-secondary truncate">{item.label}</span>
+                  <span className="text-sm text-fg-secondary truncate">{item.label}</span>
                 </div>
                 <div className="text-right min-w-0 max-w-full">
-                  <span className="block text-xs font-semibold text-fg-primary">
+                  <span className="block text-sm font-semibold text-fg-primary tabular-nums">
                     {getPercent(item.value)}%
                   </span>
-                  <span className="block max-w-full text-[10px] leading-tight text-fg-secondary whitespace-normal break-words">
-                    <AmountDisplay value={item.value} currency={reportingCurrency} className="text-[10px] whitespace-normal break-words" />
+                  <span className="block max-w-full text-xs leading-tight text-fg-secondary whitespace-normal break-words">
+                    <AmountDisplay value={item.value} currency={reportingCurrency} className="text-xs whitespace-normal break-words" />
                   </span>
                 </div>
               </div>

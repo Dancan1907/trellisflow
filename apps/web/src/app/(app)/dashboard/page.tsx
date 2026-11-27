@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Calendar, ArrowRight, TrendingUp, PlusCircle, BarChart3, Wallet, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth/auth-store';
@@ -15,7 +16,16 @@ import { InsightsWidget } from '@/components/features/dashboard/insights-widget'
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const { data: summary, isLoading: isLoadingSummary } = useDashboardSummary();
+  const [selectedDays, setSelectedDays] = useState(30);
+  const [isRangeMenuOpen, setIsRangeMenuOpen] = useState(false);
+  const rangeOptions = [
+    { days: 7, label: 'Last 7 days' },
+    { days: 30, label: 'Last 30 days' },
+    { days: 90, label: 'Last 90 days' },
+    { days: 365, label: 'Last 12 months' },
+  ];
+  const selectedRangeLabel = rangeOptions.find((option) => option.days === selectedDays)?.label ?? 'Last 30 days';
+  const { data: summary, isLoading: isLoadingSummary } = useDashboardSummary(selectedDays);
   const { data: containers, isLoading: isLoadingContainers } = useDashboardContainers();
   const { data: insights, isLoading: isLoadingInsights } = useDashboardInsights();
 
@@ -33,10 +43,44 @@ export default function DashboardPage() {
             Here&apos;s your financial snapshot for today.
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-bg-secondary text-sm font-medium text-fg-secondary hover:text-fg-primary transition-colors w-fit">
-          <Calendar size={16} />
-          Last 30 days
-        </button>
+        <div className="relative w-fit">
+          <button
+            type="button"
+            aria-label="Filter cash flow activity period"
+            title="Filter cash flow activity period"
+            aria-haspopup="listbox"
+            aria-expanded={isRangeMenuOpen}
+            onClick={() => setIsRangeMenuOpen((open) => !open)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-bg-secondary text-sm font-medium text-fg-secondary hover:text-fg-primary transition-colors"
+          >
+            <Calendar size={16} />
+            {selectedRangeLabel}
+            <span aria-hidden="true" className="text-xs">▾</span>
+          </button>
+          {isRangeMenuOpen && (
+            <div
+              role="listbox"
+              aria-label="Dashboard activity period"
+              className="absolute right-0 top-full z-30 mt-2 min-w-44 overflow-hidden rounded-xl border border-border-subtle bg-bg-secondary p-1 shadow-xl"
+            >
+              {rangeOptions.map((option) => (
+                <button
+                  key={option.days}
+                  type="button"
+                  role="option"
+                  aria-selected={selectedDays === option.days}
+                  onClick={() => {
+                    setSelectedDays(option.days);
+                    setIsRangeMenuOpen(false);
+                  }}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-bg-tertiary ${selectedDays === option.days ? 'bg-accent-primary/10 text-accent-primary font-semibold' : 'text-fg-secondary'}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Grid Layout */}
@@ -53,7 +97,7 @@ export default function DashboardPage() {
               containers={containers}
               reportingCurrency={summary?.netWorth.currency ?? 'KES'}
             />
-            <CashFlowWidget isLoading={isLoadingSummary} data={summary?.cashFlow} />
+            <CashFlowWidget isLoading={isLoadingSummary} data={summary?.cashFlow} periodLabel={selectedRangeLabel} />
           </div>
 
           {/* Useful shortcuts fill the dashboard's lower-left space without duplicating insights. */}

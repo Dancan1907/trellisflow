@@ -46,6 +46,10 @@ describe('DashboardService (Unit)', () => {
       expect(result.cashFlow.income).toBe(5000);
       expect(result.cashFlow.expenses).toBe(2000);
       expect(result.cashFlow.net).toBe(3000);
+      const query = mockPrisma.transaction.findMany.mock.calls[0][0];
+      expect(query.where.date.gte).toBeInstanceOf(Date);
+      expect(query.where.date.lte).toBeInstanceOf(Date);
+      expect(query.where.date.gte.getTime()).toBeLessThan(query.where.date.lte.getTime());
     });
 
     it('keeps dashboard cash flow grouped by currency and excludes pending rows', async () => {
@@ -74,6 +78,18 @@ describe('DashboardService (Unit)', () => {
       expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
         where: expect.objectContaining({ status: { in: ['POSTED', 'RECONCILED'] } }),
       }));
+    });
+
+    it('uses the selected recent activity window for cash flow', async () => {
+      mockPrisma.netWorthSnapshot.findFirst.mockResolvedValue(null);
+      mockPrisma.transaction.findMany.mockResolvedValue([]);
+
+      await service.getSummary('u1', 7);
+
+      const query = mockPrisma.transaction.findMany.mock.calls[0][0];
+      const elapsed = query.where.date.lte.getTime() - query.where.date.gte.getTime();
+      expect(elapsed).toBeGreaterThan(6 * 24 * 60 * 60 * 1000);
+      expect(elapsed).toBeLessThan(7 * 24 * 60 * 60 * 1000);
     });
 
     it('should handle no snapshot gracefully', async () => {

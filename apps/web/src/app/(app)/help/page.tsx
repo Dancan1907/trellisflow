@@ -9,18 +9,18 @@ import {
   Building2,
   Wallet,
   Target,
-  CreditCard,
   BarChart3,
   ShieldCheck,
   PlayCircle,
-  HelpCircle,
   Box,
   PieChart,
   Lock,
+  Sparkles,
+  MessageSquareText,
+  FileText,
+  PanelLeftClose,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/auth/auth-store';
-import { Logo } from '@/components/shared/logo';
 
 const SECTIONS = [
   {
@@ -30,6 +30,7 @@ const SECTIONS = [
       { id: 'introduction', label: 'Introduction to TrellisFlow' },
       { id: 'dashboard', label: 'Your Dashboard' },
       { id: 'containers', label: 'Understanding Containers' },
+      { id: 'navigation', label: 'Sidebar & navigation' },
     ],
   },
   {
@@ -54,29 +55,32 @@ const SECTIONS = [
     title: 'Analyze & Manage',
     icon: BarChart3,
     items: [
-      { id: 'reports', label: 'Reports & Insights' },
-      { id: 'security', label: 'Security & Privacy' },
+      { id: 'reports', label: 'Reports, forecasts & insights' },
     ],
+  },
+  {
+    title: 'AI & Intelligence',
+    icon: Sparkles,
+    items: [
+      { id: 'money-copilot', label: 'Money Copilot' },
+      { id: 'help-assistant', label: 'RAG Help Assistant' },
+      { id: 'ai-transactions', label: 'AI transaction drafting' },
+    ],
+  },
+  {
+    title: 'Account & Privacy',
+    icon: ShieldCheck,
+    items: [{ id: 'security', label: 'Security & Privacy' }],
   },
 ];
 
 export default function HelpPage() {
   const [activeSection, setActiveSection] = useState('introduction');
-  const isAuthenticated = Boolean(useAuthStore((state) => state.token));
 
   return (
     <>
-      {!isAuthenticated && (
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border-subtle bg-bg-primary px-5 md:px-8">
-          <Logo />
-          <nav className="flex items-center gap-3" aria-label="Public navigation">
-            <Link href="/login" className="text-sm font-medium text-fg-secondary hover:text-fg-primary">Log in</Link>
-            <Link href="/signup" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-semibold text-white">Get started</Link>
-          </nav>
-        </header>
-      )}
       <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">
-      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">{isAuthenticated ? "Use the Help Assistant to ask questions and find the right TrellisFlow page." : "Sign in to unlock the complete user guide and the Help Assistant."}</p>{!isAuthenticated && <Link href="/login" className="mt-2 inline-flex text-sm font-semibold text-accent-primary">Sign in →</Link>}</section>
+      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">Use the Help Assistant to ask questions and find the right TrellisFlow page.</p></section>
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-64 shrink-0">
         <div className="sticky top-24 space-y-6">
@@ -85,7 +89,7 @@ export default function HelpPage() {
               User Guide
             </h2>
             <nav className="space-y-4">
-              {SECTIONS.filter((section) => isAuthenticated || section.title === 'Getting Started').map((section) => (
+              {SECTIONS.map((section) => (
                 <div key={section.title}>
                   <div className="flex items-center gap-2 px-2 mb-2">
                     <section.icon size={14} className="text-fg-tertiary" />
@@ -94,7 +98,7 @@ export default function HelpPage() {
                     </h3>
                   </div>
                   <ul className="space-y-1">
-                    {section.items.filter((item) => isAuthenticated || ['introduction', 'dashboard', 'containers'].includes(item.id)).map((item) => (
+                    {section.items.map((item) => (
                       <li key={item.id}>
                         <a
                           href={`#${item.id}`}
@@ -116,14 +120,14 @@ export default function HelpPage() {
           </div>
 
           {/* Quick Actions */}
-          {isAuthenticated && <div className="bg-bg-secondary border border-border-subtle rounded-xl p-4 space-y-2">
+          <div className="bg-bg-secondary border border-border-subtle rounded-xl p-4 space-y-2">
             <button
               onClick={() => (window.location.href = '/dashboard?tour=true')}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-fg-primary bg-bg-tertiary rounded-md hover:bg-border-subtle transition-colors"
             >
               <PlayCircle size={16} className="text-accent-primary" /> Restart Quick Tour
             </button>
-          </div>}
+          </div>
         </div>
       </aside>
 
@@ -146,8 +150,7 @@ export default function HelpPage() {
             together into a single, intelligent dashboard.
           </p>
           <p className="text-fg-secondary leading-relaxed">
-            This guide will walk you through every feature of the platform, explaining not just{' '}
-            <em>how</em> to use it, but <em>why</em> it matters for your financial health.
+            This guide covers the full product: recording transactions, managing personal and business finances, tracking investments, planning cash flow, and using AI-assisted tools safely. AI features may be unavailable when disabled by the account environment.
           </p>
         </section>
 
@@ -160,21 +163,17 @@ export default function HelpPage() {
             <h2 className="text-xl font-display font-semibold text-fg-primary">Your Dashboard</h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            The Dashboard is your command center. The moment you log in, you get a snapshot of your
-            entire net worth, updated in real-time based on the data in your containers.
+            The Dashboard is your command center. The moment you log in, you get a snapshot of your recorded net worth and a view of cash flow. Net worth uses the latest saved snapshot; cash flow can be filtered by a recent activity period. The snapshot may lag behind recent account changes until it is recomputed.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
-              <strong>Total Net Worth:</strong> The sum of all your assets minus your liabilities
-              across every container.
+              <strong>Total Net Worth:</strong> Your reporting-currency assets minus liabilities, using the latest saved snapshot. Amounts in other currencies are presented separately rather than silently converted.
             </li>
             <li>
-              <strong>Cash Flow:</strong> Shows how much money came in versus how much went out this
-              month.
+              <strong>Cash Flow:</strong> Shows posted and reconciled income and expenses for the selected period and reporting currency. Other currencies remain separate.
             </li>
             <li>
-              <strong>Portfolio Overview:</strong> A visual breakdown of how your wealth is
-              distributed between Personal, Investments, and Businesses.
+              <strong>Portfolio Overview:</strong> A visual breakdown of the reporting-currency net worth across Personal, Investments, and Businesses. Additional currencies are shown separately and are not silently converted.
             </li>
           </ul>
         </section>
@@ -192,8 +191,9 @@ export default function HelpPage() {
           <p className="text-fg-secondary leading-relaxed mb-4">
             A <strong>Container</strong> is simply a bucket that holds a specific type of financial
             data. By keeping your Personal money, Investments, and Business finances in separate
-            containers, TrellisFlow can give you distinct reports for each while still rolling them
-            all up into a single Net Worth figure.
+            containers, TrellisFlow can give you distinct reports for each while still bringing
+            eligible balances into the reporting-currency net-worth view. Other currencies remain
+            visible in separate totals.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
@@ -210,8 +210,23 @@ export default function HelpPage() {
 
         <hr className="border-border-subtle" />
 
-        {isAuthenticated && (
-          <>
+        <section id="navigation" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <PanelLeftClose className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">Sidebar & navigation</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            TrellisFlow's sidebar can be expanded to show section names and menu labels, or collapsed to an icon-only rail to give the current page more room. On desktop and tablet, use the sidebar control in the top bar to switch between these layouts. Your preference is saved in this browser and restored on your next visit.
+          </p>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            In the compact layout, hover over or focus a navigation icon to see its label. Select an icon to open that area. On phones, use the menu button in the top bar to open the navigation drawer; selecting a destination closes the drawer.
+          </p>
+          <p className="text-sm text-fg-tertiary">The compact setting changes the navigation width, not your permissions or the features available to your account.</p>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        {/* Signed-in product guide. */}
         {/* Personal Finance */}
         <section id="personal" className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-4">
@@ -251,18 +266,15 @@ export default function HelpPage() {
             <h2 className="text-xl font-display font-semibold text-fg-primary">Investments</h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            The <strong>Investments</strong> container is your portfolio tracker. It allows you to
-            monitor stocks, ETFs, crypto, and real estate, calculating your unrealized gains
-            automatically.
+            The <strong>Investments</strong> container is your portfolio tracker. It allows you to manage supported holdings and review recorded investment activity and holding values. Unrealized changes in value are distinct from realized gains and income events.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>Add a holding (e.g., AAPL or Bitcoin) with the quantity and cost basis.</li>
             <li>
-              Enable <strong>Auto-Pricing</strong> to fetch live market prices from our data
-              providers.
+              Where a supported market-data source and instrument are available, enable <strong>Auto-Pricing</strong> to refresh market prices. Availability and freshness depend on the configured provider.
             </li>
             <li>
-              Record events like Buys, Sells, and Dividends to keep your portfolio history accurate.
+              Record events such as Buys, Sells, Dividends, Interest, Contributions, and Withdrawals to keep your portfolio history accurate. Interest and dividend events are recorded as income linked to the holding and its investment account. Keep realized gains separate from unrealized changes in holding value.
             </li>
           </ul>
         </section>
@@ -277,7 +289,7 @@ export default function HelpPage() {
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
             Track your business finances side-by-side with your personal wealth. You can run Profit
-            & Loss (P&L) reports and monitor your Cash Runway to ensure your business stays healthy.
+            & Loss (P&L) reports and review an estimated cash runway based on the records available.
           </p>
           <p className="text-fg-secondary leading-relaxed">
             If your business operates on an external system, you can convert it to an{' '}
@@ -308,8 +320,7 @@ export default function HelpPage() {
             <div id="debt" className="scroll-mt-24">
               <h3 className="text-sm font-bold text-fg-primary mb-1">Debt Payoff</h3>
               <p className="text-sm text-fg-secondary">
-                Simulate Snowball and Avalanche strategies to see exactly when you will be debt-free
-                and how much interest you can save.
+                Simulate Snowball and Avalanche strategies to estimate a debt-free date and compare projected interest costs using the assumptions you enter.
               </p>
             </div>
           </div>
@@ -326,15 +337,71 @@ export default function HelpPage() {
             </h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            The <strong>Reports</strong> section gives you deep, historical views of your financial
-            life. You can generate Net Worth statements, view Cash Flow trends, and analyze your
-            Asset Allocation.
+            The <strong>Reports</strong> section gives you historical views of your financial life. You can review Net Worth statements, Cash Flow statements, and Allocation reports. The Cash-flow Forecast projects eligible liquid-account balances using deterministic rules, posted/reconciled history, pending movements, recurring rules, and known future-dated transactions. It supports scenarios, warnings, indicative uncertainty ranges, and backtesting where enough history exists. It is an estimate, not a guarantee; currencies are forecast separately.
           </p>
           <p className="text-fg-secondary leading-relaxed mb-4">
             Meanwhile, the <strong>Insights</strong> engine runs silently in the background,
             scanning your data to alert you to unusual spending, budget overruns, or opportunities
             to optimize your wealth.
           </p>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        {/* AI & Intelligence */}
+        <section id="money-copilot" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <Sparkles className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">Money Copilot</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            Money Copilot is an AI-powered financial explainer for your signed-in TrellisFlow data. Ask questions in natural language about recorded balances, cash flow, spending categories, investments, business performance, and supported what-if scenarios.
+          </p>
+          <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2 mb-4">
+            <li>It uses financial context assembled by the backend for your account and explains the facts it receives.</li>
+            <li>It keeps currencies separate and distinguishes saved snapshots, current balances, recorded transactions, unrealized gains, and estimates.</li>
+            <li>What-if calculations are deterministic sensitivities, not forecasts, probabilities, or personalized financial advice.</li>
+            <li>Chat analysis is read-only. A separate, limited income/expense workflow can create a preview; a financial record is written only after you review and explicitly confirm it.</li>
+            <li>It cannot make transfers, change accounts, edit holdings, or perform arbitrary financial actions.</li>
+          </ul>
+          <p className="text-sm text-fg-tertiary">Money Copilot must be enabled by the application operator. If it is not visible in your navigation, it may not be enabled for this deployment.</p>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        <section id="help-assistant" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <MessageSquareText className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">RAG Help Assistant</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            The Help Assistant answers product-usage questions by retrieving relevant passages from approved TrellisFlow documentation. This retrieval-augmented generation (RAG) process grounds answers in the Help Centre rather than searching your private financial records.
+          </p>
+          <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
+            <li>Ask how a feature works or where to find a workflow.</li>
+            <li>Review the source references attached to an answer to see which approved guide sections support it.</li>
+            <li>If the approved documentation does not support an answer, the assistant should say it cannot verify the answer instead of inventing product behavior.</li>
+            <li>It is informational only; it cannot create transactions or change account settings.</li>
+          </ul>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        <section id="ai-transactions" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <FileText className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">AI-assisted transaction drafting</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            Where enabled, natural-language transaction entry and M-Pesa message parsing can turn text you provide into a draft. The AI helps extract details; it does not make the draft a saved financial record.
+          </p>
+          <ol className="list-decimal list-inside text-fg-secondary space-y-2 ml-2">
+            <li>Paste or enter the transaction text in the relevant workflow.</li>
+            <li>Review the proposed amount, date, description, account, category, and transaction type.</li>
+            <li>Correct anything that was parsed incorrectly.</li>
+            <li>Confirm only when the details are accurate. Repeated confirmation requests are protected against duplicate writes when the same confirmation key and payload are retried.</li>
+          </ol>
+          <p className="mt-3 text-sm text-fg-tertiary">Never paste passwords, API keys, access tokens, or other secrets into an AI feature. Treat all extracted details as suggestions that require review.</p>
         </section>
 
         <hr className="border-border-subtle" />
@@ -348,7 +415,7 @@ export default function HelpPage() {
             </h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            Your financial data is highly sensitive. TrellisFlow is built with security at its core.
+            Your financial data is sensitive. Use a strong, unique password, keep your sign-in credentials private, and review available account security controls regularly.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
@@ -362,13 +429,10 @@ export default function HelpPage() {
               PDF Net Worth statement.
             </li>
             <li>
-              <strong>Audit Logs:</strong> Every single change (create, update, delete) is logged.
-              You can view this history to see exactly when a transaction or account was modified.
+              <strong>Audit Logs:</strong> Available audit history helps you review recorded changes and investigate account activity. The events shown depend on the audit coverage implemented for each workflow.
             </li>
           </ul>
         </section>
-          </>
-        )}
       </main>
       </div>
     </>
