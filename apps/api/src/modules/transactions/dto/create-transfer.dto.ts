@@ -24,6 +24,11 @@ export class CreateTransferDto {
   @Length(1, 200)
   description: string;
 
+  @ApiPropertyOptional({ description: 'Per-user idempotency key for safe transfer retries' })
+  @IsUUID()
+  @IsOptional()
+  idempotencyKey?: string;
+
   @ApiPropertyOptional({ example: 'Monthly savings' })
   @IsString()
   @IsOptional()
