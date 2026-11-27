@@ -67,28 +67,28 @@ export function OnboardingManager() {
     {
       target: '#tour-personal',
       content:
-        'The Personal section is where you track your everyday money. Add your bank accounts, mobile money, and record daily transactions here.',
+        'The Personal section is where you track everyday money. Add accounts, record transactions, or use natural-language and M-Pesa parsing to prepare a draft. Always review the extracted details before confirming.',
       placement: 'right',
       skipBeacon: true,
     },
     {
       target: '#tour-investments',
       content:
-        'In Investments, you can track your portfolio. Add stocks, crypto, or real estate, and monitor your unrealized gains.',
+        'In Investments, manage holdings and record buys, sells, dividends, interest, contributions, and withdrawals. Keep realized gains and income distinct from unrealized changes in value.',
       placement: 'right',
       skipBeacon: true,
     },
     {
       target: '#tour-businesses',
       content:
-        'Managing a business? Use this section to track business accounts, calculate P&L, and monitor cash runway.',
+        'Manage business accounts and records, review currency-separated profit and loss, and monitor historical cash-runway estimates. Different currencies are not silently combined.',
       placement: 'right',
       skipBeacon: true,
     },
     {
       target: '#tour-plan',
       content:
-        'The Plan section helps you look forward. Set up budgets, create savings goals, and simulate debt payoff strategies.',
+        'The Plan section helps you look forward with budgets, savings goals, and debt payoff strategies. Reports also include a deterministic cash-flow forecast based on recorded history and known future activity.',
       placement: 'right',
       skipBeacon: true,
     },
