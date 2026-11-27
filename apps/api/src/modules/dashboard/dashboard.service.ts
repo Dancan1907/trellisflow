@@ -107,6 +107,27 @@ export class DashboardService {
       orderBy: { createdAt: 'asc' },
     });
 
+    const investmentContainerIds = containers
+      .filter((container) => container.type === 'INVESTMENT')
+      .map((container) => container.id);
+    const holdings = investmentContainerIds.length
+      ? await this.prisma.holding.findMany({
+          where: {
+            userId,
+            containerId: { in: investmentContainerIds },
+            status: 'OPEN',
+            deletedAt: null,
+          },
+          select: { containerId: true, currency: true, currentValueTotal: true },
+        })
+      : [];
+    const holdingsByContainer = new Map<string, Array<{ currency: string; currentValueTotal: number }>>();
+    for (const holding of holdings) {
+      const items = holdingsByContainer.get(holding.containerId) ?? [];
+      items.push({ currency: holding.currency, currentValueTotal: Number(holding.currentValueTotal) });
+      holdingsByContainer.set(holding.containerId, items);
+    }
+
     return containers.map((container) => {
       const balances = new Map<string, number>();
       if (container.type === 'EXTERNAL_BUSINESS') {
@@ -123,6 +144,13 @@ export class DashboardService {
           const signedBalance = account.category === 'ASSET' ? balance : -balance;
           balances.set(account.currency, (balances.get(account.currency) ?? 0) + signedBalance);
         }
+      }
+
+      for (const holding of holdingsByContainer.get(container.id) ?? []) {
+        balances.set(
+          holding.currency,
+          (balances.get(holding.currency) ?? 0) + holding.currentValueTotal,
+        );
       }
 
       const byCurrency = Array.from(balances.entries()).map(([currency, netWorth]) => ({
