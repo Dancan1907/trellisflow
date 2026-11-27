@@ -453,6 +453,7 @@ export class BusinessesService {
         userId,
         containerId: container.id,
         type: { in: ['INCOME', 'EXPENSE'] },
+        status: { in: ['POSTED', 'RECONCILED'] },
         deletedAt: null,
         date: { gte: this.addDays(from, -1), lte: this.addDays(to, 1) },
       },
@@ -547,6 +548,7 @@ export class BusinessesService {
         userId,
         containerId: container.id,
         type: 'EXPENSE',
+        status: { in: ['POSTED', 'RECONCILED'] },
         deletedAt: null,
         // Same DATE/timezone caveat as getPnl: widen, then filter by date-only.
         date: { gte: this.addDays(from, -1), lte: this.addDays(to, 1) },
