@@ -488,6 +488,7 @@ export class MoneyCopilotDataService {
           return {
             name: business.name, type: business.type, currency: business.currency,
             netWorth: netWorth.netWorth,
+            netWorthByCurrency: netWorth.byCurrency ?? [],
             note: 'External business net worth comes from its latest saved summary; transaction-level P&L and runway are not available here.',
           };
         }
@@ -498,6 +499,7 @@ export class MoneyCopilotDataService {
         return {
           name: business.name, type: business.type, currency: business.currency,
           netWorth: netWorth.netWorth,
+          netWorthByCurrency: netWorth.byCurrency ?? [],
           profitAndLoss: {
             from: pnl.from, to: pnl.to, income: pnl.totalIncome,
             expenses: pnl.totalExpenses, netProfit: pnl.netProfit,
