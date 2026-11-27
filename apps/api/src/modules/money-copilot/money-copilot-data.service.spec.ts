@@ -44,6 +44,43 @@ describe('MoneyCopilotDataService', () => {
     expect(JSON.stringify(result)).not.toContain('notes');
   });
 
+  it('discloses when the account overview reaches its safety cap', async () => {
+    prisma.account.findMany.mockResolvedValue(Array.from({ length: 101 }, (_, index) => ({
+      name: 'Account ' + index,
+      category: 'ASSET',
+      accountType: 'CHECKING',
+      currency: 'KES',
+      currentBalance: 100,
+      container: { name: 'Personal', type: 'PERSONAL', status: 'ACTIVE' },
+    })));
+
+    const result = await service.buildContext('user-1', 'Summarize my finances');
+
+    expect(result.dataLimitations).toContain(
+      'The account-balance overview reached its 100-account safety cap and may be incomplete.',
+    );
+    expect(prisma.account.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 101 }));
+  });
+
+  it('discloses when portfolio totals reach the holding safety cap', async () => {
+    prisma.holding.findMany.mockResolvedValue(Array.from({ length: 5001 }, (_, index) => ({
+      name: 'Holding ' + index,
+      symbol: null,
+      assetClass: 'STOCK',
+      currency: 'KES',
+      costBasisTotal: 10,
+      currentValueTotal: 12,
+    })));
+
+    const result = await service.buildContext('user-1', 'Analyze my investment portfolio');
+    const investments = result.investments as any;
+
+    expect(investments.riskLimitations).toContain(
+      'The portfolio analysis reached its 5,000-holding safety cap; totals and allocations may be incomplete.',
+    );
+    expect(prisma.holding.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 5001 }));
+  });
+
   it('only requests investment records when the question concerns investments', async () => {
     await service.buildContext('user-1', 'How is my investment portfolio doing?');
 
