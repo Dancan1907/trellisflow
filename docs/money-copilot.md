@@ -22,7 +22,7 @@ The backend builds context for the authenticated user only:
 - Recent transaction descriptions and a bounded description-only transaction lookup.
 - Expense category analysis for supported date ranges.
 - Open investment holdings, cost basis, current recorded value, unrealized gain and return, allocation and concentration indicators grouped by currency; recorded realized sale gains/losses, dividend/interest income, contributions and withdrawals are reported separately by currency.
-- Internal business profit and loss and a historical 90-day cash-runway estimate, grouped by currency; external businesses use their latest saved summary.
+- Internal business net worth, profit and loss, and a historical 90-day cash-runway estimate, grouped by currency; external businesses use their latest saved summary.
 - Supported deterministic what-if sensitivities for personal expense reduction, internal-business revenue/expense changes and uniform portfolio-value changes.
 
 PostgreSQL `DATE` filters are widened and then filtered by ISO date keys to avoid database-session-timezone boundary issues. Transfers are excluded from income and expense aggregates. Different currencies are never added together or converted, including within a single business container.
