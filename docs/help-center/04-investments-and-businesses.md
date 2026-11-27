@@ -10,7 +10,7 @@ visibility: authenticated
 
 Open **Investments** (`/investments`) to manage investment holdings and investment events. Holdings represent positions associated with investment accounts. Investment events record activity that changes or explains a position.
 
-Keep quantities, cost information, dates, currencies and event types accurate. Events include buys, sells, dividends, interest, contributions and withdrawals. Interest and dividend events are linked to a holding and its account; they record income and update that account balance. Investment values and performance views depend on the records and valuation information available in TrellisFlow. Do not interpret unrealized gains as realized cash profit.
+Keep quantities, cost information, dates, currencies and event types accurate. Events include buys, sells, dividends, interest, contributions and withdrawals. Interest and dividend events are linked to a holding and its account; they record income and update that account balance. Open holding values are included separately from the linked investment account's remaining cash balance in consolidated net-worth snapshots. Investment values and performance views depend on the records and valuation information available in TrellisFlow. Do not interpret unrealized gains as realized cash profit.
 
 TrellisFlow's product help is informational and does not provide personalized investment, tax or legal advice.
 
