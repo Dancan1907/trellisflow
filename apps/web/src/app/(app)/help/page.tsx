@@ -204,7 +204,7 @@ export default function HelpPage() {
             A <strong>Container</strong> is simply a bucket that holds a specific type of financial
             data. By keeping your Personal money, Investments, and Business finances in separate
             containers, TrellisFlow can give you distinct reports for each while still rolling them
-            all up into a single Net Worth figure.
+            contribute to the reporting-currency net-worth view, while other currencies remain visible in separate totals.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
@@ -300,7 +300,7 @@ export default function HelpPage() {
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
             Track your business finances side-by-side with your personal wealth. You can run Profit
-            & Loss (P&L) reports and monitor your Cash Runway to ensure your business stays healthy.
+            & Loss (P&L) reports and review an estimated cash runway based on the records available.
           </p>
           <p className="text-fg-secondary leading-relaxed">
             If your business operates on an external system, you can convert it to an{' '}
