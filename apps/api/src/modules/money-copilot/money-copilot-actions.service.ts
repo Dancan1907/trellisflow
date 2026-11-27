@@ -136,7 +136,7 @@ export class MoneyCopilotActionsService {
     }
 
     const payload = existing.payload as unknown as ActionPayload;
-    const digest = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+    const digest = createHash('sha256').update(serializeActionPayload(payload)).digest('hex');
     if (digest !== existing.payloadHash) throw new ConflictException('The action preview has changed. Create a new preview.');
 
     try {
