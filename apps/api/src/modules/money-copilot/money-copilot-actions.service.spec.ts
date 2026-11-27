@@ -129,6 +129,7 @@ describe('MoneyCopilotActionsService', () => {
     expect(result).toMatchObject({ status: 'CONFIRMED', replayed: true });
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(balances.applyTransactionEffect).not.toHaveBeenCalled();
+    expect(snapshots.computeAndSaveForUser).toHaveBeenCalledWith('user-1');
   });
 
   it('rejects an expired preview', async () => {
