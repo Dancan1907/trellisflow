@@ -25,13 +25,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Restore the user's desktop sidebar preference without changing server-rendered markup.
   useEffect(() => {
-    setIsSidebarCollapsed(window.localStorage.getItem('trellisflow-sidebar-collapsed') === 'true');
+    try {
+      setIsSidebarCollapsed(window.localStorage.getItem('trellisflow-sidebar-collapsed') === 'true');
+    } catch {
+      // The sidebar remains usable with an in-memory preference if storage is unavailable.
+    }
   }, []);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed((current) => {
       const next = !current;
-      window.localStorage.setItem('trellisflow-sidebar-collapsed', String(next));
+      try {
+        window.localStorage.setItem('trellisflow-sidebar-collapsed', String(next));
+      } catch {
+        // Keep the current-session toggle working when browser storage is unavailable.
+      }
       return next;
     });
   };
