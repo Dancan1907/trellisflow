@@ -181,8 +181,7 @@ export default function HelpPage() {
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
-              <strong>Total Net Worth:</strong> The sum of all your assets minus your liabilities
-              across every container.
+              <strong>Total Net Worth:</strong> Your reporting-currency assets minus liabilities, using the latest saved snapshot. Amounts in other currencies are presented separately rather than silently converted.
             </li>
             <li>
               <strong>Cash Flow:</strong> Shows posted and reconciled income and expenses for the selected period and reporting currency. Other currencies remain separate.
@@ -280,15 +279,12 @@ export default function HelpPage() {
             <h2 className="text-xl font-display font-semibold text-fg-primary">Investments</h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            The <strong>Investments</strong> container is your portfolio tracker. It allows you to
-            monitor stocks, ETFs, crypto, and real estate, calculating your unrealized gains
-            automatically.
+            The <strong>Investments</strong> container is your portfolio tracker. It allows you to manage supported holdings and review recorded investment activity and holding values. Unrealized changes in value are distinct from realized gains and income events.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>Add a holding (e.g., AAPL or Bitcoin) with the quantity and cost basis.</li>
             <li>
-              Enable <strong>Auto-Pricing</strong> to fetch live market prices from our data
-              providers.
+              Where a supported market-data source and instrument are available, enable <strong>Auto-Pricing</strong> to refresh market prices. Availability and freshness depend on the configured provider.
             </li>
             <li>
               Record events such as Buys, Sells, Dividends, Interest, Contributions, and Withdrawals to keep your portfolio history accurate. Interest and dividend events are recorded as income linked to the holding and its investment account. Keep realized gains separate from unrealized changes in holding value.
@@ -337,8 +333,7 @@ export default function HelpPage() {
             <div id="debt" className="scroll-mt-24">
               <h3 className="text-sm font-bold text-fg-primary mb-1">Debt Payoff</h3>
               <p className="text-sm text-fg-secondary">
-                Simulate Snowball and Avalanche strategies to see exactly when you will be debt-free
-                and how much interest you can save.
+                Simulate Snowball and Avalanche strategies to estimate a debt-free date and compare projected interest costs using the assumptions you enter.
               </p>
             </div>
           </div>
@@ -433,7 +428,7 @@ export default function HelpPage() {
             </h2>
           </div>
           <p className="text-fg-secondary leading-relaxed mb-4">
-            Your financial data is highly sensitive. TrellisFlow is built with security at its core.
+            Your financial data is sensitive. Use a strong, unique password, keep your sign-in credentials private, and review available account security controls regularly.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
@@ -447,8 +442,7 @@ export default function HelpPage() {
               PDF Net Worth statement.
             </li>
             <li>
-              <strong>Audit Logs:</strong> Every single change (create, update, delete) is logged.
-              You can view this history to see exactly when a transaction or account was modified.
+              <strong>Audit Logs:</strong> Available audit history helps you review recorded changes and investigate account activity. The events shown depend on the audit coverage implemented for each workflow.
             </li>
           </ul>
         </section>
