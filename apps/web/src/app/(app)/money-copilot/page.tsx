@@ -113,8 +113,8 @@ export default function MoneyCopilotPage() {
       <section className="rounded-xl border border-border-subtle bg-bg-secondary p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-fg-primary">Confirmed transaction actions</h2>
-            <p className="mt-1 text-xs text-fg-secondary">Prepare an income or expense, review every detail, then confirm it explicitly.</p>
+            <h2 className="text-sm font-semibold text-fg-primary">Record a transaction with confirmation</h2>
+            <p className="mt-1 text-xs text-fg-secondary">Prepare an income or expense, review the exact details, then confirm to save it.</p>
           </div>
           <button type="button" onClick={() => { setShowActionForm((value) => !value); setActionPreview(null); setActionMessage(''); }} className="flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm text-fg-primary hover:bg-bg-tertiary">
             <Plus size={15} /> {showActionForm ? 'Close' : 'Prepare transaction'}
