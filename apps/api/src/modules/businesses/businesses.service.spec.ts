@@ -106,6 +106,9 @@ describe('BusinessesService (Unit)', () => {
         totalLiabilities: 500,
         netWorth: 500,
         currency: 'KES',
+        byCurrency: [{
+          currency: 'KES', totalAssets: 1000, totalLiabilities: 500, netWorth: 500,
+        }],
       });
     });
   });
