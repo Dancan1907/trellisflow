@@ -55,6 +55,11 @@ export class CreateTransactionDto {
   @IsOptional()
   receiptImageHash?: string;
 
+  @ApiPropertyOptional({ description: 'Per-user idempotency key for safe request retries' })
+  @IsUUID()
+  @IsOptional()
+  idempotencyKey?: string;
+
   @ApiPropertyOptional({ example: 'Weekly shopping' })
   @IsString()
   @IsOptional()
