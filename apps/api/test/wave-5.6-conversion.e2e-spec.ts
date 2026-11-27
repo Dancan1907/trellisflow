@@ -48,6 +48,7 @@ describe('Wave 5.6 — Internal → External Conversion (E2E)', () => {
 
     accessToken = res.body.accessToken;
     userId = res.body.user.id;
+    await prisma.user.update({ where: { id: userId }, data: { reportingCurrency: 'KES' } });
     expect(accessToken).toBeDefined();
     expect(userId).toBeDefined();
   });

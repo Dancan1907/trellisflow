@@ -31,74 +31,69 @@ export class TransactionsService {
     dto: CreateTransactionDto,
     source: TransactionSource = 'MANUAL',
   ) {
-    // 1. Verify the account exists and belongs to the user
+    if (dto.idempotencyKey) {
+      const existing = await this.prisma.transaction.findFirst({
+        where: { userId, idempotencyKey: dto.idempotencyKey },
+      });
+      if (existing) return this.resolveIdempotentTransaction(existing, dto);
+    }
+
     const account = await this.prisma.account.findFirst({
       where: { id: dto.accountId, userId, status: 'ACTIVE' },
     });
+    if (!account) throw new NotFoundException('Account not found or inactive');
 
-    if (!account) {
-      throw new NotFoundException('Account not found or inactive');
-    }
-
-    // 2. Validate category (must exist and belong to user)
     if (dto.categoryId) {
       const category = await this.prisma.category.findFirst({
         where: { id: dto.categoryId, userId },
       });
-      if (!category) {
-        throw new NotFoundException('Category not found');
-      }
+      if (!category) throw new NotFoundException('Category not found');
     }
 
-    // 3. Execute in a database transaction
-    const transaction = await this.prisma.$transaction(async (tx) => {
-      // a. Create the transaction row
-      const created = await tx.transaction.create({
-        data: {
-          id: randomUUID(),
-          userId,
-          containerId: account.containerId,
-          accountId: account.id,
-          type: dto.type,
-          amount: dto.amount,
-          currency: account.currency, // Inherit from account
-          date: new Date(dto.date),
-          description: dto.description,
-          categoryId: dto.categoryId,
-          notes: dto.notes,
-          mpesaReference: dto.mpesaReference?.trim().toUpperCase(),
-          receiptImageHash: dto.receiptImageHash,
-          source,
-          status: 'POSTED',
-        },
+    let transaction;
+    try {
+      transaction = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.transaction.create({
+          data: {
+            id: randomUUID(), userId, containerId: account.containerId,
+            accountId: account.id, type: dto.type, amount: dto.amount,
+            currency: account.currency, date: new Date(dto.date),
+            description: dto.description, categoryId: dto.categoryId,
+            notes: dto.notes, mpesaReference: dto.mpesaReference?.trim().toUpperCase(),
+            receiptImageHash: dto.receiptImageHash, idempotencyKey: dto.idempotencyKey,
+            source, status: 'POSTED',
+          },
+        });
+        await this.balanceService.applyTransactionEffect(tx, account.id, dto.type, dto.amount, 1);
+        await this.auditLog.log(tx, userId, 'Transaction', created.id, AuditAction.CREATE, null, created);
+        return created;
       });
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) {
+        if (dto.idempotencyKey) {
+          const existing = await this.prisma.transaction.findFirst({
+            where: { userId, idempotencyKey: dto.idempotencyKey },
+          });
+          if (existing) return this.resolveIdempotentTransaction(existing, dto);
+        }
+        if (dto.mpesaReference || dto.receiptImageHash) {
+          const duplicate = await this.prisma.transaction.findFirst({
+            where: {
+              userId,
+              OR: [
+                ...(dto.mpesaReference ? [{ mpesaReference: dto.mpesaReference.trim().toUpperCase() }] : []),
+                ...(dto.receiptImageHash ? [{ receiptImageHash: dto.receiptImageHash }] : []),
+              ],
+            },
+            select: { id: true },
+          });
+          if (duplicate) throw new ConflictException('This M-Pesa reference or receipt has already been imported.');
+        }
+      }
+      throw error;
+    }
 
-      // b. Update the account balance
-      await this.balanceService.applyTransactionEffect(
-        tx,
-        account.id,
-        dto.type,
-        dto.amount,
-        1, // direction: apply
-      );
-
-      // c. Write the audit log
-      await this.auditLog.log(
-        tx,
-        userId,
-        'Transaction',
-        created.id,
-        AuditAction.CREATE,
-        null, // No 'before' state
-        created, // The new 'after' state
-      );
-
-      return created;
-    });
-
-    // After the transaction is saved, recompute the snapshot
     await this.snapshotsService.computeAndSaveForUser(userId);
-
     return transaction;
   }
 
@@ -295,20 +290,22 @@ export class TransactionsService {
    * 4. Both happen inside a single DB transaction.
    */
   async transfer(userId: string, dto: CreateTransferDto) {
-    // 1. Verify both accounts
+    if (dto.idempotencyKey) {
+      const existing = await this.prisma.transaction.findFirst({
+        where: { userId, idempotencyKey: dto.idempotencyKey },
+      });
+      if (existing) return this.resolveIdempotentTransfer(existing, dto, userId);
+    }
+
     const fromAccount = await this.prisma.account.findFirst({
       where: { id: dto.fromAccountId, userId, status: 'ACTIVE' },
     });
-
     const toAccount = await this.prisma.account.findFirst({
       where: { id: dto.toAccountId, userId, status: 'ACTIVE' },
     });
-
     if (!fromAccount) throw new NotFoundException('Source account not found');
     if (!toAccount) throw new NotFoundException('Destination account not found');
-    if (fromAccount.id === toAccount.id) {
-      throw new BadRequestException('Cannot transfer to the same account');
-    }
+    if (fromAccount.id === toAccount.id) throw new BadRequestException('Cannot transfer to the same account');
     if (fromAccount.containerId !== toAccount.containerId) {
       throw new BadRequestException('Transfers must be within the same container');
     }
@@ -317,11 +314,7 @@ export class TransactionsService {
     }
 
     if (dto.mpesaReference || dto.receiptImageHash) {
-      if (
-        dto.mpesaReference &&
-        dto.mpesaReferenceAccountId !== fromAccount.id &&
-        dto.mpesaReferenceAccountId !== toAccount.id
-      ) {
+      if (dto.mpesaReference && dto.mpesaReferenceAccountId !== fromAccount.id && dto.mpesaReferenceAccountId !== toAccount.id) {
         throw new BadRequestException('The M-Pesa reference must be attached to one of the selected transfer accounts.');
       }
       const existingReference = await this.prisma.transaction.findFirst({
@@ -334,77 +327,110 @@ export class TransactionsService {
         },
         select: { id: true },
       });
-      if (existingReference) {
-        throw new ConflictException('This M-Pesa reference has already been imported.');
-      }
+      if (existingReference) throw new ConflictException('This M-Pesa reference has already been imported.');
     }
 
-    // 2. Execute atomically
-    const result = await this.prisma.$transaction(async (tx) => {
-      const pairId = randomUUID();
-
-      // a. Create the "OUT" transaction (from account)
-      const outTx = await tx.transaction.create({
-        data: {
-          id: randomUUID(),
-          userId,
-          containerId: fromAccount.containerId,
-          accountId: fromAccount.id,
-          type: 'TRANSFER',
-          amount: -dto.amount, // Negative because money is leaving
-          currency: fromAccount.currency,
-          date: new Date(dto.date),
-          description: dto.description,
-          notes: dto.notes,
-          transferPairId: pairId,
-          mpesaReference:
-            dto.mpesaReference && dto.mpesaReferenceAccountId === fromAccount.id
-              ? dto.mpesaReference.trim().toUpperCase()
-              : undefined,
-          receiptImageHash: dto.receiptImageHash && dto.mpesaReferenceAccountId === fromAccount.id ? dto.receiptImageHash : undefined,
-          source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL',
-          status: 'POSTED',
-        },
+    let result;
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        const pairId = randomUUID();
+        const outTx = await tx.transaction.create({
+          data: {
+            id: randomUUID(), userId, containerId: fromAccount.containerId,
+            accountId: fromAccount.id, type: 'TRANSFER', amount: -dto.amount,
+            currency: fromAccount.currency, date: new Date(dto.date),
+            description: dto.description, notes: dto.notes, transferPairId: pairId,
+            idempotencyKey: dto.idempotencyKey,
+            mpesaReference: dto.mpesaReference && dto.mpesaReferenceAccountId === fromAccount.id
+              ? dto.mpesaReference.trim().toUpperCase() : undefined,
+            receiptImageHash: dto.receiptImageHash && dto.mpesaReferenceAccountId === fromAccount.id
+              ? dto.receiptImageHash : undefined,
+            source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL', status: 'POSTED',
+          },
+        });
+        const inTx = await tx.transaction.create({
+          data: {
+            id: randomUUID(), userId, containerId: toAccount.containerId,
+            accountId: toAccount.id, type: 'TRANSFER', amount: dto.amount,
+            currency: toAccount.currency, date: new Date(dto.date),
+            description: dto.description, notes: dto.notes, transferPairId: pairId,
+            mpesaReference: dto.mpesaReference && dto.mpesaReferenceAccountId === toAccount.id
+              ? dto.mpesaReference.trim().toUpperCase() : undefined,
+            receiptImageHash: dto.receiptImageHash && dto.mpesaReferenceAccountId === toAccount.id
+              ? dto.receiptImageHash : undefined,
+            source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL', status: 'POSTED',
+          },
+        });
+        await this.balanceService.applyTransactionEffect(tx, fromAccount.id, 'TRANSFER', -dto.amount, 1);
+        await this.balanceService.applyTransactionEffect(tx, toAccount.id, 'TRANSFER', dto.amount, 1);
+        return { outTx, inTx };
       });
-
-      // b. Create the "IN" transaction (to account)
-      const inTx = await tx.transaction.create({
-        data: {
-          id: randomUUID(),
-          userId,
-          containerId: toAccount.containerId,
-          accountId: toAccount.id,
-          type: 'TRANSFER',
-          amount: dto.amount, // Positive because money is arriving
-          currency: toAccount.currency,
-          date: new Date(dto.date),
-          description: dto.description,
-          notes: dto.notes,
-          transferPairId: pairId,
-          mpesaReference:
-            dto.mpesaReference && dto.mpesaReferenceAccountId === toAccount.id
-              ? dto.mpesaReference.trim().toUpperCase()
-              : undefined,
-          receiptImageHash: dto.receiptImageHash && dto.mpesaReferenceAccountId === toAccount.id ? dto.receiptImageHash : undefined,
-          source: dto.mpesaReference ? 'IMPORTED' : 'MANUAL',
-          status: 'POSTED',
-        },
-      });
-
-      // c. Update balances
-      await this.balanceService.applyTransactionEffect(
-        tx,
-        fromAccount.id,
-        'TRANSFER',
-        -dto.amount,
-        1,
-      );
-      await this.balanceService.applyTransactionEffect(tx, toAccount.id, 'TRANSFER', dto.amount, 1);
-
-      return { outTx, inTx };
-    });
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) {
+        if (dto.idempotencyKey) {
+          const existing = await this.prisma.transaction.findFirst({
+            where: { userId, idempotencyKey: dto.idempotencyKey },
+          });
+          if (existing) return this.resolveIdempotentTransfer(existing, dto, userId);
+        }
+        if (dto.mpesaReference || dto.receiptImageHash) {
+          const duplicate = await this.prisma.transaction.findFirst({
+            where: {
+              userId,
+              OR: [
+                ...(dto.mpesaReference ? [{ mpesaReference: dto.mpesaReference.trim().toUpperCase() }] : []),
+                ...(dto.receiptImageHash ? [{ receiptImageHash: dto.receiptImageHash }] : []),
+              ],
+            },
+            select: { id: true },
+          });
+          if (duplicate) throw new ConflictException('This M-Pesa reference or receipt has already been imported.');
+        }
+      }
+      throw error;
+    }
 
     await this.snapshotsService.computeAndSaveForUser(userId);
     return result;
   }
+
+  private isUniqueConstraintViolation(error: unknown): boolean {
+    return !!error && typeof error === 'object' && 'code' in error &&
+      (error as { code?: string }).code === 'P2002';
+  }
+
+  private resolveIdempotentTransaction(existing: any, dto: CreateTransactionDto) {
+    const existingDate = existing.date instanceof Date
+      ? existing.date.toISOString().slice(0, 10) : String(existing.date).slice(0, 10);
+    const samePayload = existing.type === dto.type && existing.accountId === dto.accountId &&
+      Number(existing.amount) === dto.amount && existingDate === dto.date.slice(0, 10) &&
+      existing.description === dto.description &&
+      (existing.categoryId ?? null) === (dto.categoryId ?? null) &&
+      (existing.notes ?? null) === (dto.notes ?? null) &&
+      (existing.mpesaReference ?? null) === (dto.mpesaReference?.trim().toUpperCase() ?? null) &&
+      (existing.receiptImageHash ?? null) === (dto.receiptImageHash ?? null);
+    if (!samePayload) throw new ConflictException('This idempotency key has already been used for a different transaction.');
+    return existing;
+  }
+
+  private async resolveIdempotentTransfer(existing: any, dto: CreateTransferDto, userId: string) {
+    if (existing.type !== 'TRANSFER' || !existing.transferPairId) {
+      throw new ConflictException('This idempotency key has already been used for a different transaction.');
+    }
+    const pair = await this.prisma.transaction.findMany({
+      where: { userId, transferPairId: existing.transferPairId },
+    });
+    const outTx = pair.find((item: any) => item.accountId === dto.fromAccountId && Number(item.amount) === -dto.amount);
+    const inTx = pair.find((item: any) => item.accountId === dto.toAccountId && Number(item.amount) === dto.amount);
+    const sameCommonFields = pair.length === 2 && pair.every((item: any) => {
+      const itemDate = item.date instanceof Date ? item.date.toISOString().slice(0, 10) : String(item.date).slice(0, 10);
+      return item.type === 'TRANSFER' && itemDate === dto.date.slice(0, 10) &&
+        item.description === dto.description && (item.notes ?? null) === (dto.notes ?? null);
+    });
+    if (!outTx || !inTx || !sameCommonFields) {
+      throw new ConflictException('This idempotency key has already been used for a different transfer.');
+    }
+    return { outTx, inTx };
+  }
+
 }

@@ -8,7 +8,8 @@ To record the history of investment activities (buy, sell, dividend, etc.) and c
 
 - **BUY** — Acquiring more units of a holding (increases quantity and cost basis).
 - **SELL** — Disposing of units (decreases quantity and cost basis, calculates realized gain).
-- **DIVIDEND** — Cash paid out from the holding (recorded as income/realized gain, no change to quantity).
+- **DIVIDEND** — Cash paid out from the holding (recorded as investment income, no change to quantity).
+- **INTEREST** — Interest income earned on a holding (recorded as income, no change to quantity).
 - **CONTRIBUTION** — Adding cash to the investment container (informational).
 - **WITHDRAWAL** — Removing cash from the investment container (informational).
 
@@ -24,7 +25,7 @@ To record the history of investment activities (buy, sell, dividend, etc.) and c
 
 ### `create-investment-event.dto.ts`
 
-- `holdingId` (UUID, optional — required for BUY/SELL/DIVIDEND, null for CONTRIBUTION/WITHDRAWAL)
+- `holdingId` (UUID, optional — required for BUY/SELL/DIVIDEND/INTEREST, null for CONTRIBUTION/WITHDRAWAL)
 - `containerId` (UUID, required)
 - `eventType` (Enum, required)
 - `quantity` (Number, optional — required for BUY/SELL, null for others)

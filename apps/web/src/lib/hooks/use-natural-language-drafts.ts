@@ -47,6 +47,7 @@ export interface NaturalLanguageDraftResult {
 
 export type ConfirmNaturalLanguageDraftInput =
   | {
+      idempotencyKey: string;
       type: 'INCOME' | 'EXPENSE';
       transaction: {
         type: 'INCOME' | 'EXPENSE';
@@ -59,6 +60,7 @@ export type ConfirmNaturalLanguageDraftInput =
       };
     }
   | {
+      idempotencyKey: string;
       type: 'TRANSFER';
       transaction: {
         fromAccountId: string;

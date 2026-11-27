@@ -26,6 +26,7 @@ describe('Snapshots (Integration)', () => {
         email: `snap-int-${Date.now()}@trellisflow.com`,
         passwordHash: 'x',
         name: 'Snap Test',
+        reportingCurrency: 'KES',
       },
     });
 

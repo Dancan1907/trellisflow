@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../api/api-client';
 
-export type EventType = 'BUY' | 'SELL' | 'DIVIDEND' | 'CONTRIBUTION' | 'WITHDRAWAL';
+export type EventType = 'BUY' | 'SELL' | 'DIVIDEND' | 'INTEREST' | 'CONTRIBUTION' | 'WITHDRAWAL';
 
 export interface InvestmentEvent {
   id: string;

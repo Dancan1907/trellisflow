@@ -1,9 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsObject, ValidateNested } from 'class-validator';
+import { IsIn, IsObject, IsUUID, ValidateNested } from 'class-validator';
 import { CreateTransactionDto } from '../../transactions/dto/create-transaction.dto';
 import { CreateTransferDto } from '../../transactions/dto/create-transfer.dto';
 
 export class ConfirmNaturalLanguageDraftDto {
+  @IsUUID()
+  idempotencyKey: string;
+
   @IsIn(['INCOME', 'EXPENSE', 'TRANSFER'])
   type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
 

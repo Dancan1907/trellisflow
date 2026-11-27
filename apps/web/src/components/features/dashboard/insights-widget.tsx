@@ -37,7 +37,6 @@ export function InsightsWidget({ isLoading, insights }: InsightsWidgetProps) {
     return (
       <div className="bg-bg-secondary border border-border-subtle rounded-lg p-6 h-48">
         <Skeleton className="h-4 w-24 mb-6" />
-        <Skeleton className="h-16 w-full mb-2" />
         <Skeleton className="h-16 w-full" />
       </div>
     );
@@ -65,9 +64,9 @@ export function InsightsWidget({ isLoading, insights }: InsightsWidgetProps) {
 
   return (
     <div className="bg-bg-secondary border border-border-subtle rounded-lg p-6">
-      <h3 className="text-sm font-medium text-fg-secondary mb-4">Top Insights</h3>
+      <h3 className="text-sm font-medium text-fg-secondary mb-4">Top Insight</h3>
       <div className="space-y-3">
-        {insights.map((insight) => (
+        {insights.slice(0, 1).map((insight) => (
           <div key={insight.id} className="flex items-start gap-3 p-3 bg-bg-tertiary rounded-md">
             {getIcon(insight.severity)}
             <div>

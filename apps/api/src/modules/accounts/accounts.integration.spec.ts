@@ -31,6 +31,7 @@ describe('Accounts (Integration)', () => {
         email: `acc-int-${Date.now()}@trellisflow.com`,
         passwordHash: 'x',
         name: 'Acc Test',
+        reportingCurrency: 'KES',
       },
     });
 

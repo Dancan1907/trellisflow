@@ -1,469 +1,229 @@
-# TrellisFlow — Implementation Gap Analysis
+# TrellisFlow — Implementation Gap Closure Roadmap
 
-> **Document type:** Repository audit and implementation planning reference  
-> **Status:** Updated after Phase 1 (M-Pesa SMS/receipt parsing) implementation and deployment review  
-> **Repository:** https://github.com/Dancan1907/trellisflow  
-> **Roadmap reference:** `notes/trellisflow-master-product-intelligence-roadmap.md`  
-> **Audit scope:** Repository structure, backend modules, frontend routes/components, package manifests, Prisma schema, and existing feature notes  
-> **Important:** This is a static code review. It does not claim that every feature has been exercised in a running authenticated account or production environment.
-
----
-
-## 1. Executive Summary
-
-TrellisFlow already has a substantial financial-management foundation. It is not starting from zero.
-
-The repository contains implemented modules for accounts, transactions, budgets, savings goals, debts, recurring transactions, investments/holdings, investment events, businesses, business summaries, snapshots, reports, insights, audit logs, API tokens, and external API ingestion.
-
-The original audit predates the M-Pesa parser work. Phase 1 has since been implemented: the API now has a provider abstraction with Gemini support, authenticated M-Pesa parsing and confirmation endpoints, transaction-review UI, usage controls, and fixture-based evaluation. The broader conversational assistant, natural-language transaction drafts, and RAG capabilities remain future work.
-
-**The correct strategy is to add intelligence on top of the existing modules and services, not rebuild the financial platform.**
-
-### Overall status
-
-| Capability | Audit status | Evidence / explanation |
-|---|---|---|
-| Personal finance foundation | IMPLEMENTED IN CODE | Accounts, transactions, categories, recurring rules |
-| Budgets and savings goals | IMPLEMENTED IN CODE | Budget module and goal projection logic |
-| Debt management | IMPLEMENTED IN CODE | Debt plans and simulation module |
-| Investment tracking | IMPLEMENTED IN CODE | Holdings, investment events and pricing providers |
-| Business finance | IMPLEMENTED IN CODE | Business and summary modules, P&L-related services |
-| Net-worth snapshots and reports | IMPLEMENTED IN CODE | Snapshot and reports services |
-| Rule-based financial insights | IMPLEMENTED IN CODE | Existing deterministic insights engine |
-| Goal completion projection | IMPLEMENTED IN CODE | Goal-specific historical projection utility |
-| Business cash-runway warning | PARTIALLY IMPLEMENTED | Existing rule-based warning; not a general cash-flow forecast |
-| AI provider foundation for parsing | IMPLEMENTED FOR PHASE 1 | Provider abstraction, Gemini configuration, usage accounting and feature controls |
-| M-Pesa SMS/receipt parsing | IMPLEMENTED IN CODE; DEPLOYMENT VERIFICATION PARTIAL | Authenticated parse/confirm API, SMS and receipt-image review workflow; backend deployed, frontend production update awaiting Vercel |
-| Natural-language transaction entry | NOT IMPLEMENTED | Phase 2; existing form-based transaction entry remains |
-| Financial Q&A chatbot | NOT FOUND IN IMPLEMENTATION | No AI chat module or chat UI found |
-| Natural-language navigation/actions | NOT FOUND IN IMPLEMENTATION | No assistant/tool-execution layer found |
-| RAG documentation Q&A | NOT FOUND IN IMPLEMENTATION | No embedding/retrieval implementation or vector table found |
-| AI-generated insight narration | NOT FOUND IN IMPLEMENTATION | Insights currently store deterministic titles/messages |
-| General predictive cash-flow forecasting | NOT FOUND IN IMPLEMENTATION | Existing cash-flow reporting is historical |
-| Receipt OCR/document intelligence | NOT FOUND IN IMPLEMENTATION | No OCR/document extraction workflow found |
-| AI investment/business copilot | NOT FOUND IN IMPLEMENTATION | Existing financial data modules can support future tools, but no copilot exists |
-
-"Not found" means no implementation was located in the inspected default-branch source. It is not a claim about untracked local files, external services, or features hidden behind an uninspected deployment.
+> **Status:** Active implementation and verification plan  
+> **Baseline:** `main` at `eb9acf96deee88254eccafa67ead7b8a0cc9c68f` (2026-11-27)  
+> **Working branch:** `complete-implementation-gap-closure`  
+> **Master strategy:** `notes/trellisflow-master-product-intelligence-roadmap.md`  
+> **Purpose:** Close and verify the seven agreed implementation phases; record evidence and remaining limitations accurately.  
+> **Important:** A module's presence is not proof of production readiness. Every completion claim requires code, test, and (where applicable) deployment evidence.
 
 ---
 
-## 2. Existing Foundations — Reuse These
-
-### 2.1 Personal finance
-
-**Status: IMPLEMENTED IN CODE**
-
-Relevant backend files:
-
-- `apps/api/src/modules/accounts/`
-- `apps/api/src/modules/transactions/`
-- `apps/api/src/modules/categories/`
-- `apps/api/src/modules/recurring/`
-
-Relevant frontend files:
-
-- `apps/web/src/app/(app)/personal/`
-- `apps/web/src/components/features/personal/`
-- `apps/web/src/components/features/transactions/add-transaction-modal.tsx`
-
-The transaction service already:
-- Checks that the account belongs to the authenticated user.
-- Validates category ownership.
-- Creates the transaction and applies its balance effect in a database transaction.
-- Writes an audit log.
-- Recomputes the user's net-worth snapshot.
-
-**Implementation implication:** Future M-Pesa parsing and conversational transaction entry should create a reviewed draft and then call the existing transaction creation path after confirmation. Do not create a second transaction persistence implementation.
-
-### 2.2 Budgets, goals and debts
-
-**Status: IMPLEMENTED IN CODE**
-
-Relevant backend files:
-
-- `apps/api/src/modules/budgets/`
-- `apps/api/src/modules/goals/`
-- `apps/api/src/modules/goals/goal-projection.ts`
-- `apps/api/src/modules/debts/`
-
-The goal module already builds contribution history and computes a projection for a savings goal. This is a useful example of deterministic financial calculation.
-
-**Important distinction:** A savings-goal completion projection is not the same thing as a complete predictive cash-flow forecast. The latter still needs to account for expected income, recurring obligations, planned spending, and uncertainty.
-
-### 2.3 Recurring transactions
-
-**Status: IMPLEMENTED IN CODE**
-
-Relevant files:
-
-- `apps/api/src/modules/recurring/recurring.service.ts`
-- `apps/api/src/modules/recurring/recurring.controller.ts`
-- `apps/web/src/app/(app)/personal/recurring/page.tsx`
-
-The recurring service supports rule management, upcoming occurrences, and generation of due transactions.
-
-**Implementation implication:** Forecasting should reuse recurring rules as known future obligations/inflows rather than inventing a parallel recurring-bills system.
-
-### 2.4 Investments
-
-**Status: IMPLEMENTED IN CODE**
-
-Relevant backend files:
-
-- `apps/api/src/modules/holdings/`
-- `apps/api/src/modules/investment-events/`
-
-The holdings module includes pricing providers for Alpha Vantage, CoinGecko and Finnhub, as well as pricing services and a scheduled pricing job.
-
-Relevant frontend routes/components:
-
-- `apps/web/src/app/(app)/investments/`
-- `apps/web/src/components/features/investments/`
-
-**Implementation implication:** Future portfolio intelligence should read existing holdings and investment events. It should not introduce a duplicate portfolio ledger.
-
-### 2.5 Business finance
-
-**Status: IMPLEMENTED IN CODE**
-
-Relevant backend files:
-
-- `apps/api/src/modules/businesses/`
-- `apps/api/src/modules/summaries/`
-
-The repository has business and summary modules, including summary correction/versioning and business reporting capabilities.
-
-The insights engine also contains business-related checks for profit decline and low cash runway.
-
-**Implementation implication:** A future business copilot should use these existing business services and respect the distinction between personal and business ownership.
-
-### 2.6 Net worth, snapshots and reports
-
-**STATUS: IMPLEMENTED IN CODE**
-
-Relevant backend files:
-
-- `apps/api/src/modules/snapshots/`
-- `apps/api/src/modules/dashboard/`
-- `apps/api/src/modules/export/`
-
-The reports service provides historical net-worth trends, historical cash-flow totals, allocation breakdowns, and PDF net-worth statement generation.
-
-**Important distinction:** The existing cash-flow report calculates income, expenses and net cash flow over a supplied historical date range. It is not a future cash-flow prediction engine.
-
-### 2.7 Existing insights engine
-
-**STATUS: IMPLEMENTED IN CODE — DETERMINISTIC, NOT GENERATIVE AI**
-
-Relevant files:
-
-- `apps/api/src/modules/insights/insights.service.ts`
-- `apps/api/src/modules/insights/insights.controller.ts`
-- `apps/api/src/modules/insights/insights.module.ts`
-- `apps/api/src/modules/insights/insights-wave-5-5.spec.ts`
-- `apps/web/src/components/features/dashboard/insights-widget.tsx`
-- `apps/web/src/app/(app)/insights/page.tsx`
-
-The service runs rule checks including:
-- Budget overspending and near-limit warnings.
-- Savings-goal achievement, milestones and behind-schedule warnings.
-- Debt completion.
-- API token expiry.
-- Net-worth milestones.
-- Unusual spending against a three-month average.
-- Optimization opportunities.
-- Portfolio rebalance suggestions.
-- Business profit decline.
-- Low business cash runway.
-
-The controller exposes authenticated endpoints to list, generate and dismiss insights. User identity is taken from the authenticated request.
-
-The current insight model contains a title, message, severity, metadata and related entity information. The inspected schema/service does not show an AI narrative field or an LLM narration workflow.
-
-**Implementation implication:** Preserve the existing deterministic rules as the source of truth. Add optional AI narration as a separate enhancement that explains existing insight data. The model must not invent financial figures or replace the rules engine.
-
----
-
-## 3. AI Infrastructure — Current Status
-
-The API now contains an AI module and provider abstraction used by the M-Pesa parser. Gemini is the selected provider for the current deployment, with provider configuration kept on the backend. The implementation also includes structured extraction validation, usage accounting, request limits and feature-flag controls.
-
-This is a feature-specific foundation, not a completed general-purpose AI assistant. The following capabilities remain future work:
-
-- Conversational chat API and UI.
-- Natural-language transaction draft parsing (Phase 2).
-- Read-only financial tools for a Money Copilot.
-- Embedding generation, document ingestion and RAG retrieval.
-- AI-generated insight narration.
-
-Continue extending the existing provider abstraction rather than coupling future features directly to one provider. Keep provider secrets server-side, validate all model output, and require explicit user confirmation before any financial write.
-
----
-
-## 4. Feature-by-Feature Gap Analysis
-
-### 4.1 M-Pesa SMS and receipt parsing
-
-**Status: IMPLEMENTED IN CODE — Phase 1 complete; production verification is not yet fully closed.**
-
-Implemented capabilities:
-- Backend AI module with a provider abstraction and Gemini adapter/configuration.
-- Authenticated endpoints: POST /api/mpesa-import/parse and POST /api/mpesa-import/confirm.
-- SMS text and receipt-image extraction with strict structured-output validation.
-- Editable review flow; parsing does not create a transaction automatically.
-- Explicit confirmation through the existing transaction creation workflow.
-- Withdrawal and deposit handling through the paired-account transfer workflow.
-- M-Pesa reference duplicate protection for SMS transactions.
-- Request rate limiting, per-user daily usage limits, usage accounting and failure handling.
-- Raw SMS/receipt content is not persisted as transaction data or written to application logs.
-
-Verification reported during implementation:
-- API typecheck passed locally.
-- Synthetic Gemini evaluation passed 9/9 cases using gemini-3.5-flash-lite; only synthetic fixtures were used.
-- Core UI workflows were manually tested, including transaction review, confirmation, transfer handling and duplicate SMS protection.
-- Render backend deployment completed; startup logs showed the database connected and both M-Pesa endpoints registered.
-
-Remaining verification / known limitations:
-- The Vercel frontend deployment is currently rate-limited, so the latest frontend build has not yet been confirmed live on the production website.
-- The same receipt image can currently be submitted more than once; image-level duplicate detection remains an outstanding improvement.
-- A complete Jest suite result has not been confirmed in the available test evidence.
-- Re-test the production frontend and end-to-end workflow after Vercel permits deployment.
-
-Safety requirements retained:
-- Never silently create a transaction from model output.
-- Never infer a missing amount.
-- Clearly surface uncertain or unsupported results for review.
-- Ensure the authenticated user owns the selected account and category.
-- Keep provider credentials exclusively in the backend environment.
-
-### 4.2 Natural-language transaction entry
-
-**Status: NOT FOUND IN IMPLEMENTATION**
-
-Build after M-Pesa parsing:
-- Parse a sentence into a transaction draft.
-- Resolve the intended account and category from the user's own available data.
-- Ask a clarification question when the amount, date, currency, account or transaction type is ambiguous.
-- Show a confirmation preview.
-- Use the existing transaction service after confirmation.
-
-### 4.3 Transaction and financial chatbot
-
-**Status: NOT FOUND IN IMPLEMENTATION**
-
-The current app has no discovered chat widget or AI chat API.
-
-Build:
-- A chat interface and authenticated chat endpoint.
-- Read-only query tools first: balances, transactions, spending by category, budgets, goals, recurring obligations, holdings, business summaries and insights.
-- Strict user scoping on every tool.
-- Deterministic server-side calculations.
-- Explicit confirmation for all write actions.
-- Safe navigation actions limited to known application routes.
-
-Never let the model construct arbitrary Prisma queries or choose a user ID.
-
-### 4.4 RAG / TrellisFlow help assistant
-
-**Status: NOT FOUND IN IMPLEMENTATION**
-
-The app has a static help page at `apps/web/src/app/(app)/help/page.tsx`. It is not a retrieval-augmented AI assistant.
-
-Build only after the product documentation is reliable:
-- Index selected user-facing documentation.
-- Chunk by headings and preserve source metadata.
-- Store embeddings in a supported vector store.
-- Retrieve relevant chunks and cite the source in the answer.
-- Treat retrieved text as untrusted reference content, not instructions.
-- Say when documentation does not answer a question.
-
-### 4.5 AI insights narration
-
-**STATUS: NOT FOUND IN IMPLEMENTATION — EXISTING RULE ENGINE IS READY TO REUSE**
-
-Build:
-- Narrate an existing insight using its title, message and carefully selected supporting facts.
-- Keep the original deterministic insight intact.
-- Use asynchronous/background processing if narration is not immediately available.
-- Cache/version generated narratives and allow regeneration.
-- Avoid presenting speculative advice as a guaranteed outcome.
-- Add tests ensuring the narration cannot change the underlying numeric facts.
-
-The existing dashboard insight component already displays a title and message. It may be enhanced to show a narrative without replacing the current fallback.
-
-### 4.6 Predictive cash flow
-
-**STATUS: NOT FOUND AS A GENERAL FORECASTING FEATURE**
-
-Existing pieces:
-- Historical cash-flow report in `apps/api/src/modules/snapshots/reports.service.ts`.
-- Recurring rules and upcoming occurrences in `apps/api/src/modules/recurring/`.
-- Goal completion projection in `apps/api/src/modules/goals/goal-projection.ts`.
-- Business cash-runway warning in `apps/api/src/modules/insights/insights.service.ts`.
-
-Build:
-- A deterministic baseline forecast.
-- Known scheduled transactions from recurring rules.
-- Expected income and known obligations, with clear confidence/assumption labels.
-- Best/base/worst scenarios.
-- A forecast horizon selector.
-- Backtesting against actual historical outcomes.
-- Warnings for projected low balances or shortfalls.
-
-Do not call the existing historical report or goal projection a cash-flow forecast.
-
-### 4.7 Investment and business intelligence
-
-**STATUS: FOUNDATIONAL DATA EXISTS; ADVANCED COPILOT NOT FOUND**
-
-Build on holdings, investment events, pricing and business summaries:
-- Portfolio performance and concentration analysis.
-- Explainable allocation and rebalance analysis.
-- Business profitability and cash runway analysis.
-- Personal/business consolidation with ownership boundaries.
-- Scenario analysis with assumptions clearly separated from actual data.
-
----
-
-## 5. Recommended Implementation Order
-
-The following order minimizes duplication and builds on existing code.
-
-### Phase 0 — Audit and prepare
-
-- [x] Confirm GitHub repository access.
-- [x] Locate the master product roadmap in `notes/`.
-- [x] Inspect the backend module registration and package manifests.
-- [x] Identify existing financial modules and relevant extension points.
-- [ ] Run the full test, typecheck and build commands in a local/CI environment.
-- [ ] Confirm production environment and deployment configuration.
-
-### Phase 1 — M-Pesa parser (P0) — IMPLEMENTED
-
-- [x] Select Gemini as the initial provider/model and configure the backend deployment environment.
-- [x] Add the AI module and provider abstraction.
-- [x] Add parse DTOs and strict extraction schema.
-- [x] Add the M-Pesa parser service and authenticated parse/confirm endpoints.
-- [x] Add transaction-page SMS paste and receipt-image parse/review UI.
-- [x] Save only after user confirmation through the existing transaction workflow.
-- [x] Add synthetic fixture evaluation, request limits, usage logging and failure handling.
-- [x] Implement withdrawal/deposit transfer handling using paired accounts.
-- [ ] Add receipt-image duplicate detection.
-- [ ] Confirm the latest frontend production deployment and complete production end-to-end verification.
-- [ ] Confirm the complete API Jest suite passes.
-
-### Phase 2 — Natural-language transaction drafts
-
-- [ ] Add sentence-to-transaction parsing.
-- [ ] Reuse account/category lookup.
-- [ ] Add ambiguity handling and confirmation.
-- [ ] Reuse existing transaction creation.
-
-### Phase 3 — Read-only Money Copilot
-
-- [ ] Add chat API and UI.
-- [ ] Implement read-only tools for transactions, budgets, goals, accounts, insights and recurring rules.
-- [ ] Add user-scope and authorization tests for every tool.
-- [ ] Add streaming, rate limits, cost controls and error fallback.
-- [ ] Evaluate answer accuracy against known test accounts.
-
-### Phase 4 — Insights narration
-
-- [ ] Add asynchronous narrative generation for existing insights.
-- [ ] Preserve deterministic insight values.
-- [ ] Add citations/links to relevant app records where useful.
-- [ ] Add quality and regression tests.
-
-### Phase 5 — Cash-flow forecasting
-
-- [ ] Define forecast inputs and accounting rules.
-- [ ] Reuse recurring rules and historical transactions.
-- [ ] Implement deterministic forecast engine before adding LLM explanations.
-- [ ] Add scenarios, warnings and forecast backtesting.
-- [ ] Show assumptions and uncertainty in the UI.
-
-### Phase 6 — RAG help assistant
-
-- [ ] Finalize authoritative product documentation.
-- [ ] Add document ingestion and chunking.
-- [ ] Add embeddings and vector retrieval.
-- [ ] Add source-cited answers and prompt-injection defenses.
-- [ ] Add retrieval quality tests.
-
-### Phase 7 — Advanced wealth and business copilot
-
-- [ ] Portfolio performance and risk analysis.
-- [ ] Business profitability and runway analysis.
-- [ ] What-if simulations.
-- [ ] Cross-container wealth insights without double counting.
-- [ ] Controlled, explicitly confirmed write actions.
-
----
-
-## 6. Architecture Rules for Every AI Feature
-
-1. **Existing services remain the system of record.** AI tools call existing domain services; they do not duplicate persistence logic.
-2. **Authentication determines identity.** Never accept a user ID from the model as authorization.
-3. **Narrow tools only.** Do not expose arbitrary database queries or unrestricted application actions to an LLM.
-4. **Validate every input and output.** Use DTO validation and strict schemas.
-5. **Financial arithmetic is deterministic.** Use backend code for balances, totals, rates, projections and comparisons.
-6. **Confirm writes.** Parsing or tool calling creates a draft; the user confirms before data changes.
-7. **Keep actuals separate from projections.** Forecasts and hypothetical scenarios must never be stored or displayed as completed transactions.
-8. **Explain uncertainty.** Show assumptions, confidence and missing information.
-9. **Control cost and abuse.** Add per-user limits, timeouts, token budgets, usage records and feature flags.
-10. **Protect financial data.** Minimize prompt context, redact secrets and avoid sending unnecessary personal data to providers.
-11. **Test tenant isolation.** Every read/write tool must prove that one user cannot access another user's data.
-12. **Graceful fallback.** Existing non-AI workflows must continue working if an AI provider is unavailable.
-
----
-
-## 7. Files and Modules We Should Reuse
-
-| Purpose | Existing code to extend |
-|---|---|
-| Save parsed transactions | `apps/api/src/modules/transactions/transactions.service.ts` |
-| Transaction entry UI | `apps/web/src/components/features/transactions/add-transaction-modal.tsx` |
-| Financial insights | `apps/api/src/modules/insights/insights.service.ts` |
-| Insights API | `apps/api/src/modules/insights/insights.controller.ts` |
-| Insights dashboard UI | `apps/web/src/components/features/dashboard/insights-widget.tsx` |
-| Cash-flow history | `apps/api/src/modules/snapshots/reports.service.ts` |
-| Recurring obligations | `apps/api/src/modules/recurring/recurring.service.ts` |
-| Goal projections | `apps/api/src/modules/goals/goal-projection.ts` |
-| Investment data | `apps/api/src/modules/holdings/` and `apps/api/src/modules/investment-events/` |
-| Business data | `apps/api/src/modules/businesses/` and `apps/api/src/modules/summaries/` |
-| Authenticated user context | `apps/api/src/modules/auth/` |
-| Audit trail | `apps/api/src/common/services/audit.service.ts` |
-| Root module registration | `apps/api/src/app.module.ts` |
-
----
-
-## 8. Validation Still Required
-
-This audit reviewed the default-branch source tree and selected implementation files. Before production changes, verify:
-
-- Current `main` commit and deployment commit are aligned.
-- CI test, typecheck and build pipelines pass.
-- The authenticated product workflows behave as expected in a test account.
-- Production database migrations and backup/restore procedures are healthy.
-- Deployment provider environment-variable configuration is known.
-- Existing M-Pesa imports or integrations are not implemented outside this repository.
-
-No production endpoint was modified by this audit. No application code was changed.
-
----
-
-## 9. Immediate Next Step
-
-**Proceed to Phase 2: Natural-language transaction drafts.**
-
-Phase 1's parser and provider foundation are implemented. Close the remaining Phase 1 verification items when Vercel deployments are available, particularly receipt-image duplicate detection and production end-to-end verification. These follow-ups should not be confused with the Phase 2 scope.
-
-For Phase 2, parse a user's natural-language sentence into a structured transaction draft, resolve account and category choices using the existing user-scoped lookup logic, ask for clarification when essential details are ambiguous, and require explicit confirmation before calling the existing transaction creation service.
-
----
-
-## 10. Audit Conclusion
-
-TrellisFlow already has the financial data model and core workflows needed to support a much smarter product. The biggest missing piece is not another finance module: it is the intelligence layer that safely interprets, explains and projects the data already in the system.
-
-**Build the intelligence layer around the existing financial engine. Do not rebuild the engine.**
+## 1. Scope and completion standard
+
+This branch closes the seven-phase implementation plan below. It does **not** attempt to implement every aspirational capability in the broader master product strategy (for example tax filing, household finance, subscription discovery, or a full financial-independence planner). Those remain separate product decisions unless explicitly added to this seven-phase scope.
+
+A task is complete only when:
+1. The backend calculation/workflow is implemented and validated.
+2. API authorization, tenant isolation, validation, error handling and audit requirements are tested where relevant.
+3. The frontend exposes the intended workflow and safe fallbacks.
+4. Unit/integration tests cover critical success, failure, boundary and retry cases.
+5. Documentation and environment examples match the actual behavior.
+6. Production-only checks are explicitly verified by the repository owner; code inspection alone is not production evidence.
+
+Database target selection, migration execution, and Neon/local PostgreSQL confirmation remain the repository owner's responsibility. This work must not change database configuration or independently run migrations.
+
+## 2. Current baseline audit
+
+The default branch already contains implementation areas for all seven phases:
+
+| Phase | Baseline code status | Evidence in repository | Closure assessment |
+|---|---|---|---|
+| 1. M-Pesa parser | Implemented | `mpesa-import`, Gemini provider, review/confirm UI, fixture and service tests | Code-level duplicate fingerprint protection exists; verify race-safe duplicate confirmation and production journey |
+| 2. Natural-language transaction drafts | Implemented | `natural-language-drafts`, DTO/schema/controller/service and web hook | Verify full user-scoped matching, clarification and confirm/write safety |
+| 3. Read-only Money Copilot | Implemented | `money-copilot` API/UI/data service and tests | Verify coverage, data boundaries, accuracy and safe provider failure |
+| 4. AI insight narration | Implemented | `insight-narration.service.ts`, schema fields, worker and tests | Verify deterministic facts cannot be altered and worker recovery/feature flags |
+| 5. Cash-flow forecasting | Implemented | deterministic engine, service/controller, engine and service tests, forecast UI/docs | Verify accounting edge cases, transfer pairs, future-dated entries, recurring catch-up and backtest interpretation |
+| 6. RAG Help Assistant | Implemented | ingestion/retrieval service, vector migration/schema, integration and service tests, web widget/docs | Verify ingestion lifecycle, retrieval quality, citations, prompt injection and graceful no-result behavior |
+| 7. Advanced wealth/business copilot | Implemented with defined limitations | holdings/business analysis, what-if sensitivities, consolidated wealth, preview/confirm actions and tests | Extend only material gaps in performance/risk, runway, scenario coverage and action safety |
+
+### Corrections to the previous gap analysis
+
+- Receipt-image duplicate detection is already implemented: uploaded receipt bytes are SHA-256 fingerprinted; parse checks the fingerprint against the user's transactions; confirmation persists it. Existing M-Pesa service tests cover detection and persistence. Do not duplicate this implementation.
+- Phase 2–7 are no longer unimplemented. The older unchecked roadmap was stale.
+- Phase 7 is not a complete institutional-grade portfolio risk engine. Current concentration metrics are descriptive, not volatility or market-risk measures.
+- Business runway is a historical 90-day burn-rate estimate, not a guaranteed forward forecast.
+- Current what-if support is intentionally bounded: personal expense reduction, internal-business revenue/expense changes, and uniform portfolio-value sensitivity.
+- Confirmed Copilot writes currently cover preview/confirm income and expense transactions; this is not unrestricted write access.
+- Money Copilot documentation must be checked against current code: the original read-only-only description and its old limitations are stale now that confirmed actions and what-if sensitivities exist.
+- Forecasting documentation and environment examples must be checked against current implementation and flags.
+
+## 2.1 Implementation work completed on this branch (CI verified; owner checks remain)
+
+The following code changes have been made on `complete-implementation-gap-closure`. The latest branch commit passed the repository CI suite (lint, unit tests, integration/E2E tests, typecheck and build). Local UI smoke testing, deployed-environment verification and owner-operated data refreshes remain outstanding; related checklist items below stay unchecked where those checks are still required.
+
+- **M-Pesa duplicate race handling:** transaction and transfer writers translate unique-constraint races on receipt fingerprints or M-Pesa references into explicit conflict responses. Unit coverage and a real PostgreSQL concurrency integration test cover duplicate M-Pesa references and idempotent retries.
+- **Natural-language confirmation retries:** income/expense and paired-transfer writes accept a per-user UUID idempotency key, compare replay payloads, return the original result for matching retries, and reject key reuse with altered details. The review form reuses one key across retries.
+- **Help Assistant grounding:** generated answers without a valid citation to a retrieved approved document are withheld in favor of a no-answer response.
+- **Money Copilot safety and analysis:** confirmed-action endpoints now fail closed behind `AI_MONEY_COPILOT_ENABLED`; scenario percentages accept the 0–100 boundary and reject negative/out-of-range values; account, portfolio-holding, business and investment-event safety caps disclose truncation.
+- **Investment event coverage:** `INTEREST` events now require a holding, create an income transaction, credit the linked account, record realized investment income, and reverse correctly if deleted. Money Copilot summarizes recorded sale gains/losses, dividends/interest, contributions and withdrawals separately by currency.
+- **Business and consolidated accounting correctness:** P&L and runway exclude pending entries and calculate per currency. Business net worth is grouped by currency; top-level totals represent only the configured business currency. Internal-to-external conversion is blocked when account currencies differ from that configured currency. Net-worth snapshots now use the user's reporting currency for headline totals, preserve per-currency breakdowns, and include open investment holding values separately from linked investment-account cash. Dashboard wealth, container cards and cash flow now use reporting-currency/per-currency data rather than summing unlike currencies. The business detail UI displays additional-currency P&L, runway and net-worth values separately.
+- **Documentation/configuration:** natural-language drafts default to disabled in the API environment example; Money Copilot and help documentation describe the implemented gates, currency behavior and investment event handling.
+
+No Prisma schema or migration changes were made. The existing per-user transaction idempotency and duplicate-import unique constraints are reused. The Help Centre source document was updated; its RAG index must be re-ingested by the repository owner in the intended database environment. Investment-event UI exposes Interest and labels dividend/interest income separately from realized sale gains/losses. Existing net-worth snapshots will be corrected by the next normal snapshot recomputation.
+
+## 3. Phase 1 — M-Pesa SMS and receipt parser
+
+**Baseline status: IMPLEMENTED. Closure focus: verification and duplicate safety.**
+
+- [x] Gemini-backed provider abstraction and structured extraction schema.
+- [x] Authenticated parse and confirm endpoints.
+- [x] SMS and receipt-image parsing with editable review.
+- [x] No automatic transaction write during parsing.
+- [x] Explicit confirmation through the existing transaction service.
+- [x] Transfer drafts are not incorrectly posted as ordinary income/expense.
+- [x] M-Pesa reference duplicate detection.
+- [x] SHA-256 receipt-image fingerprint duplicate detection at parse and confirmation.
+- [x] Receipt fingerprint is persisted only after confirmation.
+- [x] Upload MIME, file size and actual image signature validation.
+- [x] Usage reservation, provider usage accounting, rate limits and safe error responses.
+- [ ] Prove duplicate confirmation is race-safe under concurrent requests (database uniqueness constraint plus integration test).
+- [ ] Ensure duplicate detection UX clearly blocks or warns before confirmation, and handles same image/different metadata.
+- [ ] Run complete API Jest suite and frontend build on this branch.
+- [ ] Verify live Render API and Vercel frontend commits and complete an authenticated production end-to-end journey (owner-operated; do not claim from source inspection).
+
+## 4. Phase 2 — Natural-language transaction drafts
+
+**Baseline status: IMPLEMENTED. Closure focus: robust ambiguity and write safety.**
+
+- [ ] Audit parser schema for required amount, currency, date, type, account and category ambiguity.
+- [ ] Verify account/category matching is authenticated-user scoped and never guesses across containers.
+- [ ] Verify clarification responses do not create persistent transactions.
+- [ ] Verify preview contents exactly match the eventual write payload.
+- [ ] Verify confirmation is idempotent or safely rejects repeated/concurrent confirmation.
+- [ ] Test stale, expired, altered, malformed and cross-user draft identifiers.
+- [ ] Test currency mismatch, invalid category, inactive account and date boundary cases.
+- [ ] Confirm all writes use the existing transaction service, balance update and audit log.
+- [ ] Verify UI supports edit/cancel/confirm and clearly presents unresolved fields.
+- [ ] Update documentation with actual supported language patterns and limitations.
+
+## 5. Phase 3 — Read-only Money Copilot
+
+**Baseline status: IMPLEMENTED. Closure focus: correctness, scope and resilience.**
+
+- [ ] Inventory every data tool and map it to a user-scoped domain service/query.
+- [ ] Test cross-user isolation for accounts, transactions, budgets, goals, holdings, businesses and snapshots.
+- [ ] Verify transfers are excluded from income/expense totals and currencies are never added without conversion.
+- [ ] Verify date ranges and user timezone boundaries.
+- [ ] Test large data sets, truncation disclosure, missing snapshots and empty accounts.
+- [ ] Verify prompts/history and transaction descriptions are treated as untrusted input.
+- [ ] Verify provider failure, malformed model output, timeouts, daily quota and rate-limit behavior.
+- [ ] Confirm no arbitrary SQL, write service, or model-supplied user ID is exposed.
+- [ ] Validate answers against deterministic test-account ground truth.
+- [ ] Update docs and API/UI labels to accurately distinguish read-only answers from the separate confirmed-action API.
+
+## 6. Phase 4 — AI insight narration
+
+**Baseline status: IMPLEMENTED. Closure focus: narrative factuality and job reliability.**
+
+- [ ] Verify narration cannot change deterministic insight title, message, severity, amount, threshold or source records.
+- [ ] Expand regression tests for unsupported numbers, percentages, dates, currencies and causal explanations.
+- [ ] Test prompt injection in insight title/message.
+- [ ] Test duplicate worker execution, concurrent claims, stale PROCESSING recovery and dismissed insights.
+- [ ] Verify failed narration leaves the deterministic insight visible and retryable.
+- [ ] Verify feature flags, quota accounting and usage failures do not break the insights engine.
+- [ ] Confirm narrative UI has a deterministic fallback and does not imply model-generated text is a new financial fact.
+- [ ] Document prompt/versioning, regeneration and operational recovery behavior.
+
+## 7. Phase 5 — Cash-flow forecasting
+
+**Baseline status: IMPLEMENTED. Closure focus: accounting correctness and realistic limitations.**
+
+- [ ] Verify all money calculations, rounding and supported decimal precision.
+- [ ] Verify opening-balance reconstruction for future-dated posted/reconciled transactions.
+- [ ] Verify pending, posted and reconciled scheduled transactions are included exactly once.
+- [ ] Verify paired transfers preserve value across same-currency accounts and never become income/expense.
+- [ ] Verify recurring rule catch-up after missed occurrences, month-end clamping, leap years, intervals, end dates and custom-frequency exclusions.
+- [ ] Verify generated recurring transactions are not double-counted alongside their rule.
+- [ ] Verify currency mismatches and invalid/missing transfer destinations are excluded with warnings.
+- [ ] Verify scenario adjustments affect only the documented variable-flow baseline.
+- [ ] Verify forecast horizon/lookback validation and bounded query size.
+- [ ] Verify lower/upper uncertainty bands are labeled as indicative rather than statistical guarantees.
+- [ ] Verify backtesting sample count, MAE/MAPE edge cases and disclose that recurring-rule history is unavailable.
+- [ ] Verify UI exposes assumptions, warnings, as-of date, currency separation and forecast horizon.
+- [ ] Add integration fixtures covering realistic multi-account histories and compare engine output to hand-calculated expectations.
+- [ ] Document forecast limitations, especially straight-line baseline and the lack of historical recurring-rule versions.
+
+## 8. Phase 6 — RAG Help Assistant
+
+**Baseline status: IMPLEMENTED. Closure focus: ingestion governance and retrieval quality.**
+
+- [ ] Verify only approved, current product documentation is ingested.
+- [ ] Verify chunking preserves document title, heading, source and safe route metadata.
+- [ ] Verify re-ingestion updates/deletes stale chunks without duplicate accumulation.
+- [ ] Verify embedding model and dimensions match the database vector column and index.
+- [ ] Verify retrieval relevance threshold, ranking and no-result behavior using a representative evaluation set.
+- [ ] Verify citations only refer to retrieved chunks actually used by the answer.
+- [ ] Test prompt injection in retrieved documents, user messages and conversation history.
+- [ ] Verify the assistant cannot answer personal-finance questions or invoke financial write actions.
+- [ ] Verify route allowlist prevents external, protocol-relative and unsafe navigation.
+- [ ] Verify user-scoped quotas, provider failure handling and usage accounting.
+- [ ] Verify ingestion is repeatable and can be safely run during deployment/operations.
+- [ ] Document source ownership, update process, re-indexing and retrieval evaluation.
+
+## 9. Phase 7 — Advanced wealth and business copilot
+
+**Baseline status: IMPLEMENTED with explicitly bounded calculations. Closure focus: expand only where data supports it.**
+
+### Portfolio performance and risk
+- [ ] Add historical portfolio valuation/performance series only if reliable price and cash-flow history exists.
+- [ ] Separate contributions/withdrawals from investment return; define and document the selected return methodology.
+- [ ] Add realized gain/loss and investment income only where investment-event data supports it.
+- [ ] Add currency and asset-class exposure summaries without mixing currencies.
+- [ ] Keep concentration metrics descriptive.
+- [ ] Do not calculate volatility, beta, Sharpe ratio, drawdown or correlations without sufficient, correctly aligned historical price data; expose these as unavailable rather than fabricating estimates.
+- [ ] Add tests for missing prices, stale valuations, corporate actions, deposits/withdrawals and multi-currency holdings.
+
+### Business profitability and runway
+- [ ] Verify P&L includes the correct business/container transactions and excludes transfers.
+- [ ] Verify runway denominator and liquid-balance eligibility; document the 90-day lookback and zero/negative burn behavior.
+- [ ] Distinguish internal transaction-level metrics from external saved-summary-only metrics.
+- [ ] Add tests for no history, no cash, negative/zero burn, missing accounts and mixed currencies.
+- [ ] Clearly label runway as a historical burn-rate estimate unless a separate forward forecast is implemented.
+
+### What-if simulations
+- [ ] Add typed, deterministic scenario inputs/results for supported scenario types.
+- [ ] Validate percent bounds and reject unsupported or ambiguous requests rather than returning invented outputs.
+- [ ] Expand only high-value scenarios supported by existing financial data (e.g. savings contribution, income shock, debt overpayment) after defining accounting assumptions.
+- [ ] Ensure scenarios never persist as transactions or mutate financial records.
+- [ ] Test positive/negative/zero baselines, no data, currencies, bounds and model prompt injection.
+
+### Consolidated wealth and cross-container insights
+- [ ] Verify the latest net-worth snapshot is the sole consolidated wealth total.
+- [ ] Verify components are breakdowns only and are never added again to the snapshot.
+- [ ] Verify personal, internal-business and external-business ownership boundaries.
+- [ ] Verify snapshot staleness is disclosed and currencies are not combined without FX conversion.
+- [ ] Add fixtures with overlapping account/holding/business values to prove no double counting.
+
+### Confirmed write actions
+- [ ] Verify action preview is bound to the authenticated user and immutable payload hash.
+- [ ] Verify expiry, one-time confirmation, idempotency and concurrent retries.
+- [ ] Verify account/category ownership and unchanged account/category details at confirmation.
+- [ ] Verify transaction, balance effect, audit event and action status commit atomically.
+- [ ] Verify snapshot refresh retry does not duplicate the financial write.
+- [ ] Test cross-user IDs, altered payload, expired preview, deleted/inactive account, changed category, concurrency and snapshot failure.
+- [ ] Document exactly which action types are supported; do not imply general-purpose write access.
+
+## 10. Cross-cutting release gates
+
+- [ ] API lint/typecheck/build pass.
+- [ ] Web lint/typecheck/build pass.
+- [ ] Full API Jest suite passes.
+- [ ] Focused integration tests pass for every phase above.
+- [ ] CI workflow on this branch is green.
+- [ ] No unintended schema or migration changes; any required migration is reviewed separately and executed only by the repository owner.
+- [ ] Environment examples and deployment docs match actual feature flags; secrets remain server-side.
+- [ ] No accidental logging of SMS, receipt image, financial prompts, access tokens or provider secrets.
+- [ ] Feature flags default safely and disabled features fail closed.
+- [ ] Render/Vercel deployment commit and live smoke tests are confirmed by the repository owner.
+- [ ] Roadmap, feature docs and release notes agree with the delivered behavior.
+
+## 11. Explicit non-goals for this closure branch
+
+The broader master roadmap contains additional product proposals not included in the seven implementation phases. They must not be silently treated as release blockers or marked complete here. Examples include tax preparation, household wealth sharing, financial independence planning, subscription discovery, financial obligations calendar, broad financial document intelligence, reconciliation center and full portfolio analytics requiring market-data history. These need separate product scope, data design, security review and acceptance criteria.
+
+## 12. Completion record
+
+For each checklist item, record the relevant commit, test command/result or production evidence in the PR description or a follow-up section. Keep unresolved items unchecked and state why they are blocked. Do not check an item based solely on a file or class existing.
+
+**Closure objective:** finish all code-addressable requirements in Phases 1–7, prove them with automated tests and CI, update the feature documentation, and leave only owner-operated production checks or explicitly out-of-scope master-roadmap proposals.

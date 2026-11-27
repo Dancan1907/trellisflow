@@ -14,11 +14,19 @@ export interface BusinessProfile {
   logoUrl: string | null;
 }
 
+export interface BusinessNetWorthCurrency {
+  currency: string;
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+}
+
 export interface BusinessNetWorth {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
   currency: string;
+  byCurrency: BusinessNetWorthCurrency[];
 }
 
 export interface BusinessSummary {
@@ -58,6 +66,14 @@ export interface PnlCategoryRow {
   amount: number;
 }
 
+export interface BusinessPnlCurrency {
+  currency: string;
+  totalIncome: number;
+  totalExpenses: number;
+  netProfit: number;
+  byCategory: PnlCategoryRow[];
+}
+
 export interface BusinessPnl {
   businessId: string;
   currency: string;
@@ -67,6 +83,14 @@ export interface BusinessPnl {
   totalExpenses: number;
   netProfit: number;
   byCategory: PnlCategoryRow[];
+  byCurrency: BusinessPnlCurrency[];
+}
+
+export interface BusinessRunwayCurrency {
+  currency: string;
+  cashBalance: number;
+  monthlyBurn: number;
+  runwayMonths: number | null;
 }
 
 export interface BusinessRunway {
@@ -75,6 +99,7 @@ export interface BusinessRunway {
   cashBalance: number;
   monthlyBurn: number;
   runwayMonths: number | null;
+  byCurrency: BusinessRunwayCurrency[];
   windowDays: number;
   asOf: string;
 }

@@ -201,12 +201,16 @@ function EventRow({
     BUY: 'text-accent-primary bg-accent-primary/10 border-accent-primary/30',
     SELL: 'text-status-positive bg-status-positive/10 border-status-positive/30',
     DIVIDEND: 'text-status-positive bg-status-positive/10 border-status-positive/30',
+    INTEREST: 'text-status-positive bg-status-positive/10 border-status-positive/30',
     CONTRIBUTION: 'text-fg-secondary bg-bg-tertiary border-border-subtle',
     WITHDRAWAL: 'text-status-negative bg-status-negative/10 border-status-negative/30',
   };
   const badgeClass = colors[event.eventType];
 
-  const hasRealizedGain = event.realizedGain !== null && safeNumber(event.realizedGain) !== 0;
+  const realizedValue = event.realizedGain === null ? 0 : safeNumber(event.realizedGain);
+  const hasRealizedGain = event.realizedGain !== null && realizedValue !== 0;
+  const isIncomeEvent = event.eventType === 'DIVIDEND' || event.eventType === 'INTEREST';
+  const isPositive = isIncomeEvent || realizedValue >= 0;
 
   return (
     <div className="flex items-center gap-4 p-4 bg-bg-secondary border border-border-subtle rounded-lg group">
@@ -224,8 +228,9 @@ function EventRow({
       </div>
       <div className="text-right shrink-0">
         {hasRealizedGain && (
-          <p className="text-xs font-medium text-status-positive mb-0.5">
-            Gain: <AmountDisplay value={safeNumber(event.realizedGain)} currency={currency} />
+          <p className={`text-xs font-medium mb-0.5 ${isPositive ? 'text-status-positive' : 'text-status-negative'}`}>
+            {isIncomeEvent ? 'Income' : isPositive ? 'Realized gain' : 'Realized loss'}:{' '}
+            <AmountDisplay value={realizedValue} currency={currency} />
           </p>
         )}
         <p className="text-xs text-fg-tertiary">{new Date(event.date).toLocaleDateString()}</p>

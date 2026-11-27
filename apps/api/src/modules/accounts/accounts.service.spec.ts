@@ -5,6 +5,7 @@ import { SnapshotsService } from '../snapshots/snapshots.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 
 const mockPrisma = {
+  user: { findUnique: jest.fn() },
   account: {
     findMany: jest.fn(),
     findFirst: jest.fn(),
@@ -23,6 +24,8 @@ describe('AccountsService', () => {
   let service: AccountsService;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+    mockPrisma.user.findUnique.mockResolvedValue({ reportingCurrency: 'KES' });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountsService,
@@ -69,18 +72,41 @@ describe('AccountsService', () => {
   describe('getNetWorth', () => {
     it('should calculate net worth correctly (assets - liabilities)', async () => {
       mockPrisma.account.findMany.mockResolvedValue([
-        { category: 'ASSET', currentBalance: '5000' },
-        { category: 'ASSET', currentBalance: '2000' },
-        { category: 'LIABILITY', currentBalance: '1500' },
+        { category: 'ASSET', currentBalance: '5000', currency: 'KES' },
+        { category: 'ASSET', currentBalance: '2000', currency: 'KES' },
+        { category: 'LIABILITY', currentBalance: '1500', currency: 'KES' },
       ]);
 
       const result = await service.getNetWorth('user-1');
 
       expect(result).toEqual({
+        currency: 'KES',
         totalAssets: 7000,
         totalLiabilities: 1500,
         totalNetWorth: 5500,
+        byCurrency: [{
+          currency: 'KES', totalAssets: 7000, totalLiabilities: 1500, totalNetWorth: 5500,
+        }],
       });
+    });
+  });
+
+  describe('multi-currency reporting', () => {
+    it('does not add account balances from different currencies', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ reportingCurrency: 'KES' });
+    mockPrisma.account.findMany.mockResolvedValue([
+      { category: 'ASSET', currentBalance: '1000', currency: 'KES' },
+      { category: 'ASSET', currentBalance: '500', currency: 'USD' },
+    ]);
+
+    const result = await service.getNetWorth('user-1');
+
+    expect(result.totalNetWorth).toBe(1000);
+    expect(result.currency).toBe('KES');
+    expect(result.byCurrency).toEqual(expect.arrayContaining([
+      expect.objectContaining({ currency: 'KES', totalNetWorth: 1000 }),
+      expect.objectContaining({ currency: 'USD', totalNetWorth: 500 }),
+    ]));
     });
   });
 });
