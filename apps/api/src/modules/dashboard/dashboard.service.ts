@@ -70,10 +70,11 @@ export class DashboardService {
             businesses: Number(latestSnapshot.businessesNetWorth),
             currency: snapshotCurrency,
             byCurrency: snapshotBreakdown?.byCurrency ?? [],
+            currencyBreakdownAvailable: Array.isArray(snapshotBreakdown?.byCurrency),
           }
         : {
             total: 0, personal: 0, investments: 0, businesses: 0,
-            currency: reportingCurrency, byCurrency: [],
+            currency: reportingCurrency, byCurrency: [], currencyBreakdownAvailable: true,
           },
       cashFlow: {
         income: primaryCashFlow.income,
