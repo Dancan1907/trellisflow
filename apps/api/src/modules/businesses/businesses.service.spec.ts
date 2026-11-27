@@ -202,7 +202,32 @@ describe('BusinessesService (Unit)', () => {
         totalAssets: 1000,
         totalLiabilities: 500,
         netWorth: 500,
+        byCurrency: [{
+          currency: 'KES', totalAssets: 1000, totalLiabilities: 500, netWorth: 500,
+        }],
       });
+    });
+  });
+
+    it('keeps business net worth separate by account currency', async () => {
+      mockPrisma.container.findFirst.mockResolvedValue(container({
+        accounts: [
+          account({ id: 'kes-asset', currency: 'KES', category: 'ASSET', currentBalance: '1000' }),
+          account({ id: 'kes-liability', currency: 'KES', category: 'LIABILITY', currentBalance: '500' }),
+          account({ id: 'usd-asset', currency: 'USD', category: 'ASSET', currentBalance: '200' }),
+          account({ id: 'usd-liability', currency: 'USD', category: 'LIABILITY', currentBalance: '50' }),
+        ],
+      }));
+
+      const result = await service.getNetWorth('user-1', 'biz-1');
+
+      expect(result.totalAssets).toBe(1000);
+      expect(result.totalLiabilities).toBe(500);
+      expect(result.netWorth).toBe(500);
+      expect(result.byCurrency).toEqual(expect.arrayContaining([
+        expect.objectContaining({ currency: 'KES', totalAssets: 1000, totalLiabilities: 500, netWorth: 500 }),
+        expect.objectContaining({ currency: 'USD', totalAssets: 200, totalLiabilities: 50, netWorth: 150 }),
+      ]));
     });
   });
 
