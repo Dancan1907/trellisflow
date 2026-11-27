@@ -1,14 +1,39 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bot, Send, Sparkles, ShieldCheck, User, RotateCcw } from 'lucide-react';
+import {
+  Bot,
+  BriefcaseBusiness,
+  ChartNoAxesCombined,
+  Send,
+  ShieldCheck,
+  User,
+  Wallet,
+  RotateCcw,
+} from 'lucide-react';
 import { useMoneyCopilotChat, MoneyCopilotMessage } from '@/lib/hooks/use-money-copilot';
 
-const suggestions = [
-  'Summarize my financial position',
-  'Where did most of my money go this month?',
-  'How are my investments performing?',
-  'Give me an overview of my businesses',
+const suggestionGroups = [
+  {
+    title: 'Everyday financial assistance',
+    description: 'Understand your spending, budgets, transactions and overall financial position.',
+    icon: Wallet,
+    suggestions: [
+      'Summarize my financial position',
+      'Where did most of my money go this month?',
+    ],
+  },
+  {
+    title: 'Advanced financial intelligence',
+    description: 'Explore investment performance, business profitability and cash runway.',
+    icon: ChartNoAxesCombined,
+    suggestions: [
+      'How are my investments performing?',
+      'How diversified is my investment portfolio?',
+      'Give me an overview of my businesses',
+      'How profitable is my business and what is its cash runway?',
+    ],
+  },
 ];
 
 export default function MoneyCopilotPage() {
@@ -45,11 +70,13 @@ export default function MoneyCopilotPage() {
         <div>
           <div className="mb-1 flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
-              <Sparkles size={19} />
+              <ChartNoAxesCombined size={19} />
             </div>
             <h1 className="text-2xl font-semibold text-fg-primary">Money Copilot</h1>
           </div>
-          <p className="text-sm text-fg-secondary">Ask questions about your money, investments, and businesses.</p>
+          <p className="max-w-2xl text-sm text-fg-secondary">
+            One assistant for everyday money management and deeper investment and business insights.
+          </p>
         </div>
         <button
           type="button"
@@ -64,26 +91,47 @@ export default function MoneyCopilotPage() {
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-secondary">
         <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto p-4 md:p-6">
           {messages.length === 0 ? (
-            <div className="mx-auto flex max-w-xl flex-col items-center py-10 text-center">
+            <div className="mx-auto flex max-w-2xl flex-col items-center py-8 text-center sm:py-10">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-primary/10 text-accent-primary">
                 <Bot size={28} />
               </div>
-              <h2 className="text-lg font-semibold text-fg-primary">Your finances, explained</h2>
-              <p className="mt-2 text-sm leading-6 text-fg-secondary">
-                Ask a question in plain language. I use your TrellisFlow records to explain the numbers and highlight useful context.
+              <h2 className="text-lg font-semibold text-fg-primary">Your finances, explained. Your decisions, informed.</h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-fg-secondary">
+                Ask in plain language. Money Copilot can help with everyday finances and dig deeper into your investments and businesses using your TrellisFlow records.
               </p>
-              <div className="mt-6 grid w-full gap-2 sm:grid-cols-2">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => void submit(undefined, suggestion)}
-                    disabled={chat.isPending}
-                    className="rounded-lg border border-border-subtle p-3 text-left text-sm text-fg-secondary transition-colors hover:border-accent-primary/50 hover:bg-bg-tertiary disabled:opacity-50"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+
+              <div className="mt-7 grid w-full gap-4 text-left sm:grid-cols-2">
+                {suggestionGroups.map((group) => {
+                  const GroupIcon = group.icon;
+                  return (
+                    <div key={group.title} className="rounded-xl border border-border-subtle bg-bg-primary p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
+                          <GroupIcon size={18} />
+                        </div>
+                        <h3 className="text-sm font-semibold text-fg-primary">{group.title}</h3>
+                      </div>
+                      <p className="mb-3 text-xs leading-5 text-fg-secondary">{group.description}</p>
+                      <div className="space-y-2">
+                        {group.suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => void submit(undefined, suggestion)}
+                            disabled={chat.isPending}
+                            className="w-full rounded-lg border border-border-subtle p-2.5 text-left text-sm text-fg-secondary transition-colors hover:border-accent-primary/50 hover:bg-bg-tertiary disabled:opacity-50"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-fg-tertiary">
+                <BriefcaseBusiness size={14} />
+                <span>Ask about personal finances, investments or your businesses in this same conversation.</span>
               </div>
             </div>
           ) : messages.map((message, index) => (
@@ -124,7 +172,8 @@ export default function MoneyCopilotPage() {
               }}
               maxLength={2000}
               rows={2}
-              placeholder="Ask about your finances…"
+              placeholder="Ask about spending, investments or business performance…"
+              aria-label="Ask Money Copilot a question"
               className="max-h-32 min-h-12 flex-1 resize-y rounded-lg border border-border-subtle bg-bg-primary px-3 py-3 text-sm text-fg-primary outline-none placeholder:text-fg-tertiary focus:border-accent-primary"
             />
             <button
