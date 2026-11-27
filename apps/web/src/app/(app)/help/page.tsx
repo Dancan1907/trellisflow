@@ -20,6 +20,7 @@ import {
   Sparkles,
   MessageSquareText,
   FileText,
+  PanelLeftClose,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth/auth-store';
@@ -33,6 +34,7 @@ const SECTIONS = [
       { id: 'introduction', label: 'Introduction to TrellisFlow' },
       { id: 'dashboard', label: 'Your Dashboard' },
       { id: 'containers', label: 'Understanding Containers' },
+      { id: 'navigation', label: 'Sidebar & navigation' },
     ],
   },
   {
@@ -84,7 +86,7 @@ export default function HelpPage() {
     <>
       {!isAuthenticated && (
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border-subtle bg-bg-primary px-5 md:px-8">
-          <Logo />
+          <Logo href="/" />
           <nav className="flex items-center gap-3" aria-label="Public navigation">
             <Link href="/login" className="text-sm font-medium text-fg-secondary hover:text-fg-primary">Log in</Link>
             <Link href="/signup" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-semibold text-white">Get started</Link>
@@ -101,7 +103,7 @@ export default function HelpPage() {
               User Guide
             </h2>
             <nav className="space-y-4">
-              {SECTIONS.filter((section) => isAuthenticated || section.title === 'Getting Started').map((section) => (
+              {SECTIONS.map((section) => (
                 <div key={section.title}>
                   <div className="flex items-center gap-2 px-2 mb-2">
                     <section.icon size={14} className="text-fg-tertiary" />
@@ -110,7 +112,7 @@ export default function HelpPage() {
                     </h3>
                   </div>
                   <ul className="space-y-1">
-                    {section.items.filter((item) => isAuthenticated || ['introduction', 'dashboard', 'containers'].includes(item.id)).map((item) => (
+                    {section.items.map((item) => (
                       <li key={item.id}>
                         <a
                           href={`#${item.id}`}
@@ -222,8 +224,23 @@ export default function HelpPage() {
 
         <hr className="border-border-subtle" />
 
-        {isAuthenticated && (
-          <>
+        <section id="navigation" className="scroll-mt-24">
+          <div className="flex items-center gap-3 mb-4">
+            <PanelLeftClose className="text-accent-primary" size={24} />
+            <h2 className="text-xl font-display font-semibold text-fg-primary">Sidebar & navigation</h2>
+          </div>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            TrellisFlow's sidebar can be expanded to show section names and menu labels, or collapsed to an icon-only rail to give the current page more room. On desktop and tablet, use the sidebar control in the top bar to switch between these layouts. Your preference is saved in this browser and restored on your next visit.
+          </p>
+          <p className="text-fg-secondary leading-relaxed mb-4">
+            In the compact layout, hover over or focus a navigation icon to see its label. Select an icon to open that area. On phones, use the menu button in the top bar to open the navigation drawer; selecting a destination closes the drawer.
+          </p>
+          <p className="text-sm text-fg-tertiary">The compact setting changes the navigation width, not your permissions or the features available to your account.</p>
+        </section>
+
+        <hr className="border-border-subtle" />
+
+        {/* Full product guide is public so visitors can read the documentation before signing in. */}
         {/* Personal Finance */}
         <section id="personal" className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-4">
@@ -435,8 +452,6 @@ export default function HelpPage() {
             </li>
           </ul>
         </section>
-          </>
-        )}
       </main>
       </div>
     </>
