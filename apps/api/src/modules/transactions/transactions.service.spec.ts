@@ -4,7 +4,7 @@ import { BalanceService } from './balance.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../common/services/audit.service';
 import { SnapshotsService } from '../snapshots/snapshots.service';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
 // Create the mock transaction client first
 const mockTx = {
@@ -110,6 +110,67 @@ describe('TransactionsService', () => {
       );
 
       expect(result).toEqual({ id: 'tx-1' });
+    });
+  });
+
+  describe('idempotent writes', () => {
+    const key = '00000000-0000-4000-8000-000000000123';
+
+    it('returns the original transaction for a matching retry without applying its balance twice', async () => {
+      const existing = {
+        id: 'tx-existing', type: 'EXPENSE', accountId: 'acc-1', amount: '100',
+        date: new Date('2026-10-20T00:00:00.000Z'), description: 'Test',
+        categoryId: null, notes: null,
+      };
+      mockPrisma.transaction.findFirst.mockResolvedValue(existing);
+
+      const result = await service.create('user-1', {
+        type: 'EXPENSE', amount: 100, date: '2026-10-20', description: 'Test',
+        accountId: 'acc-1', idempotencyKey: key,
+      });
+
+      expect(result).toBe(existing);
+      expect(mockPrisma.account.findFirst).not.toHaveBeenCalled();
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+      expect(mockBalanceService.applyTransactionEffect).not.toHaveBeenCalled();
+    });
+
+    it('rejects reuse of a transaction key with a different payload', async () => {
+      mockPrisma.transaction.findFirst.mockResolvedValue({
+        id: 'tx-existing', type: 'EXPENSE', accountId: 'acc-1', amount: '100',
+        date: new Date('2026-10-20T00:00:00.000Z'), description: 'Test',
+        categoryId: null, notes: null,
+      });
+
+      await expect(service.create('user-1', {
+        type: 'EXPENSE', amount: 200, date: '2026-10-20', description: 'Test',
+        accountId: 'acc-1', idempotencyKey: key,
+      })).rejects.toBeInstanceOf(ConflictException);
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('returns both existing transfer rows for a matching retry', async () => {
+      const date = new Date('2026-10-20T00:00:00.000Z');
+      const outTx = {
+        id: 'transfer-out', type: 'TRANSFER', accountId: 'from-1', amount: '-50',
+        date, description: 'Savings', notes: null, transferPairId: 'pair-1',
+      };
+      const inTx = {
+        id: 'transfer-in', type: 'TRANSFER', accountId: 'to-1', amount: '50',
+        date, description: 'Savings', notes: null, transferPairId: 'pair-1',
+      };
+      mockPrisma.transaction.findFirst.mockResolvedValue(outTx);
+      mockPrisma.transaction.findMany.mockResolvedValue([outTx, inTx]);
+
+      const result = await service.transfer('user-1', {
+        fromAccountId: 'from-1', toAccountId: 'to-1', amount: 50,
+        date: '2026-10-20', description: 'Savings', idempotencyKey: key,
+      });
+
+      expect(result).toEqual({ outTx, inTx });
+      expect(mockPrisma.account.findFirst).not.toHaveBeenCalled();
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+      expect(mockBalanceService.applyTransactionEffect).not.toHaveBeenCalled();
     });
   });
 
