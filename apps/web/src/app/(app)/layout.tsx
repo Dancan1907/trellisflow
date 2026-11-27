@@ -122,7 +122,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </Suspense>
             {children}
           </div>
-          <MarketingFooter />
+          <MarketingFooter showProductLinks={false} />
         </main>
       </div>
       <MoneyCopilotWidget />
