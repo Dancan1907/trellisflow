@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth/auth-store';
+import { Logo } from '@/components/shared/logo';
 
 const SECTIONS = [
   {
@@ -64,7 +65,17 @@ export default function HelpPage() {
   const isAuthenticated = Boolean(useAuthStore((state) => state.token));
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">
+    <>
+      {!isAuthenticated && (
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border-subtle bg-bg-primary px-5 md:px-8">
+          <Logo />
+          <nav className="flex items-center gap-3" aria-label="Public navigation">
+            <Link href="/login" className="text-sm font-medium text-fg-secondary hover:text-fg-primary">Log in</Link>
+            <Link href="/signup" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-semibold text-white">Get started</Link>
+          </nav>
+        </header>
+      )}
+      <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">
       <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">{isAuthenticated ? "Use the Help Assistant to ask questions and find the right TrellisFlow page." : "Sign in to unlock the complete user guide and the Help Assistant."}</p>{!isAuthenticated && <Link href="/login" className="mt-2 inline-flex text-sm font-semibold text-accent-primary">Sign in →</Link>}</section>
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-64 shrink-0">
@@ -359,6 +370,7 @@ export default function HelpPage() {
           </>
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 }
