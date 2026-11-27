@@ -97,14 +97,14 @@ export function ContainerCards({
 
   return (
     <div className="space-y-4 min-w-0">
-      <div className="bg-bg-secondary border border-border-subtle rounded-xl p-5 min-w-0 h-full">
+      <div className="bg-bg-secondary border border-border-subtle rounded-xl p-5 min-w-0 h-full overflow-hidden">
         <h2 className="text-base font-semibold text-fg-primary mb-5">
           Your Portfolio Overview · {reportingCurrency}
         </h2>
 
-        <div className="flex items-center gap-4 min-w-0">
+        <div className="grid grid-cols-[minmax(5.5rem,7rem)_minmax(0,1fr)] items-center gap-3 sm:gap-4 min-w-0">
           <div
-            className="relative w-28 h-28 shrink-0 rounded-full flex items-center justify-center"
+            className="relative aspect-square w-full max-w-28 rounded-full flex items-center justify-center"
             style={{ background: conicGradient }}
             aria-label={`Portfolio allocation in ${reportingCurrency}`}
           >
@@ -116,7 +116,7 @@ export function ContainerCards({
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 space-y-3">
+          <div className="min-w-0 space-y-3">
             {[
               { label: 'Personal', value: primary.personal, color: 'bg-accent-primary' },
               { label: 'Investments', value: primary.investments, color: 'bg-accent-purple' },
@@ -127,12 +127,12 @@ export function ContainerCards({
                   <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.color}`} />
                   <span className="text-xs text-fg-secondary truncate">{item.label}</span>
                 </div>
-                <div className="text-right min-w-0 shrink">
+                <div className="text-right min-w-0 max-w-full">
                   <span className="block text-xs font-semibold text-fg-primary">
                     {getPercent(item.value)}%
                   </span>
-                  <span className="block text-[10px] leading-tight text-fg-secondary whitespace-normal break-all">
-                    <AmountDisplay value={item.value} currency={reportingCurrency} className="text-[10px] whitespace-normal break-all" />
+                  <span className="block max-w-full text-[10px] leading-tight text-fg-secondary whitespace-normal break-words">
+                    <AmountDisplay value={item.value} currency={reportingCurrency} className="text-[10px] whitespace-normal break-words" />
                   </span>
                 </div>
               </div>
