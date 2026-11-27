@@ -132,6 +132,9 @@ export class MoneyCopilotActionsService {
         where: { id: existing.transactionId, userId },
       });
       if (!transaction) throw new ConflictException('The confirmed transaction could not be retrieved.');
+      // A prior request may have committed the transaction but failed to refresh
+      // the snapshot. Retry the refresh without repeating the financial write.
+      await this.snapshots.computeAndSaveForUser(userId);
       return { status: 'CONFIRMED' as const, transaction, replayed: true };
     }
     if (existing.status !== 'PENDING' || existing.expiresAt <= new Date()) {
@@ -148,8 +151,9 @@ export class MoneyCopilotActionsService {
     const digest = createHash('sha256').update(serializeActionPayload(payload)).digest('hex');
     if (digest !== existing.payloadHash) throw new ConflictException('The action preview has changed. Create a new preview.');
 
+    let transaction;
     try {
-      const transaction = await this.prisma.$transaction(async (tx) => {
+      transaction = await this.prisma.$transaction(async (tx) => {
         const claimed = await tx.moneyCopilotAction.updateMany({
           where: {
             id: actionId,
@@ -212,20 +216,25 @@ export class MoneyCopilotActionsService {
         });
         return created;
       });
-
-      await this.snapshots.computeAndSaveForUser(userId);
-      return { status: 'CONFIRMED' as const, transaction, replayed: false };
     } catch (error) {
       // A concurrent retry may have won the atomic claim. Return its result,
       // but never execute the financial mutation a second time.
       const latest = await this.prisma.moneyCopilotAction.findFirst({ where: { id: actionId, userId } });
       if (latest?.status === 'CONFIRMED' && latest.transactionId) {
-        const transaction = await this.prisma.transaction.findFirst({
+        const confirmedTransaction = await this.prisma.transaction.findFirst({
           where: { id: latest.transactionId, userId },
         });
-        if (transaction) return { status: 'CONFIRMED' as const, transaction, replayed: true };
+        if (confirmedTransaction) {
+          await this.snapshots.computeAndSaveForUser(userId);
+          return { status: 'CONFIRMED' as const, transaction: confirmedTransaction, replayed: true };
+        }
       }
       throw error;
     }
+
+    // Surface snapshot failures. A retry will refresh the snapshot above
+    // while returning the already committed transaction without posting again.
+    await this.snapshots.computeAndSaveForUser(userId);
+    return { status: 'CONFIRMED' as const, transaction, replayed: false };
   }
 }
