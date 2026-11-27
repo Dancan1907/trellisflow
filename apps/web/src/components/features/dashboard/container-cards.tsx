@@ -157,6 +157,7 @@ export function ContainerCards({
                   </div>
                 </div>
                 <AmountDisplay value={group.total} currency={group.currency} />
+              </div>
             ))}
           </div>
         </div>
