@@ -159,33 +159,109 @@ export class MoneyCopilotDataService {
 
     if (/what[- ]if|what would happen|simulate|simulation|scenario|reduce.*spend|cut.*spend|increase.*spend/i.test(question)) {
       const range = this.resolveDateRange('last 30 days', timezone);
-      const spending = await this.getSpendingAnalysis(userId, range);
-      const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
+      const match = question.match(/(\\d{1,2}(?:\\.\\d+)?)\\s*%/);
       const percentage = match ? Number(match[1]) : null;
-      const expenseReductionRequested =
-        /(reduce|cut|lower|decrease)[\w\s]{0,30}(spending|expenses?)/i.test(question) ||
-        /(spending|expenses?)[\w\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
+      const validPercentage = percentage !== null && percentage >= 0 && percentage <= 100;
+      const asksReduction = /\\b(reduce|cut|lower|decrease)\\b/i.test(question);
+      const asksIncrease = /\\b(increase|raise|grow|rise)\\b/i.test(question);
+      const asksDrop = /\\b(drop|fall|decline|decrease|reduce|cut)\\b/i.test(question);
+      const asksGrowth = /\\b(increase|raise|grow|rise)\\b/i.test(question);
+      const isBusinessRevenue = /\\b(business|company|revenue|sales)\\b/i.test(question) &&
+        /\\b(revenue|sales)\\b/i.test(question) && (asksReduction || asksIncrease || /\\b(drop|fall|decline)\\b/i.test(question));
+      const isBusinessExpense = /\\b(business|company)\\b/i.test(question) &&
+        /\\b(expenses?|costs?)\\b/i.test(question) && (asksReduction || asksIncrease);
+      const isPortfolioShock = /\\b(portfolio|investments?|holdings)\\b/i.test(question) &&
+        (asksDrop || asksGrowth);
+      const isPersonalExpenseReduction =
+        /(reduce|cut|lower|decrease)[\\w\\s]{0,30}(spending|expenses?)/i.test(question) ||
+        /(spending|expenses?)[\\w\\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
+
+      let scenarioType = 'UNSUPPORTED_SCENARIO';
+      let result: unknown = null;
+      let basedOn: Record<string, unknown> = { from: range.from, to: range.to };
+
+      if (isPersonalExpenseReduction) {
+        scenarioType = 'PERSONAL_EXPENSE_REDUCTION';
+        const spending = await this.getSpendingAnalysis(userId, range);
+        basedOn = { from: range.from, to: range.to, source: 'recorded personal expense transactions' };
+        result = validPercentage ? spending.totals.map((item) => ({
+          currency: item.currency,
+          baselineExpenses: item.totalExpenses,
+          assumedExpenseReductionPercent: percentage,
+          estimatedMonthlySavings: this.money(item.totalExpenses * percentage! / 100),
+          projectedExpensesAfterChange: this.money(item.totalExpenses * (1 - percentage! / 100)),
+        })) : null;
+      } else if (isBusinessRevenue || isBusinessExpense) {
+        scenarioType = isBusinessRevenue ? 'BUSINESS_REVENUE_CHANGE' : 'BUSINESS_EXPENSE_CHANGE';
+        const businesses = (context.businessPerformance as Array<Record<string, any>> | undefined) ?? [];
+        basedOn = {
+          from: range.from, to: range.to,
+          source: 'existing internal-business P&L service',
+        };
+        result = validPercentage ? businesses
+          .filter((business) => business.type === 'INTERNAL_BUSINESS' && business.profitAndLoss)
+          .map((business) => {
+            const pnl = business.profitAndLoss;
+            const income = Number(pnl.income);
+            const expenses = Number(pnl.expenses);
+            const revenueMultiplier = isBusinessRevenue
+              ? (asksReduction || /\\b(drop|fall|decline)\\b/i.test(question)
+                ? 1 - percentage! / 100 : 1 + percentage! / 100)
+              : 1;
+            const expenseMultiplier = isBusinessExpense
+              ? (asksReduction ? 1 - percentage! / 100 : 1 + percentage! / 100)
+              : 1;
+            const projectedIncome = income * revenueMultiplier;
+            const projectedExpenses = expenses * expenseMultiplier;
+            const projectedProfit = projectedIncome - projectedExpenses;
+            return {
+              business: business.name,
+              currency: business.currency,
+              baselineRevenue: this.money(income),
+              baselineExpenses: this.money(expenses),
+              baselineNetProfit: this.money(Number(pnl.netProfit)),
+              projectedRevenue: this.money(projectedIncome),
+              projectedExpenses: this.money(projectedExpenses),
+              projectedNetProfit: this.money(projectedProfit),
+              projectedNetProfitMarginPercent: projectedIncome > 0
+                ? this.money((projectedProfit / projectedIncome) * 100) : null,
+              appliedChange: isBusinessRevenue
+                ? (revenueMultiplier < 1 ? 'REVENUE_REDUCTION' : 'REVENUE_INCREASE')
+                : (expenseMultiplier < 1 ? 'EXPENSE_REDUCTION' : 'EXPENSE_INCREASE'),
+            };
+          }) : null;
+      } else if (isPortfolioShock) {
+        scenarioType = 'PORTFOLIO_VALUE_SENSITIVITY';
+        const investments = context.investments as Record<string, any> | undefined;
+        basedOn = { source: 'recorded current holding values', asOf: today };
+        result = validPercentage ? (investments?.byCurrency ?? []).map((portfolio: any) => {
+          const multiplier = asksDrop ? 1 - percentage! / 100 : 1 + percentage! / 100;
+          const currentValue = Number(portfolio.currentValue);
+          const hypotheticalValue = currentValue * multiplier;
+          return {
+            currency: portfolio.currency,
+            currentValue: this.money(currentValue),
+            assumedChangePercent: asksDrop ? -percentage! : percentage!,
+            hypotheticalValue: this.money(hypotheticalValue),
+            hypotheticalGainOrLoss: this.money(hypotheticalValue - currentValue),
+          };
+        }) : null;
+      }
+
       context.whatIfSimulation = {
-        scenarioType: expenseReductionRequested ? 'EXPENSE_REDUCTION' : 'UNSUPPORTED_SCENARIO',
-        basedOn: { from: range.from, to: range.to },
-        baselineExpensesByCurrency: spending.totals,
+        scenarioType,
+        basedOn,
         requestedChangePercent: percentage,
-        result: expenseReductionRequested && percentage !== null && percentage >= 0 && percentage <= 100
-          ? spending.totals.map((item) => ({
-              currency: item.currency,
-              baselineExpenses: item.totalExpenses,
-              assumedExpenseReductionPercent: percentage,
-              estimatedMonthlySavings: this.money(item.totalExpenses * percentage / 100),
-              projectedExpensesAfterChange: this.money(item.totalExpenses * (1 - percentage / 100)),
-            }))
-          : null,
+        result,
         limitations: [
-          'This is a deterministic illustration using recorded expenses in the selected 30-day period, not a prediction.',
-          ...(expenseReductionRequested
-            ? ['It assumes the requested percentage reduction applies uniformly to the recorded expense total.']
-            : ['This simulation currently supports expense-reduction scenarios only. No business revenue, cost, hiring or investment scenario is calculated.']),
-          'No future income, investment returns, inflation, taxes or behavior changes are assumed.',
-          ...(percentage === null ? ['Specify a percentage, for example: What if I reduce spending by 10%?'] : []),
+          'This is a deterministic sensitivity illustration using recorded historical or current values, not a prediction.',
+          'The percentage is applied uniformly to the selected baseline; no probability, future behavior, tax, fee, inflation or market-return assumptions are included.',
+          'Business scenarios use the requested P&L period and internal businesses only; external-business summaries do not contain transaction-level P&L.',
+          'Portfolio scenarios apply a hypothetical uniform change to recorded current holding values and do not estimate volatility or the likelihood of that change.',
+          ...(scenarioType === 'UNSUPPORTED_SCENARIO'
+            ? ['Supported scenarios: personal spending reduction, internal-business revenue or expense changes, and uniform portfolio value sensitivity.']
+            : []),
+          ...(!validPercentage ? ['Specify a percentage from 0% to 100%, for example: What if my business revenue increases by 10%?'] : []),
         ],
       };
     }
