@@ -157,6 +157,51 @@ export class MoneyCopilotDataService {
       context.transactionLookup = await this.lookupTransactions(userId, question);
     }
 
+    if (/what[- ]if|what would happen|simulate|simulation|scenario|reduce.*spend|cut.*spend|increase.*spend/i.test(question)) {
+      const range = this.resolveDateRange('last 30 days', timezone);
+      const spending = await this.getSpendingAnalysis(userId, range);
+      const match = question.match(/(\\d{1,2}(?:\\.\\d+)?)\\s*%/);
+      const percentage = match ? Number(match[1]) : null;
+      context.whatIfSimulation = {
+        basedOn: { from: range.from, to: range.to },
+        baselineExpensesByCurrency: spending.totals,
+        requestedChangePercent: percentage,
+        result: percentage !== null && percentage >= 0 && percentage <= 100
+          ? spending.totals.map((item) => ({
+              currency: item.currency,
+              baselineExpenses: item.totalExpenses,
+              assumedExpenseReductionPercent: percentage,
+              estimatedMonthlySavings: this.money(item.totalExpenses * percentage / 100),
+              projectedExpensesAfterChange: this.money(item.totalExpenses * (1 - percentage / 100)),
+            }))
+          : null,
+        limitations: [
+          'This is a deterministic illustration using recorded expenses in the selected 30-day period, not a prediction.',
+          'It assumes the requested percentage reduction applies uniformly to the recorded expense total.',
+          'No future income, investment returns, inflation, taxes or behavior changes are assumed.',
+          ...(percentage === null ? ['Specify a percentage, for example: What if I reduce spending by 10%?'] : []),
+        ],
+      };
+    }
+
+    // The latest saved net-worth snapshot is the sole consolidated wealth figure.
+    // Its components are presented as a breakdown only; current account balances,
+    // holdings and business values are deliberately not added to it again.
+    context.consolidatedWealth = snapshot ? {
+      asOf: this.dateKey(snapshot.date),
+      currency: snapshot.currency,
+      totalNetWorth: Number(snapshot.totalNetWorth),
+      components: {
+        personal: Number(snapshot.personalNetWorth),
+        investments: Number(snapshot.investmentsNetWorth),
+        businesses: Number(snapshot.businessesNetWorth),
+      },
+      aggregationRule: 'Use this saved snapshot as the consolidated total. Do not add account balances, investment holdings or business values to this total because those records may already be represented in the snapshot.',
+    } : {
+      available: false,
+      note: 'No saved net-worth snapshot is available. Do not construct a consolidated total by adding accounts, holdings and business values because overlap and ownership boundaries cannot be safely resolved.',
+    };
+
     return context;
   }
 
@@ -214,16 +259,19 @@ export class MoneyCopilotDataService {
     const groups = new Map<string, {
       costBasis: number; currentValue: number; count: number;
       byAssetClass: Map<string, { value: number; count: number }>;
+      byHolding: Array<{ name: string; symbol: string | null; value: number }>;
     }>();
     for (const holding of holdings) {
       const group = groups.get(holding.currency) ?? {
-        costBasis: 0, currentValue: 0, count: 0, byAssetClass: new Map(),
+        costBasis: 0, currentValue: 0, count: 0,
+        byAssetClass: new Map(), byHolding: [],
       };
       const cost = Number(holding.costBasisTotal);
       const value = Number(holding.currentValueTotal);
       group.costBasis += cost;
       group.currentValue += value;
       group.count += 1;
+      group.byHolding.push({ name: holding.name, symbol: holding.symbol, value });
       const asset = group.byAssetClass.get(holding.assetClass) ?? { value: 0, count: 0 };
       asset.value += value;
       asset.count += 1;
@@ -231,22 +279,49 @@ export class MoneyCopilotDataService {
       groups.set(holding.currency, group);
     }
     return {
-      byCurrency: Array.from(groups.entries()).map(([currency, group]) => ({
-        currency,
-        holdingCount: group.count,
-        costBasis: this.money(group.costBasis),
-        currentValue: this.money(group.currentValue),
-        unrealizedGain: this.money(group.currentValue - group.costBasis),
-        byAssetClass: Array.from(group.byAssetClass.entries()).map(([assetClass, value]) => ({
-          assetClass, currentValue: this.money(value.value), holdingCount: value.count,
-        })),
-      })),
+      byCurrency: Array.from(groups.entries()).map(([currency, group]) => {
+        const gain = group.currentValue - group.costBasis;
+        const total = group.currentValue;
+        const allocation = Array.from(group.byAssetClass.entries()).map(([assetClass, value]) => ({
+          assetClass,
+          currentValue: this.money(value.value),
+          holdingCount: value.count,
+          allocationPercent: total > 0 ? this.money((value.value / total) * 100) : null,
+        })).sort((a, b) => b.currentValue - a.currentValue);
+        const rankedHoldings = [...group.byHolding].sort((a, b) => b.value - a.value);
+        const topHolding = rankedHoldings[0];
+        const concentrationIndex = total > 0
+          ? rankedHoldings.reduce((sum, holding) => sum + Math.pow(holding.value / total, 2), 0)
+          : null;
+        return {
+          currency,
+          holdingCount: group.count,
+          costBasis: this.money(group.costBasis),
+          currentValue: this.money(total),
+          unrealizedGain: this.money(gain),
+          unrealizedReturnPercent: group.costBasis > 0
+            ? this.money((gain / group.costBasis) * 100) : null,
+          byAssetClass: allocation,
+          concentration: {
+            largestHolding: topHolding ? topHolding.name : null,
+            largestHoldingPercent: topHolding && total > 0
+              ? this.money((topHolding.value / total) * 100) : null,
+            holdingsHerfindahlIndex: concentrationIndex === null
+              ? null : this.money(concentrationIndex),
+            interpretation: 'Concentration indicators describe the distribution of recorded current values; they are not a measure of price volatility or investment risk.',
+          },
+        };
+      }),
       holdings: holdings.slice(0, 30).map((holding) => ({
         name: holding.name, symbol: holding.symbol, assetClass: holding.assetClass,
         currency: holding.currency, costBasis: Number(holding.costBasisTotal),
         currentValue: Number(holding.currentValueTotal),
       })),
-      note: 'Unrealized gain is current recorded value minus cost basis. It is not a realized return and does not include fees, taxes, or cash flows.',
+      riskLimitations: [
+        'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
+        'Asset-class allocation and largest-holding concentration are descriptive concentration indicators, not a complete risk assessment.',
+        'Unrealized gain is current recorded value minus cost basis; it is not realized profit and excludes fees, taxes and cash flows.',
+      ],
     };
   }
 
