@@ -150,12 +150,13 @@ export function ContainerCards({
               <div key={group.currency} className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-fg-primary">{group.currency}</p>
-                  <p className="text-xs text-fg-secondary">
-                    Personal · Investments · Businesses shown separately
-                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-secondary">
+                    <span>Personal: <AmountDisplay value={group.personal} currency={group.currency} /></span>
+                    <span>Investments: <AmountDisplay value={group.investments} currency={group.currency} /></span>
+                    <span>Businesses: <AmountDisplay value={group.businesses} currency={group.currency} /></span>
+                  </div>
                 </div>
                 <AmountDisplay value={group.total} currency={group.currency} />
-              </div>
             ))}
           </div>
         </div>
