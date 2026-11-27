@@ -93,6 +93,7 @@ model User {
   auditLogs          AuditLog[]
   aiUsageDaily       AiUsageDaily[]
   aiUsageEvents      AiUsageEvent[]
+  moneyCopilotActions MoneyCopilotAction[]
 
   @@index([status])
   @@map("users")
@@ -287,6 +288,12 @@ enum TransactionStatus {
   RECONCILED
 }
 
+enum MoneyCopilotActionStatus {
+  PENDING
+  CONFIRMED
+  EXPIRED
+}
+
 enum RecurringFrequency {
   DAILY
   WEEKLY
@@ -403,10 +410,30 @@ model Transaction {
   @@index([containerId, date(sort: Desc)])
   @@index([categoryId, date])
   @@index([transferPairId])
-  @@index([userId, idempotencyKey])
+  @@unique([userId, idempotencyKey])
   @@unique([userId, mpesaReference])
   @@unique([userId, receiptImageHash])
   @@map("transactions")
+}
+
+model MoneyCopilotAction {
+  id             String                    @id @db.Uuid
+  userId         String                    @map("user_id") @db.Uuid
+  idempotencyKey String                    @map("idempotency_key") @db.VarChar(36)
+  payloadHash    String                    @map("payload_hash") @db.Char(64)
+  payload        Json
+  status         MoneyCopilotActionStatus  @default(PENDING)
+  expiresAt      DateTime                  @map("expires_at") @db.Timestamptz(6)
+  confirmedAt    DateTime?                 @map("confirmed_at") @db.Timestamptz(6)
+  transactionId  String?                   @map("transaction_id") @db.Uuid
+  createdAt      DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, status, expiresAt])
+  @@index([transactionId])
+  @@map("money_copilot_actions")
 }
 
 model RecurringRule {
