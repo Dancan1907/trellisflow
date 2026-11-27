@@ -46,6 +46,8 @@ export default function DashboardPage() {
         <div className="relative w-fit">
           <button
             type="button"
+            aria-label="Filter cash flow activity period"
+            title="Filter cash flow activity period"
             aria-haspopup="listbox"
             aria-expanded={isRangeMenuOpen}
             onClick={() => setIsRangeMenuOpen((open) => !open)}
