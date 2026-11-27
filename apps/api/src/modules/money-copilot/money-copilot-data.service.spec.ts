@@ -103,6 +103,7 @@ describe('MoneyCopilotDataService', () => {
   it('provides a deterministic spending-reduction illustration from recorded expenses', async () => {
     const date = new Date();
     prisma.transaction.findMany.mockImplementation(async (args: any) => {
+      if (args.select?.account) return [];
       if (args.select?.category) {
         return [{ type: 'EXPENSE', amount: 120, currency: 'KES', date, category: { name: 'Food' } }];
       }
