@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { MarketingFooter } from '@/components/layout/marketing-footer';
@@ -19,7 +19,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [hasHydrated, setHasHydrated] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>('checking');
   const token = useAuthStore((state) => state.token);
-  const pathname = usePathname();
   const router = useRouter();
 
   // Restore the user's desktop sidebar preference without changing server-rendered markup.
