@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { Calendar, ArrowRight, TrendingUp, PlusCircle, BarChart3, Wallet, Sparkles } from 'lucide-react';
