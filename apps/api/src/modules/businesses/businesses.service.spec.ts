@@ -190,6 +190,22 @@ describe('BusinessesService (Unit)', () => {
     });
   });
 
+  describe('convertToExternal currency safety', () => {
+    it('rejects conversion when account balances span currencies', async () => {
+      mockPrisma.container.findFirst.mockResolvedValue(container({
+        accounts: [
+          account({ id: 'kes-account', currency: 'KES' }),
+          account({ id: 'usd-account', currency: 'USD', currentBalance: '500' }),
+        ],
+      }));
+
+      await expect(service.convertToExternal('user-1', 'biz-1')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getNetWorth', () => {
     it('computes assets minus liabilities', async () => {
       mockPrisma.container.findFirst.mockResolvedValue(container());
