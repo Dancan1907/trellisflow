@@ -186,6 +186,15 @@ async function main() {
       files.length +
       ' files, ' +
       totalChunks +
-      ' chunks.\\n',
+      ' chunks.\n',
   );
 }
+
+main()
+  .catch((error: unknown) => {
+    console.error('Help documentation ingestion failed:', error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
