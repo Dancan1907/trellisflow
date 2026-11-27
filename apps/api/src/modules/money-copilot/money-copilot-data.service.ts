@@ -159,22 +159,22 @@ export class MoneyCopilotDataService {
 
     if (/what[- ]if|what would happen|simulate|simulation|scenario|reduce.*spend|cut.*spend|increase.*spend/i.test(question)) {
       const range = this.resolveDateRange('last 30 days', timezone);
-      const match = question.match(/(\\d{1,2}(?:\\.\\d+)?)\\s*%/);
+      const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
       const percentage = match ? Number(match[1]) : null;
       const validPercentage = percentage !== null && percentage >= 0 && percentage <= 100;
-      const asksReduction = /\\b(reduce|cut|lower|decrease)\\b/i.test(question);
-      const asksIncrease = /\\b(increase|raise|grow|rise)\\b/i.test(question);
-      const asksDrop = /\\b(drop|fall|decline|decrease|reduce|cut)\\b/i.test(question);
-      const asksGrowth = /\\b(increase|raise|grow|rise)\\b/i.test(question);
-      const isBusinessRevenue = /\\b(business|company|revenue|sales)\\b/i.test(question) &&
-        /\\b(revenue|sales)\\b/i.test(question) && (asksReduction || asksIncrease || /\\b(drop|fall|decline)\\b/i.test(question));
-      const isBusinessExpense = /\\b(business|company)\\b/i.test(question) &&
-        /\\b(expenses?|costs?)\\b/i.test(question) && (asksReduction || asksIncrease);
-      const isPortfolioShock = /\\b(portfolio|investments?|holdings)\\b/i.test(question) &&
+      const asksReduction = /\b(reduce|cut|lower|decrease)\b/i.test(question);
+      const asksIncrease = /\b(increase|raise|grow|rise)\b/i.test(question);
+      const asksDrop = /\b(drop|fall|decline|decrease|reduce|cut)\b/i.test(question);
+      const asksGrowth = /\b(increase|raise|grow|rise)\b/i.test(question);
+      const isBusinessRevenue = /\b(business|company|revenue|sales)\b/i.test(question) &&
+        /\b(revenue|sales)\b/i.test(question) && (asksReduction || asksIncrease || /\b(drop|fall|decline)\b/i.test(question));
+      const isBusinessExpense = /\b(business|company)\b/i.test(question) &&
+        /\b(expenses?|costs?)\b/i.test(question) && (asksReduction || asksIncrease);
+      const isPortfolioShock = /\b(portfolio|investments?|holdings)\b/i.test(question) &&
         (asksDrop || asksGrowth);
       const isPersonalExpenseReduction =
-        /(reduce|cut|lower|decrease)[\\w\\s]{0,30}(spending|expenses?)/i.test(question) ||
-        /(spending|expenses?)[\\w\\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
+        /(reduce|cut|lower|decrease)[\w\s]{0,30}(spending|expenses?)/i.test(question) ||
+        /(spending|expenses?)[\w\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
 
       let scenarioType = 'UNSUPPORTED_SCENARIO';
       let result: unknown = null;
@@ -205,7 +205,7 @@ export class MoneyCopilotDataService {
             const income = Number(pnl.income);
             const expenses = Number(pnl.expenses);
             const revenueMultiplier = isBusinessRevenue
-              ? (asksReduction || /\\b(drop|fall|decline)\\b/i.test(question)
+              ? (asksReduction || /\b(drop|fall|decline)\b/i.test(question)
                 ? 1 - percentage! / 100 : 1 + percentage! / 100)
               : 1;
             const expenseMultiplier = isBusinessExpense
