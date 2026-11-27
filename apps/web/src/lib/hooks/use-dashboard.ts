@@ -56,10 +56,10 @@ interface Insight {
   actionUrl?: string | null;
 }
 
-export function useDashboardSummary() {
+export function useDashboardSummary(days: number = 30) {
   return useQuery({
-    queryKey: ['dashboard', 'summary'],
-    queryFn: () => apiFetch<DashboardSummary>('/api/dashboard/summary'),
+    queryKey: ['dashboard', 'summary', days],
+    queryFn: () => apiFetch<DashboardSummary>(`/api/dashboard/summary?days=${days}`),
   });
 }
 

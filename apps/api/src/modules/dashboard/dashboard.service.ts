@@ -10,9 +10,9 @@ export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Get the hero summary: Net Worth + This Month's Cash Flow.
+   * Get the latest net-worth snapshot and cash flow for the selected recent activity period.
    */
-  async getSummary(userId: string) {
+  async getSummary(userId: string, days: number = 30) {
     const [latestSnapshot, user] = await Promise.all([
       this.prisma.netWorthSnapshot.findFirst({
         where: { userId },
@@ -26,14 +26,18 @@ export class DashboardService {
     const reportingCurrency = user?.reportingCurrency ?? 'KES';
 
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const rangeDays = Number.isFinite(days) ? Math.min(365, Math.max(1, Math.trunc(days))) : 30;
+    const periodStart = new Date(now);
+    periodStart.setDate(periodStart.getDate() - (rangeDays - 1));
+    periodStart.setHours(0, 0, 0, 0);
+    const periodEnd = new Date(now);
+    periodEnd.setHours(23, 59, 59, 999);
     const transactions = await this.prisma.transaction.findMany({
       where: {
         userId,
         type: { in: ['INCOME', 'EXPENSE'] },
         status: { in: ['POSTED', 'RECONCILED'] },
-        date: { gte: startOfMonth, lte: endOfMonth },
+        date: { gte: periodStart, lte: periodEnd },
         deletedAt: null,
       },
       select: { type: true, amount: true, currency: true },
@@ -82,8 +86,8 @@ export class DashboardService {
         net: primaryCashFlow.net,
         currency: reportingCurrency,
         byCurrency: cashFlowByCurrency,
-        periodStart: startOfMonth,
-        periodEnd: endOfMonth,
+        periodStart,
+        periodEnd,
       },
     };
   }

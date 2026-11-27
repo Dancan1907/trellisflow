@@ -39,3 +39,11 @@ Categories help group income and expenses for budgets and reports. Choose a cate
 ## Editing records
 
 Review the date, amount, currency and account before saving. Correct mistakes by editing the original record through the application's transaction workflow rather than creating a second transaction to offset it, unless that is the intended accounting treatment.
+
+## AI-assisted transaction drafts
+
+When enabled, natural-language transaction entry can interpret a sentence describing an income, expense or transfer and prepare a draft. M-Pesa message parsing can also extract transaction details from text you provide. These tools do not save a transaction automatically.
+
+Review and correct the transaction type, amount, date, description, account, category and (for transfers) source and destination accounts. Confirm only when the details are accurate. A repeated confirmation retry with the same idempotency key and payload is protected against duplicate financial writes. Reusing a key with a different payload is rejected.
+
+Never paste passwords, provider keys, authentication tokens or other secrets into a parsing or AI workflow.

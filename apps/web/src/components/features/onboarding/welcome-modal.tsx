@@ -26,8 +26,7 @@ export function WelcomeModal({ isOpen, onClose, onStartTour, onOpenGuide }: Welc
           Welcome to TrellisFlow!
         </h2>
         <p className="text-fg-secondary max-w-md mx-auto">
-          Your entire financial world, organized in one place. Let&apos;s walk you through the key
-          features so you can get the most out of your account.
+          Your financial world, organized in one place — with AI-assisted explanations, document-grounded help, and tools that turn your recorded data into clearer decisions. Let&apos;s get you started.
         </p>
       </div>
 
@@ -44,7 +43,7 @@ export function WelcomeModal({ isOpen, onClose, onStartTour, onOpenGuide }: Welc
             </span>
           </div>
           <p className="text-xs text-fg-secondary mb-4 flex-1">
-            Learn the essentials in about 2 minutes.
+            Explore your dashboard, planning tools, insights, Money Copilot, and Help Assistant in about 3 minutes.
           </p>
           <span className="text-sm font-medium text-fg-primary group-hover:text-accent-primary transition-colors flex items-center gap-1">
             Start quick tour &rarr;
@@ -61,7 +60,7 @@ export function WelcomeModal({ isOpen, onClose, onStartTour, onOpenGuide }: Welc
             <span className="text-sm font-bold text-fg-primary">Full User Guide</span>
           </div>
           <p className="text-xs text-fg-secondary mb-4 flex-1">
-            Explore every feature in detail at your own pace.
+            Learn how to manage transactions, investments, businesses, forecasts, and AI tools.
           </p>
           <span className="text-sm font-medium text-fg-secondary flex items-center gap-1">
             Open guide &rarr;

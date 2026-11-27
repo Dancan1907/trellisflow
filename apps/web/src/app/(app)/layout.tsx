@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { MarketingFooter } from '@/components/layout/marketing-footer';
@@ -15,12 +15,32 @@ type SessionState = 'checking' | 'authenticated' | 'anonymous' | 'error';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>('checking');
   const token = useAuthStore((state) => state.token);
-  const pathname = usePathname();
   const router = useRouter();
-  const isPublicHelpPage = pathname === '/help';
+
+  // Restore the user's desktop sidebar preference without changing server-rendered markup.
+  useEffect(() => {
+    try {
+      setIsSidebarCollapsed(window.localStorage.getItem('trellisflow-sidebar-collapsed') === 'true');
+    } catch {
+      // The sidebar remains usable with an in-memory preference if storage is unavailable.
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem('trellisflow-sidebar-collapsed', String(next));
+      } catch {
+        // Keep the current-session toggle working when browser storage is unavailable.
+      }
+      return next;
+    });
+  };
 
   // Do not make an authentication decision until persisted Zustand state is restored.
   useEffect(() => {
@@ -58,10 +78,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [hasHydrated, token]);
 
   useEffect(() => {
-    if (hasHydrated && sessionState === 'anonymous' && !isPublicHelpPage) {
+    if (hasHydrated && sessionState === 'anonymous') {
       router.replace('/login');
     }
-  }, [hasHydrated, sessionState, isPublicHelpPage, router]);
+  }, [hasHydrated, sessionState, router]);
 
   if (!hasHydrated || sessionState === 'checking') {
     return (
@@ -69,12 +89,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         Verifying your session…
       </div>
     );
-  }
-
-  // The Help Centre is intentionally public. Anonymous visitors receive its
-  // public documentation only and never receive the authenticated app shell.
-  if (sessionState === 'anonymous' && isPublicHelpPage) {
-    return <>{children}</>;
   }
 
   if (sessionState === 'anonymous') {
@@ -98,9 +112,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} isCollapsed={isSidebarCollapsed} />
       <div className="flex-1 flex flex-col w-full">
-        <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} />
+        <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} isSidebarCollapsed={isSidebarCollapsed} onToggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto flex flex-col">
           <div className="flex-1 p-4 md:p-8">
             <Suspense fallback={null}>
@@ -108,7 +122,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </Suspense>
             {children}
           </div>
-          <MarketingFooter />
+          <MarketingFooter showProductLinks={false} />
         </main>
       </div>
       <MoneyCopilotWidget />

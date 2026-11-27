@@ -18,7 +18,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/reports') ||
     pathname.startsWith('/insights') ||
     pathname.startsWith('/settings') ||
-    pathname.startsWith('/money-copilot');
+    pathname.startsWith('/money-copilot') ||
+    pathname.startsWith('/help');
 
   if (!hasAuthHint && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -26,7 +27,7 @@ export function middleware(request: NextRequest) {
 
   // Do not redirect away from login based on this non-authoritative cookie:
   // an expired token must be able to reach login and establish a new session.
-  // /help is intentionally public and its page filters the guide by session.
+  // The Help Centre is a signed-in application route.
   return NextResponse.next();
 }
 
@@ -43,5 +44,6 @@ export const config = {
     '/insights/:path*',
     '/settings/:path*',
     '/money-copilot/:path*',
+    '/help/:path*',
   ],
 };
