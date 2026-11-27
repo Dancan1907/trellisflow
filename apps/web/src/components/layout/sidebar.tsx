@@ -17,6 +17,7 @@ import {
   Settings,
   LucideIcon,
   X,
+  Layers3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/utils';
 import { Logo } from '../shared/logo';
@@ -68,9 +69,10 @@ const navSections: { title: string; tourId?: string; items: NavItem[] }[] = [
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  isCollapsed: boolean;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -80,12 +82,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          'fixed md:static inset-y-0 left-0 z-50 w-60 h-screen flex flex-col border-r border-border-subtle bg-bg-secondary transition-transform duration-300 ease-in-out',
+          'fixed md:static inset-y-0 left-0 z-50 w-60 h-screen shrink-0 flex flex-col border-r border-border-subtle bg-bg-secondary transition-[width,transform] duration-300 ease-in-out',
+          isCollapsed ? 'md:w-[4.5rem]' : 'md:w-60',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        <div className="h-16 flex items-center justify-between px-6 border-b border-border-subtle">
-          <Logo />
+        <div className={cn('h-16 flex items-center border-b border-border-subtle', isCollapsed ? 'justify-center px-2' : 'justify-between px-6')}>
+          {(!isCollapsed || isOpen) ? <Logo /> : <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary text-white" aria-label="TrellisFlow"><Layers3 size={21} /></div>}
           {/* Close button (Mobile only) */}
           <button
             onClick={onClose}
@@ -95,12 +98,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-6">
+        <nav className={cn("flex-1 overflow-y-auto py-6 space-y-6", isCollapsed ? "px-2" : "px-3")}>
           {navSections.map((section) => (
             <div key={section.title} {...(section.tourId ? { id: section.tourId } : {})}>
-              <h3 className="px-3 mb-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider">
+              {!isCollapsed && <h3 className="px-3 mb-2 text-xs font-semibold text-fg-tertiary uppercase tracking-wider">
                 {section.title}
-              </h3>
+              </h3>}
               <ul className="space-y-1">
                 {section.items.filter((item) => item.enabled !== false).map((item) => {
                   const isActive = pathname.startsWith(item.href);
@@ -109,6 +112,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
+                        title={isCollapsed ? item.label : undefined}
+                        aria-label={isCollapsed ? item.label : undefined}
                         id={item.tourId ?? (
                           item.href === '/dashboard'
                             ? 'tour-dashboard'
@@ -124,14 +129,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                           if (window.innerWidth < 768) onClose();
                         }}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                          'flex items-center rounded-md text-sm font-medium transition-colors',
+                          isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2',
                           isActive
                             ? 'bg-accent-subtle text-fg-primary'
                             : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary',
                         )}
                       >
-                        <Icon size={18} className={isActive ? 'text-accent-primary' : ''} />
-                        {item.label}
+                        <Icon size={19} className={isActive ? 'text-accent-primary' : ''} />
+                        {!isCollapsed && <span>{item.label}</span>}
                       </Link>
                     </li>
                   );
@@ -141,9 +147,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-border-subtle">
+        <div className={cn("border-t border-border-subtle", isCollapsed ? "p-2" : "p-3")}>
           <Link
             href="/settings"
+            title={isCollapsed ? 'Settings' : undefined}
+            aria-label={isCollapsed ? 'Settings' : undefined}
             onClick={() => {
               if (window.innerWidth < 768) onClose();
             }}
@@ -154,8 +162,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 : 'text-fg-secondary hover:bg-bg-tertiary hover:text-fg-primary',
             )}
           >
-            <Settings size={18} />
-            Settings
+            <Settings size={19} />
+            {!isCollapsed && <span>Settings</span>}
           </Link>
         </div>
       </aside>
