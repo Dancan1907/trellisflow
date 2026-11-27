@@ -181,6 +181,7 @@ export default function MoneyCopilotPage() {
               <div><dt className="text-xs text-fg-tertiary">Category</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.category ?? 'Uncategorized'}</dd></div>
               <div><dt className="text-xs text-fg-tertiary">Date</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.date}</dd></div>
               <div className="sm:col-span-2"><dt className="text-xs text-fg-tertiary">Description</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.description}</dd></div>
+              {actionPreview.preview.notes && <div className="sm:col-span-2"><dt className="text-xs text-fg-tertiary">Notes</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.notes}</dd></div>}
             </dl>
             <p className="mt-3 text-xs text-fg-tertiary">Preview expires {new Date(actionPreview.expiresAt).toLocaleTimeString()}. Confirmation creates the transaction and updates the account balance.</p>
             {actionMessage && <p role="alert" className="mt-2 text-sm text-red-500">{actionMessage}</p>}
@@ -205,7 +206,7 @@ export default function MoneyCopilotPage() {
             </div>
           </div>
         )}
-        {actionMessage && !actionPreview && <p role="status" className="mt-3 text-sm text-green-600">{actionMessage}</p>}
+        {actionMessage && !actionPreview && !showActionForm && <p role="status" className="mt-3 text-sm text-green-600">{actionMessage}</p>}
       </section>
 
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-secondary">
