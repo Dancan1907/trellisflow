@@ -163,8 +163,8 @@ export class MoneyCopilotDataService {
       const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
       const percentage = match ? Number(match[1]) : null;
       const expenseReductionRequested =
-        /(reduce|cut|lower|decrease)[\\w\\s]{0,30}(spending|expenses?)/i.test(question) ||
-        /(spending|expenses?)[\\w\\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
+        /(reduce|cut|lower|decrease)[\w\s]{0,30}(spending|expenses?)/i.test(question) ||
+        /(spending|expenses?)[\w\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
       context.whatIfSimulation = {
         scenarioType: expenseReductionRequested ? 'EXPENSE_REDUCTION' : 'UNSUPPORTED_SCENARIO',
         basedOn: { from: range.from, to: range.to },
