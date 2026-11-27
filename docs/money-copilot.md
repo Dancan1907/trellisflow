@@ -16,7 +16,7 @@ Money Copilot answers natural-language questions about a signed-in user's record
 
 The backend builds context for the authenticated user only:
 
-- Latest saved net-worth snapshot, with its snapshot date and reporting currency; other currencies remain in a separate breakdown and are never combined without FX conversion.
+- Latest saved net-worth snapshot, with its snapshot date and reporting currency; the snapshot includes open investment holding values separately from linked investment-account cash. Other currencies remain in a separate breakdown and are never combined without FX conversion.
 - Active account balances grouped by currency.
 - Current-month income, expenses, and net cash flow, grouped by currency.
 - Recent transaction descriptions and a bounded description-only transaction lookup.
