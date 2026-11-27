@@ -14,8 +14,10 @@ export class DashboardController {
 
   @Get('summary')
   @ApiOperation({ summary: 'Get the hero summary (Net worth + Cash flow)' })
-  async getSummary(@CurrentUser() user: any) {
-    return this.dashboardService.getSummary(user.id);
+  async getSummary(@CurrentUser() user: any, @Query('days') days?: string) {
+    const parsedDays = days ? Number.parseInt(days, 10) : 30;
+    const rangeDays = Number.isFinite(parsedDays) ? Math.min(365, Math.max(1, parsedDays)) : 30;
+    return this.dashboardService.getSummary(user.id, rangeDays);
   }
 
   @Get('containers')
