@@ -10,6 +10,7 @@ interface HeroCardProps {
     investments: number;
     businesses: number;
     currency: string;
+    byCurrency?: Array<{ currency: string; totalNetWorth: number }>;
   };
 }
 
@@ -55,8 +56,9 @@ export function HeroCard({ isLoading, data }: HeroCardProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {cards.map((card, i) => (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {cards.map((card, i) => (
         <div
           key={i}
           className="bg-bg-secondary border border-border-subtle rounded-xl p-5 relative overflow-hidden group hover:border-border-strong transition-colors"
@@ -99,7 +101,22 @@ export function HeroCard({ isLoading, data }: HeroCardProps) {
             </p>
           </div>
         </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      {data.byCurrency?.filter((item) => item.currency !== data.currency).length ? (
+        <div className="mt-4 flex flex-wrap gap-3">
+          {data.byCurrency
+            .filter((item) => item.currency !== data.currency)
+            .map((item) => (
+              <div key={item.currency} className="rounded-lg border border-border-subtle bg-bg-secondary px-4 py-3">
+                <p className="text-xs text-fg-secondary mb-1">Other currency · {item.currency}</p>
+                <p className="text-base font-semibold text-fg-primary">
+                  <AmountDisplay value={item.totalNetWorth} currency={item.currency} />
+                </p>
+              </div>
+            ))}
+        </div>
+      ) : null}
+    </>
   );
 }
