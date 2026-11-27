@@ -21,7 +21,7 @@ The backend builds context for the authenticated user only:
 - Current-month income, expenses, and net cash flow, grouped by currency.
 - Recent transaction descriptions and a bounded description-only transaction lookup.
 - Expense category analysis for supported date ranges.
-- Open investment holdings, cost basis, current recorded value, unrealized gain and return, allocation and concentration indicators grouped by currency.
+- Open investment holdings, cost basis, current recorded value, unrealized gain and return, allocation and concentration indicators grouped by currency; recorded realized sale gains/losses, dividend/interest income, contributions and withdrawals are reported separately by currency.
 - Internal business profit and loss and a historical 90-day cash-runway estimate; external businesses use their latest saved summary.
 - Supported deterministic what-if sensitivities for personal expense reduction, internal-business revenue/expense changes and uniform portfolio-value changes.
 
@@ -67,7 +67,7 @@ Keep the feature disabled until a valid server-side AI provider key is configure
 ## Known limitations
 
 - Business runway is a historical 90-day burn-rate estimate, not a guaranteed forward forecast.
-- Investment gain is based on recorded cost basis and current recorded value; it is not a time-weighted or money-weighted historical return series.
+- Unrealized investment gain is based on recorded cost basis and current recorded value; it is not a time-weighted or money-weighted historical return series. Realized gains and dividend/interest income are available only when their investment events have been explicitly recorded; contributions and withdrawals are not investment returns.
 - Concentration indicators are descriptive. Volatility, beta, Sharpe ratio, maximum drawdown and correlation are unavailable without reliable historical market-price series.
 - External businesses use saved summary data and do not have the same transaction-level analysis as internal businesses.
 - The latest net-worth snapshot can lag current account balances. Its components are breakdowns, not additional wealth to sum again.
