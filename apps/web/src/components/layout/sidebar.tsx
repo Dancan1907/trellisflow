@@ -57,10 +57,10 @@ const navSections: { title: string; tourId?: string; items: NavItem[] }[] = [
     title: 'Analyze',
     tourId: 'tour-analyze',
     items: [
-      { label: 'Reports', href: '/reports', icon: BarChart3 },
-      { label: 'Insights', href: '/insights', icon: Lightbulb },
-      { label: 'Money Copilot', href: '/money-copilot', icon: Sparkles, enabled: process.env.NEXT_PUBLIC_MONEY_COPILOT_ENABLED === 'true' },
-      { label: 'Help Centre', href: '/help', icon: CircleHelp, enabled: process.env.NEXT_PUBLIC_HELP_ASSISTANT_ENABLED === 'true' },
+      { label: 'Reports', href: '/reports', icon: BarChart3, tourId: 'tour-reports' },
+      { label: 'Insights', href: '/insights', icon: Lightbulb, tourId: 'tour-insights' },
+      { label: 'Money Copilot', href: '/money-copilot', icon: Sparkles, tourId: 'tour-money-copilot', enabled: process.env.NEXT_PUBLIC_MONEY_COPILOT_ENABLED === 'true' },
+      { label: 'Help Centre', href: '/help', icon: CircleHelp, tourId: 'tour-help-centre', enabled: process.env.NEXT_PUBLIC_HELP_ASSISTANT_ENABLED === 'true' },
     ],
   },
 ];
@@ -109,7 +109,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        id={
+                        id={item.tourId ?? (
                           item.href === '/dashboard'
                             ? 'tour-dashboard'
                             : item.href === '/personal'
@@ -119,7 +119,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 : item.href === '/businesses'
                                   ? 'tour-businesses'
                                   : undefined
-                        }
+                        )}
                         onClick={() => {
                           if (window.innerWidth < 768) onClose();
                         }}
