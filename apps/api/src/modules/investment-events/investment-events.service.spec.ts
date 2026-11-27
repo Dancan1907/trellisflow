@@ -345,6 +345,41 @@ describe('InvestmentEventsService', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it('remove: reverses interest income from the linked account', async () => {
+    const interestEvent = {
+      id: 'event-interest',
+      userId: 'user-1',
+      holdingId: 'holding-1',
+      eventType: 'INTEREST',
+      quantity: null,
+      totalAmount: '750',
+      realizedGain: '750',
+      relatedTransactionId: 'tx-interest',
+      date: new Date('2026-11-14'),
+    };
+    prismaMock.investmentEvent.findFirst
+      .mockResolvedValueOnce(interestEvent)
+      .mockResolvedValueOnce(interestEvent);
+    prismaMock.holding.findUnique.mockResolvedValue(mockHolding);
+    prismaMock.investmentEvent.delete.mockResolvedValue({ id: 'event-interest' });
+
+    await service.remove('user-1', 'event-interest');
+
+    expect(prismaMock.holding.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'holding-1' },
+      data: expect.objectContaining({
+        quantity: 100,
+        costBasisTotal: 15000,
+        currentValueTotal: 15000,
+      }),
+    }));
+    expect(prismaMock.transaction.delete).toHaveBeenCalledWith({ where: { id: 'tx-interest' } });
+    expect(prismaMock.account.update).toHaveBeenCalledWith({
+      where: { id: 'account-1' },
+      data: { currentBalance: { increment: -750 } },
+    });
+  });
+
   it('remove: reverses a BUY event', async () => {
     prismaMock.investmentEvent.findFirst
       .mockResolvedValueOnce({
