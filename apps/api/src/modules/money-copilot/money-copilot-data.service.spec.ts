@@ -10,6 +10,7 @@ describe('MoneyCopilotDataService', () => {
     account: { findMany: jest.fn() },
     transaction: { findMany: jest.fn() },
     holding: { findMany: jest.fn() },
+    investmentEvent: { findMany: jest.fn() },
     container: { findMany: jest.fn() },
   };
   const businesses = {
@@ -25,6 +26,7 @@ describe('MoneyCopilotDataService', () => {
     prisma.account.findMany.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
     prisma.holding.findMany.mockResolvedValue([]);
+    prisma.investmentEvent.findMany.mockResolvedValue([]);
     prisma.container.findMany.mockResolvedValue([]);
     service = new MoneyCopilotDataService(
       prisma as unknown as PrismaService,
@@ -135,6 +137,37 @@ describe('MoneyCopilotDataService', () => {
     expect(investments.riskLimitations).toContain(
       'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
     );
+  });
+
+  it('reports realized gains, investment income and capital flows separately by currency', async () => {
+    prisma.investmentEvent.findMany.mockResolvedValue([
+      { eventType: 'SELL', totalAmount: 200, realizedGain: 50, currency: 'KES' },
+      { eventType: 'DIVIDEND', totalAmount: 10, realizedGain: 10, currency: 'KES' },
+      { eventType: 'INTEREST', totalAmount: 5, realizedGain: 5, currency: 'USD' },
+      { eventType: 'CONTRIBUTION', totalAmount: 100, realizedGain: null, currency: 'KES' },
+      { eventType: 'WITHDRAWAL', totalAmount: 25, realizedGain: null, currency: 'KES' },
+    ]);
+
+    const result = await service.buildContext('user-1', 'Analyze my investment portfolio');
+    const investments = result.investments as any;
+
+    expect(investments.investmentEventsByCurrency).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        currency: 'KES', realizedGainLoss: 50, investmentIncome: 10,
+        contributions: 100, withdrawals: 25, eventCount: 4,
+      }),
+      expect.objectContaining({
+        currency: 'USD', realizedGainLoss: 0, investmentIncome: 5,
+        contributions: 0, withdrawals: 0, eventCount: 1,
+      }),
+    ]));
+    expect(prisma.investmentEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        userId: 'user-1',
+        eventType: { in: ['SELL', 'DIVIDEND', 'INTEREST', 'CONTRIBUTION', 'WITHDRAWAL'] },
+      },
+      take: 5001,
+    }));
   });
 
   it('provides a deterministic spending-reduction illustration from recorded expenses', async () => {
