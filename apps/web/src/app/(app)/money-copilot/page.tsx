@@ -178,6 +178,7 @@ export default function MoneyCopilotPage() {
               <div><dt className="text-xs text-fg-tertiary">Type</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.type}</dd></div>
               <div><dt className="text-xs text-fg-tertiary">Amount</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.currency} {actionPreview.preview.amount.toLocaleString()}</dd></div>
               <div><dt className="text-xs text-fg-tertiary">Account</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.account}</dd></div>
+              <div><dt className="text-xs text-fg-tertiary">Category</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.category ?? 'Uncategorized'}</dd></div>
               <div><dt className="text-xs text-fg-tertiary">Date</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.date}</dd></div>
               <div className="sm:col-span-2"><dt className="text-xs text-fg-tertiary">Description</dt><dd className="font-medium text-fg-primary">{actionPreview.preview.description}</dd></div>
             </dl>
@@ -304,7 +305,7 @@ export default function MoneyCopilotPage() {
             </button>
           </div>
           <div className="mt-2 flex items-center justify-center gap-1.5 text-xs text-fg-tertiary">
-            <ShieldCheck size={13} /> Read-only assistance. Review important financial decisions independently.
+            <ShieldCheck size={13} /> Chat answers are read-only. Any transaction requires a separate review and explicit confirmation.
           </div>
         </form>
       </section>
