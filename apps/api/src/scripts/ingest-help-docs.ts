@@ -47,7 +47,7 @@ function chunkDocument(content: string): Chunk[] {
     const heading = line.match(/^#{1,4}\s+(.+)$/);
     if (heading) {
       if (current.body.join('\n').trim()) sections.push(current);
-      current = { heading: heading[1].trim(), body: [] };
+      current = { heading: heading[1]?.trim() || 'Untitled section', body: [] };
     } else current.body.push(line);
   }
   if (current.body.join('\n').trim()) sections.push(current);
