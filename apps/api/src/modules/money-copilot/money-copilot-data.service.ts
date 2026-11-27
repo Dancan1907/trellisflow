@@ -351,6 +351,33 @@ export class MoneyCopilotDataService {
     });
     const holdingsTruncated = fetchedHoldings.length > 5000;
     const holdings = fetchedHoldings.slice(0, 5000);
+    const fetchedEvents = await this.prisma.investmentEvent.findMany({
+      where: {
+        userId,
+        eventType: { in: ['SELL', 'DIVIDEND', 'INTEREST', 'CONTRIBUTION', 'WITHDRAWAL'] },
+      },
+      orderBy: { date: 'desc' },
+      take: 5001,
+      select: { eventType: true, totalAmount: true, realizedGain: true, currency: true },
+    });
+    const eventsTruncated = fetchedEvents.length > 5000;
+    const events = fetchedEvents.slice(0, 5000);
+    const eventGroups = new Map<string, {
+      realizedGainLoss: number; investmentIncome: number;
+      contributions: number; withdrawals: number; eventCount: number;
+    }>();
+    for (const event of events) {
+      const group = eventGroups.get(event.currency) ?? {
+        realizedGainLoss: 0, investmentIncome: 0, contributions: 0, withdrawals: 0, eventCount: 0,
+      };
+      const amount = Number(event.totalAmount);
+      if (event.eventType === 'SELL') group.realizedGainLoss += Number(event.realizedGain ?? 0);
+      if (event.eventType === 'DIVIDEND' || event.eventType === 'INTEREST') group.investmentIncome += amount;
+      if (event.eventType === 'CONTRIBUTION') group.contributions += amount;
+      if (event.eventType === 'WITHDRAWAL') group.withdrawals += amount;
+      group.eventCount++;
+      eventGroups.set(event.currency, group);
+    }
     const groups = new Map<string, {
       costBasis: number; currentValue: number; count: number;
       byAssetClass: Map<string, { value: number; count: number }>;
@@ -413,11 +440,21 @@ export class MoneyCopilotDataService {
         currency: holding.currency, costBasis: Number(holding.costBasisTotal),
         currentValue: Number(holding.currentValueTotal),
       })),
+      investmentEventsByCurrency: Array.from(eventGroups.entries()).map(([currency, group]) => ({
+        currency,
+        realizedGainLoss: this.money(group.realizedGainLoss),
+        investmentIncome: this.money(group.investmentIncome),
+        contributions: this.money(group.contributions),
+        withdrawals: this.money(group.withdrawals),
+        eventCount: group.eventCount,
+      })),
       riskLimitations: [
         'No historical market-price series is queried, so volatility, beta, maximum drawdown and Sharpe ratio are not calculated.',
         'Asset-class allocation and largest-holding concentration are descriptive concentration indicators, not a complete risk assessment.',
         'Unrealized gain is current recorded value minus cost basis; it is not realized profit and excludes fees, taxes and cash flows.',
         ...(holdingsTruncated ? ['The portfolio analysis reached its 5,000-holding safety cap; totals and allocations may be incomplete.'] : []),
+        ...(eventsTruncated ? ['Investment-event analysis reached its 5,000-event safety cap; realized gains and investment income may be incomplete.'] : []),
+        'Realized gain/loss and investment income are reported only from explicitly recorded investment events; missing events are not inferred from current holding values.',
       ],
     };
   }
