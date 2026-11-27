@@ -21,7 +21,7 @@ export class InvestmentEventsService {
     }
 
     // ============================================================
-    // 2. Fetch the holding (required for BUY, SELL, DIVIDEND)
+    // 2. Fetch the holding (required for BUY, SELL, DIVIDEND, INTEREST)
     // ============================================================
     const needsHolding = ['BUY', 'SELL', 'DIVIDEND', 'INTEREST'].includes(dto.eventType);
 
@@ -405,7 +405,7 @@ export class InvestmentEventsService {
 
             // Reverse the balance change based on the original event type
             // BUY / WITHDRAWAL were EXPENSE → balance decreased → we increase it back
-            // SELL / DIVIDEND / CONTRIBUTION were INCOME → balance increased → we decrease it back
+            // SELL / DIVIDEND / INTEREST / CONTRIBUTION were INCOME → balance increased → we decrease it back
             const wasExpense = ['BUY', 'WITHDRAWAL'].includes(event.eventType);
             const balanceReversal = wasExpense
               ? Number(event.totalAmount)
