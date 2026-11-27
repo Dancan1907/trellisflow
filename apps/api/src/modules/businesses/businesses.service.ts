@@ -435,19 +435,10 @@ export class BusinessesService {
 
     const to = query.to ? this.parseDateOnly(query.to) : this.startOfUtcDay(new Date());
     const from = query.from ? this.parseDateOnly(query.from) : this.addDays(to, -29);
-
-    if (from > to) {
-      throw new BadRequestException('`from` must be on or before `to`');
-    }
+    if (from > to) throw new BadRequestException('`from` must be on or before `to`');
 
     const fromKey = this.formatDate(from);
     const toKey = this.formatDate(to);
-
-    // `date` is a PostgreSQL DATE column, but Prisma binds Date parameters as
-    // timestamps. PostgreSQL promotes the DATE column to a timestamp using the
-    // database session timezone (Africa/Nairobi here), which can push the first
-    // or last day of the range outside the comparison. Widen the SQL window by
-    // one day and filter precisely on the date-only value below.
     const transactions = await this.prisma.transaction.findMany({
       where: {
         userId,
@@ -457,64 +448,80 @@ export class BusinessesService {
         deletedAt: null,
         date: { gte: this.addDays(from, -1), lte: this.addDays(to, 1) },
       },
-      include: {
-        category: { select: { id: true, name: true } },
-      },
+      include: { category: { select: { id: true, name: true } } },
     });
 
-    let totalIncome = 0;
-    let totalExpenses = 0;
-
-    const byCategory = new Map<
-      string,
-      {
+    const groups = new Map<string, {
+      income: number;
+      expenses: number;
+      byCategory: Map<string, {
         categoryId: string | null;
         categoryName: string;
         type: 'INCOME' | 'EXPENSE';
         amount: number;
-      }
-    >();
+      }>;
+    }>();
 
     for (const transaction of transactions) {
       const transactionDate = this.formatDate(transaction.date);
       if (transactionDate < fromKey || transactionDate > toKey) continue;
-
       const amount = Number(transaction.amount);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      const currency = transaction.currency;
+      const group = groups.get(currency) ?? {
+        income: 0, expenses: 0, byCategory: new Map(),
+      };
       const type = transaction.type as 'INCOME' | 'EXPENSE';
-
-      if (type === 'INCOME') totalIncome += amount;
-      else totalExpenses += amount;
+      if (type === 'INCOME') group.income += amount;
+      else group.expenses += amount;
 
       const key = `${type}:${transaction.category?.id ?? 'uncategorized'}`;
-      const existing = byCategory.get(key);
-
-      if (existing) {
-        existing.amount += amount;
-      } else {
-        byCategory.set(key, {
+      const category = group.byCategory.get(key);
+      if (category) category.amount += amount;
+      else {
+        group.byCategory.set(key, {
           categoryId: transaction.category?.id ?? null,
           categoryName: transaction.category?.name ?? 'Uncategorized',
           type,
           amount,
         });
       }
+      groups.set(currency, group);
     }
+
+    const byCurrency = Array.from(groups.entries()).map(([currency, group]) => ({
+      currency,
+      totalIncome: this.money(group.income),
+      totalExpenses: this.money(group.expenses),
+      netProfit: this.money(group.income - group.expenses),
+      byCategory: Array.from(group.byCategory.values())
+        .map((entry) => ({ ...entry, amount: this.money(entry.amount) }))
+        .sort((left, right) => {
+          if (left.type !== right.type) return left.type === 'INCOME' ? -1 : 1;
+          return right.amount - left.amount;
+        }),
+    })).sort((left, right) => left.currency.localeCompare(right.currency));
+
+    // Preserve the original top-level response contract in the business's
+    // configured currency. Other currencies remain available in byCurrency.
+    const primary = byCurrency.find((group) => group.currency === container.currency) ?? {
+      currency: container.currency,
+      totalIncome: 0,
+      totalExpenses: 0,
+      netProfit: 0,
+      byCategory: [],
+    };
 
     return {
       businessId: container.id,
       currency: container.currency,
-      from: this.formatDate(from),
-      to: this.formatDate(to),
-      totalIncome: this.money(totalIncome),
-      totalExpenses: this.money(totalExpenses),
-      netProfit: this.money(totalIncome - totalExpenses),
-      byCategory: Array.from(byCategory.values())
-        .map((entry) => ({ ...entry, amount: this.money(entry.amount) }))
-        .sort((a, b) => {
-          // INCOME before EXPENSE, then largest amount first.
-          if (a.type !== b.type) return a.type === 'INCOME' ? -1 : 1;
-          return b.amount - a.amount;
-        }),
+      from: fromKey,
+      to: toKey,
+      totalIncome: primary.totalIncome,
+      totalExpenses: primary.totalExpenses,
+      netProfit: primary.netProfit,
+      byCategory: primary.byCategory,
+      byCurrency,
     };
   }
 
@@ -529,20 +536,23 @@ export class BusinessesService {
     const container = await this.getBusinessWithDetails(userId, id);
     this.assertInternal(container, 'Runway');
 
-    const cashBalance = container.accounts
-      .filter(
-        (account) =>
-          account.category === 'ASSET' &&
-          CASH_ACCOUNT_TYPES.includes(account.accountType as string),
-      )
-      .reduce((sum, account) => sum + Number(account.currentBalance), 0);
+    const cashByCurrency = new Map<string, number>();
+    for (const account of container.accounts) {
+      if (
+        account.category !== 'ASSET' ||
+        !CASH_ACCOUNT_TYPES.includes(account.accountType as string)
+      ) continue;
+      cashByCurrency.set(
+        account.currency,
+        (cashByCurrency.get(account.currency) ?? 0) + Number(account.currentBalance),
+      );
+    }
 
     const windowDays = 90;
     const to = this.startOfUtcDay(new Date());
     const from = this.addDays(to, -(windowDays - 1));
     const fromKey = this.formatDate(from);
     const toKey = this.formatDate(to);
-
     const expenses = await this.prisma.transaction.findMany({
       where: {
         userId,
@@ -550,29 +560,52 @@ export class BusinessesService {
         type: 'EXPENSE',
         status: { in: ['POSTED', 'RECONCILED'] },
         deletedAt: null,
-        // Same DATE/timezone caveat as getPnl: widen, then filter by date-only.
         date: { gte: this.addDays(from, -1), lte: this.addDays(to, 1) },
       },
-      select: { amount: true, date: true },
+      select: { amount: true, date: true, currency: true },
     });
 
-    const totalExpenses = expenses
-      .filter((transaction) => {
-        const transactionDate = this.formatDate(transaction.date);
-        return transactionDate >= fromKey && transactionDate <= toKey;
-      })
-      .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-    const monthlyBurn = totalExpenses / (windowDays / 30);
-    const runwayMonths = monthlyBurn > 0 ? cashBalance / monthlyBurn : null;
+    const expensesByCurrency = new Map<string, number>();
+    for (const transaction of expenses) {
+      const transactionDate = this.formatDate(transaction.date);
+      if (transactionDate < fromKey || transactionDate > toKey) continue;
+      const amount = Number(transaction.amount);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      expensesByCurrency.set(
+        transaction.currency,
+        (expensesByCurrency.get(transaction.currency) ?? 0) + amount,
+      );
+    }
+
+    const currencies = new Set([...cashByCurrency.keys(), ...expensesByCurrency.keys()]);
+    const byCurrency = Array.from(currencies).sort().map((currency) => {
+      const cashBalance = cashByCurrency.get(currency) ?? 0;
+      const totalExpenses = expensesByCurrency.get(currency) ?? 0;
+      const monthlyBurn = totalExpenses / (windowDays / 30);
+      const runwayMonths = monthlyBurn > 0 ? Math.max(0, cashBalance) / monthlyBurn : null;
+      return {
+        currency,
+        cashBalance: this.money(cashBalance),
+        monthlyBurn: this.money(monthlyBurn),
+        runwayMonths: runwayMonths === null ? null : Math.round(runwayMonths * 10) / 10,
+      };
+    });
+    const primary = byCurrency.find((group) => group.currency === container.currency) ?? {
+      currency: container.currency,
+      cashBalance: 0,
+      monthlyBurn: 0,
+      runwayMonths: null,
+    };
 
     return {
       businessId: container.id,
       currency: container.currency,
-      cashBalance: this.money(cashBalance),
-      monthlyBurn: this.money(monthlyBurn),
-      runwayMonths: runwayMonths === null ? null : Math.round(runwayMonths * 10) / 10,
+      cashBalance: primary.cashBalance,
+      monthlyBurn: primary.monthlyBurn,
+      runwayMonths: primary.runwayMonths,
+      byCurrency,
       windowDays,
-      asOf: this.formatDate(to),
+      asOf: toKey,
     };
   }
 
