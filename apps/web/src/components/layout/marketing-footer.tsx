@@ -22,7 +22,6 @@ export function MarketingFooter() {
             <p className="text-sm text-fg-secondary max-w-xs">
               Connected finances. AI-assisted clarity. Better-informed decisions.
             </p>
-            <Link href="/help" className="mt-3 inline-flex text-sm font-medium text-accent-primary hover:underline">Visit the Help Centre</Link>
           </div>
 
           {/* Links */}
