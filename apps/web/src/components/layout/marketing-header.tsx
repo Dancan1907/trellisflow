@@ -17,7 +17,7 @@ export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border-subtle bg-bg-primary/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:px-8">
-        <Link href="/" aria-label="TrellisFlow home"><Logo /></Link>
+        <Logo href="/" />
         <nav className="hidden items-center gap-8 md:flex" aria-label="Main navigation">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className="text-sm font-medium text-fg-secondary transition-colors hover:text-fg-primary">{link.label}</Link>
