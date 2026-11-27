@@ -1,7 +1,7 @@
 ---
 title: Getting started with TrellisFlow
 route: /dashboard
-visibility: authenticated
+visibility: public
 ---
 
 # Getting started with TrellisFlow
