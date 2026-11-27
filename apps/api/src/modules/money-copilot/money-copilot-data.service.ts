@@ -162,11 +162,15 @@ export class MoneyCopilotDataService {
       const spending = await this.getSpendingAnalysis(userId, range);
       const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
       const percentage = match ? Number(match[1]) : null;
+      const expenseReductionRequested =
+        /(reduce|cut|lower|decrease)[\\w\\s]{0,30}(spending|expenses?)/i.test(question) ||
+        /(spending|expenses?)[\\w\\s]{0,30}(reduce|cut|lower|decrease)/i.test(question);
       context.whatIfSimulation = {
+        scenarioType: expenseReductionRequested ? 'EXPENSE_REDUCTION' : 'UNSUPPORTED_SCENARIO',
         basedOn: { from: range.from, to: range.to },
         baselineExpensesByCurrency: spending.totals,
         requestedChangePercent: percentage,
-        result: percentage !== null && percentage >= 0 && percentage <= 100
+        result: expenseReductionRequested && percentage !== null && percentage >= 0 && percentage <= 100
           ? spending.totals.map((item) => ({
               currency: item.currency,
               baselineExpenses: item.totalExpenses,
@@ -177,7 +181,9 @@ export class MoneyCopilotDataService {
           : null,
         limitations: [
           'This is a deterministic illustration using recorded expenses in the selected 30-day period, not a prediction.',
-          'It assumes the requested percentage reduction applies uniformly to the recorded expense total.',
+          ...(expenseReductionRequested
+            ? ['It assumes the requested percentage reduction applies uniformly to the recorded expense total.']
+            : ['This simulation currently supports expense-reduction scenarios only. No business revenue, cost, hiring or investment scenario is calculated.']),
           'No future income, investment returns, inflation, taxes or behavior changes are assumed.',
           ...(percentage === null ? ['Specify a percentage, for example: What if I reduce spending by 10%?'] : []),
         ],
