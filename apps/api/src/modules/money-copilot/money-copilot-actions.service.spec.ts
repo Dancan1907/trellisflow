@@ -1,5 +1,19 @@
 import { BadRequestException, GoneException, NotFoundException } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { MoneyCopilotActionsService } from './money-copilot-actions.service';
+
+const hashActionPayload = (payload: any) => createHash('sha256').update(JSON.stringify({
+  type: payload.type,
+  amount: payload.amount,
+  accountId: payload.accountId,
+  accountName: payload.accountName,
+  currency: payload.currency,
+  categoryId: payload.categoryId ?? null,
+  categoryName: payload.categoryName,
+  date: payload.date,
+  description: payload.description,
+  notes: payload.notes ?? null,
+})).digest('hex');
 
 describe('MoneyCopilotActionsService', () => {
   const prisma: any = {
@@ -43,7 +57,7 @@ describe('MoneyCopilotActionsService', () => {
 
   it('creates a user-scoped, expiring preview and exposes the exact details', async () => {
     const result = await service.preview('user-1', {
-      type: 'EXPENSE', amount: 100, accountId: 'account-1', accountName: 'Main account', currency: 'KES', categoryId: 'category-1', categoryName: 'Food',
+      type: 'EXPENSE', amount: 100, accountId: 'account-1', categoryId: 'category-1',
       date: '2026-11-27', description: ' Groceries ',
     });
 
@@ -80,12 +94,12 @@ describe('MoneyCopilotActionsService', () => {
 
   it('atomically confirms once, updates balance, audits and refreshes the snapshot', async () => {
     const payload = {
-      type: 'EXPENSE', amount: 100, accountId: 'account-1', categoryId: 'category-1',
-      date: '2026-11-27', description: 'Groceries',
+      type: 'EXPENSE', amount: 100, accountId: 'account-1', accountName: 'Main account', currency: 'KES',
+      categoryId: 'category-1', categoryName: 'Food', date: '2026-11-27', description: 'Groceries',
     };
     const action = {
       id: 'action-1', userId: 'user-1', idempotencyKey: 'action-1',
-      payload, payloadHash: require('crypto').createHash('sha256').update(JSON.stringify({ type: payload.type, amount: payload.amount, accountId: payload.accountId, accountName: payload.accountName, currency: payload.currency, categoryId: payload.categoryId ?? null, categoryName: payload.categoryName ?? null, date: payload.date, description: payload.description, notes: payload.notes ?? null })).digest('hex'),
+      payload, payloadHash: hashActionPayload(payload),
       status: 'PENDING', expiresAt: new Date(Date.now() + 60_000),
     };
     prisma.moneyCopilotAction.findFirst.mockResolvedValue(action);
@@ -129,7 +143,7 @@ describe('MoneyCopilotActionsService', () => {
     const payload = { type: 'EXPENSE', amount: 100, accountId: 'account-1', accountName: 'Main account', currency: 'KES', categoryName: null, date: '2026-11-27', description: 'Groceries' };
     const action = {
       id: 'action-1', userId: 'user-1', idempotencyKey: 'action-1', payload,
-      payloadHash: require('crypto').createHash('sha256').update(JSON.stringify({ type: payload.type, amount: payload.amount, accountId: payload.accountId, accountName: payload.accountName, currency: payload.currency, categoryId: payload.categoryId ?? null, categoryName: payload.categoryName ?? null, date: payload.date, description: payload.description, notes: payload.notes ?? null })).digest('hex'),
+      payloadHash: hashActionPayload(payload),
       status: 'PENDING', expiresAt: new Date(Date.now() + 60_000),
     };
     prisma.moneyCopilotAction.findFirst.mockResolvedValue(action);
