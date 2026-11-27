@@ -96,43 +96,44 @@ export function ContainerCards({
     .sort((left, right) => left.currency.localeCompare(right.currency));
 
   return (
-    <div className="space-y-4">
-      <div className="bg-bg-secondary border border-border-subtle rounded-xl p-6">
-        <h2 className="text-base font-semibold text-fg-primary mb-6">
+    <div className="space-y-4 min-w-0">
+      <div className="bg-bg-secondary border border-border-subtle rounded-xl p-5 min-w-0 h-full">
+        <h2 className="text-base font-semibold text-fg-primary mb-5">
           Your Portfolio Overview · {reportingCurrency}
         </h2>
 
-        <div className="flex flex-col sm:flex-row items-center gap-8">
+        <div className="flex items-center gap-4 min-w-0">
           <div
-            className="relative w-36 h-36 shrink-0 rounded-full flex items-center justify-center"
+            className="relative w-28 h-28 shrink-0 rounded-full flex items-center justify-center"
             style={{ background: conicGradient }}
+            aria-label={`Portfolio allocation in ${reportingCurrency}`}
           >
-            <div className="absolute inset-0 m-auto w-24 h-24 bg-bg-secondary rounded-full flex flex-col items-center justify-center">
-              <span className="text-xs text-fg-secondary">Total</span>
-              <span className="text-sm font-bold text-fg-primary">
-                <AmountDisplay value={primary.total} currency={reportingCurrency} />
+            <div className="absolute inset-0 m-auto w-[4.75rem] h-[4.75rem] px-1 bg-bg-secondary rounded-full flex flex-col items-center justify-center overflow-hidden">
+              <span className="text-[10px] leading-tight text-fg-secondary">Total</span>
+              <span className="w-full text-center text-[9px] leading-tight font-bold text-fg-primary break-all">
+                <AmountDisplay value={primary.total} currency={reportingCurrency} className="text-[9px] whitespace-normal break-all" />
               </span>
             </div>
           </div>
 
-          <div className="flex-1 w-full space-y-4">
+          <div className="flex-1 min-w-0 space-y-3">
             {[
               { label: 'Personal', value: primary.personal, color: 'bg-accent-primary' },
               { label: 'Investments', value: primary.investments, color: 'bg-accent-purple' },
               { label: 'Businesses', value: primary.businesses, color: 'bg-accent-gold' },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                  <span className="text-sm text-fg-secondary">{item.label}</span>
+              <div key={item.label} className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.color}`} />
+                  <span className="text-xs text-fg-secondary truncate">{item.label}</span>
                 </div>
-                <div className="text-right">
-                  <span className="text-sm font-medium text-fg-primary">
+                <div className="text-right min-w-0 shrink">
+                  <span className="block text-xs font-semibold text-fg-primary">
                     {getPercent(item.value)}%
                   </span>
-                  <p className="text-xs text-fg-secondary">
-                    <AmountDisplay value={item.value} currency={reportingCurrency} />
-                  </p>
+                  <span className="block text-[10px] leading-tight text-fg-secondary whitespace-normal break-all">
+                    <AmountDisplay value={item.value} currency={reportingCurrency} className="text-[10px] whitespace-normal break-all" />
+                  </span>
                 </div>
               </div>
             ))}
@@ -148,7 +149,7 @@ export function ContainerCards({
           <div className="space-y-3">
             {otherCurrencies.map((group) => (
               <div key={group.currency} className="flex items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-fg-primary">{group.currency}</p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-secondary">
                     <span>Personal: <AmountDisplay value={group.personal} currency={group.currency} /></span>
@@ -156,7 +157,7 @@ export function ContainerCards({
                     <span>Businesses: <AmountDisplay value={group.businesses} currency={group.currency} /></span>
                   </div>
                 </div>
-                <AmountDisplay value={group.total} currency={group.currency} />
+                <span className="shrink-0 text-right"><AmountDisplay value={group.total} currency={group.currency} /></span>
               </div>
             ))}
           </div>
