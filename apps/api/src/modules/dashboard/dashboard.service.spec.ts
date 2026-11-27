@@ -80,6 +80,18 @@ describe('DashboardService (Unit)', () => {
       }));
     });
 
+    it('uses the selected recent activity window for cash flow', async () => {
+      mockPrisma.netWorthSnapshot.findFirst.mockResolvedValue(null);
+      mockPrisma.transaction.findMany.mockResolvedValue([]);
+
+      await service.getSummary('u1', 7);
+
+      const query = mockPrisma.transaction.findMany.mock.calls[0][0];
+      const elapsed = query.where.date.lte.getTime() - query.where.date.gte.getTime();
+      expect(elapsed).toBeGreaterThan(6 * 24 * 60 * 60 * 1000);
+      expect(elapsed).toBeLessThan(7 * 24 * 60 * 60 * 1000);
+    });
+
     it('should handle no snapshot gracefully', async () => {
       mockPrisma.netWorthSnapshot.findFirst.mockResolvedValue(null);
       mockPrisma.transaction.findMany.mockResolvedValue([]);
