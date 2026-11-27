@@ -144,6 +144,9 @@ export class MoneyCopilotDataService {
         'Amounts in different currencies are not converted or added together.',
         'Net worth is taken from the latest saved snapshot and may not reflect changes after its date.',
         'The snapshot headline is expressed only in the user reporting currency; other currencies remain separate in its breakdown and are not converted.',
+        ...(snapshot && !snapshotBreakdown?.byCurrency
+          ? ['The latest saved snapshot predates the per-currency breakdown and may need to be refreshed before its headline can be trusted for multi-currency accounts.']
+          : []),
         'Account balances are current account records and are not the same as a historical net-worth snapshot.',
         'Transfers are excluded from income and expense cash-flow totals.',
         ...(accountsTruncated ? ['The account-balance overview reached its 100-account safety cap and may be incomplete.'] : []),
