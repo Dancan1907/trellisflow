@@ -270,7 +270,8 @@ export class MoneyCopilotDataService {
     for (const holding of holdings) {
       const group = groups.get(holding.currency) ?? {
         costBasis: 0, currentValue: 0, count: 0,
-        byAssetClass: new Map(), byHolding: [],
+        byAssetClass: new Map<string, { value: number; count: number }>(),
+        byHolding: [] as Array<{ name: string; symbol: string | null; value: number }>,
       };
       const cost = Number(holding.costBasisTotal);
       const value = Number(holding.currentValueTotal);
