@@ -162,12 +162,13 @@ export class MoneyCopilotDataService {
       const match = question.match(/(\d{1,2}(?:\.\d+)?)\s*%/);
       const percentage = match ? Number(match[1]) : null;
       const validPercentage = percentage !== null && percentage >= 0 && percentage <= 100;
-      const asksReduction = /\b(reduce|cut|lower|decrease)\b/i.test(question);
-      const asksIncrease = /\b(increase|raise|grow|rise)\b/i.test(question);
-      const asksDrop = /\b(drop|fall|decline|decrease|reduce|cut)\b/i.test(question);
-      const asksGrowth = /\b(increase|raise|grow|rise)\b/i.test(question);
+      // Match natural-language inflections (e.g. increases, drops, growing), not only base verbs.
+      const asksReduction = /\b(reduc|cut|lower|decreas)\w*\b/i.test(question);
+      const asksIncrease = /\b(increas|rais|grow|ris)\w*\b/i.test(question);
+      const asksDrop = /\b(drop|fall|declin|decreas|reduc|cut)\w*\b/i.test(question);
+      const asksGrowth = asksIncrease;
       const isBusinessRevenue = /\b(business|company|revenue|sales)\b/i.test(question) &&
-        /\b(revenue|sales)\b/i.test(question) && (asksReduction || asksIncrease || /\b(drop|fall|decline)\b/i.test(question));
+        /\b(revenue|sales)\b/i.test(question) && (asksReduction || asksIncrease || asksDrop);
       const isBusinessExpense = /\b(business|company)\b/i.test(question) &&
         /\b(expenses?|costs?)\b/i.test(question) && (asksReduction || asksIncrease);
       const isPortfolioShock = /\b(portfolio|investments?|holdings)\b/i.test(question) &&
@@ -205,7 +206,7 @@ export class MoneyCopilotDataService {
             const income = Number(pnl.income);
             const expenses = Number(pnl.expenses);
             const revenueMultiplier = isBusinessRevenue
-              ? (asksReduction || /\b(drop|fall|decline)\b/i.test(question)
+              ? (asksReduction || asksDrop
                 ? 1 - percentage! / 100 : 1 + percentage! / 100)
               : 1;
             const expenseMultiplier = isBusinessExpense
