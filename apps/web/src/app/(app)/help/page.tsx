@@ -74,7 +74,7 @@ export default function HelpPage() {
               User Guide
             </h2>
             <nav className="space-y-4">
-              {SECTIONS.map((section) => (
+              {SECTIONS.filter((section) => isAuthenticated || section.title === 'Getting Started').map((section) => (
                 <div key={section.title}>
                   <div className="flex items-center gap-2 px-2 mb-2">
                     <section.icon size={14} className="text-fg-tertiary" />
