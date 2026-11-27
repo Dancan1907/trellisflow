@@ -95,10 +95,28 @@ export function OnboardingManager() {
     {
       target: '#tour-analyze',
       content:
-        'Finally, the Analyze section gives you deep reports and automated insights to help you make better financial decisions.',
+        'Analyze your finances with reports, automated insights, and cash-flow forecasts. Forecast balances are calculated by deterministic rules using your recorded data, not invented by AI.',
       placement: 'right',
       skipBeacon: true,
     },
+    ...(process.env.NEXT_PUBLIC_MONEY_COPILOT_ENABLED === 'true'
+      ? [{
+          target: '#tour-money-copilot',
+          content:
+            'Money Copilot explains your recorded financial position in natural language and can run supported what-if scenarios. Its chat analysis is read-only; any supported transaction action requires a separate preview and your explicit confirmation.',
+          placement: 'right' as const,
+          skipBeacon: true,
+        }]
+      : []),
+    ...(process.env.NEXT_PUBLIC_HELP_ASSISTANT_ENABLED === 'true'
+      ? [{
+          target: '#tour-help-centre',
+          content:
+            'The Help Assistant searches approved TrellisFlow documentation with retrieval and gives answers with source references. It helps with product questions, not private financial analysis.',
+          placement: 'right' as const,
+          skipBeacon: true,
+        }]
+      : []),
   ];
 
   if (isLoading) return null;
