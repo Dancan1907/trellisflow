@@ -21,7 +21,6 @@ import {
   PanelLeftClose,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/auth/auth-store';
 import { Logo } from '@/components/shared/logo';
 
 const SECTIONS = [
@@ -78,21 +77,11 @@ const SECTIONS = [
 
 export default function HelpPage() {
   const [activeSection, setActiveSection] = useState('introduction');
-  const isAuthenticated = Boolean(useAuthStore((state) => state.token));
 
   return (
     <>
-      {!isAuthenticated && (
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border-subtle bg-bg-primary px-5 md:px-8">
-          <Logo href="/" />
-          <nav className="flex items-center gap-3" aria-label="Public navigation">
-            <Link href="/login" className="text-sm font-medium text-fg-secondary hover:text-fg-primary">Log in</Link>
-            <Link href="/signup" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-semibold text-white">Get started</Link>
-          </nav>
-        </header>
-      )}
       <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto pb-20">
-      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">{isAuthenticated ? "Use the Help Assistant to ask questions and find the right TrellisFlow page." : "Sign in to unlock the complete user guide and the Help Assistant."}</p>{!isAuthenticated && <Link href="/login" className="mt-2 inline-flex text-sm font-semibold text-accent-primary">Sign in →</Link>}</section>
+      <section className="w-full rounded-xl border border-accent-primary/30 bg-bg-secondary p-4 lg:hidden"><p className="text-sm font-semibold text-fg-primary">Need help finding something?</p><p className="mt-1 text-xs text-fg-secondary">"Use the Help Assistant to ask questions and find the right TrellisFlow page."</p></section>
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-64 shrink-0">
         <div className="sticky top-24 space-y-6">
@@ -132,14 +121,14 @@ export default function HelpPage() {
           </div>
 
           {/* Quick Actions */}
-          {isAuthenticated && <div className="bg-bg-secondary border border-border-subtle rounded-xl p-4 space-y-2">
+          <div className="bg-bg-secondary border border-border-subtle rounded-xl p-4 space-y-2">
             <button
               onClick={() => (window.location.href = '/dashboard?tour=true')}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-fg-primary bg-bg-tertiary rounded-md hover:bg-border-subtle transition-colors"
             >
               <PlayCircle size={16} className="text-accent-primary" /> Restart Quick Tour
             </button>
-          </div>}
+          </div>
         </div>
       </aside>
 
@@ -203,8 +192,9 @@ export default function HelpPage() {
           <p className="text-fg-secondary leading-relaxed mb-4">
             A <strong>Container</strong> is simply a bucket that holds a specific type of financial
             data. By keeping your Personal money, Investments, and Business finances in separate
-            containers, TrellisFlow can give you distinct reports for each while still rolling them
-            contribute to the reporting-currency net-worth view, while other currencies remain visible in separate totals.
+            containers, TrellisFlow can give you distinct reports for each while still bringing
+            eligible balances into the reporting-currency net-worth view. Other currencies remain
+            visible in separate totals.
           </p>
           <ul className="list-disc list-inside text-fg-secondary space-y-2 ml-2">
             <li>
@@ -237,7 +227,7 @@ export default function HelpPage() {
 
         <hr className="border-border-subtle" />
 
-        {/* Full product guide is public so visitors can read the documentation before signing in. */}
+        {/* Signed-in product guide. */}
         {/* Personal Finance */}
         <section id="personal" className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-4">
