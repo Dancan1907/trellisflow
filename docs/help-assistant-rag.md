@@ -12,7 +12,7 @@ The Help Assistant is an authenticated, documentation-only product guide. It doe
 4. PostgreSQL/pgvector retrieves the six closest documentation chunks using cosine distance.
 5. Chunks outside the relevance threshold are discarded. If none remain, the API returns a no-answer response without calling the generation model.
 6. The existing server-side AI provider generates a JSON answer and numeric source references.
-7. The API validates source references against the retrieved result set, resolves explicit page-navigation requests against a canonical destination map (rather than trusting a document's default route), and only returns routes from a fixed allowlist.
+7. The API validates source references against the retrieved result set. If the model supplies no valid citation, its generated answer is withheld and a grounded no-answer response is returned. Explicit page-navigation requests are resolved against a canonical destination map (rather than trusting a document's default route), and only routes from a fixed allowlist are returned.
 8. Token usage metadata is recorded without storing the question, chat history or retrieved content.
 
 ## Document ingestion
