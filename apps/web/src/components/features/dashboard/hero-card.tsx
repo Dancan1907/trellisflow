@@ -99,9 +99,7 @@ export function HeroCard({ isLoading, data }: HeroCardProps) {
               <h2 className="text-2xl font-bold text-fg-primary mb-1">
                 <AmountDisplay value={card.value} currency={data.currency} />
               </h2>
-              <p className="text-xs text-accent-primary flex items-center gap-1 font-medium">
-                <TrendingUp size={12} /> +0% vs last month
-              </p>
+
             </div>
           </div>
         ))}
