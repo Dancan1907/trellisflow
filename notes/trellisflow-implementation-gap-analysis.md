@@ -52,7 +52,7 @@ The default branch already contains implementation areas for all seven phases:
 
 The following code changes have been made on `complete-implementation-gap-closure`. They remain **unverified until the current branch's CI and local validation complete**; related checklist items below stay unchecked until evidence is available.
 
-- **M-Pesa duplicate race handling:** transaction and transfer writers translate unique-constraint races on receipt fingerprints or M-Pesa references into explicit conflict responses. Regression coverage simulates the database uniqueness race.
+- **M-Pesa duplicate race handling:** transaction and transfer writers translate unique-constraint races on receipt fingerprints or M-Pesa references into explicit conflict responses. Unit coverage and a real PostgreSQL concurrency integration test cover duplicate M-Pesa references and idempotent retries.
 - **Natural-language confirmation retries:** income/expense and paired-transfer writes accept a per-user UUID idempotency key, compare replay payloads, return the original result for matching retries, and reject key reuse with altered details. The review form reuses one key across retries.
 - **Help Assistant grounding:** generated answers without a valid citation to a retrieved approved document are withheld in favor of a no-answer response.
 - **Money Copilot safety and analysis:** confirmed-action endpoints now fail closed behind `AI_MONEY_COPILOT_ENABLED`; scenario percentages accept the 0–100 boundary and reject negative/out-of-range values; account, portfolio-holding, business and investment-event safety caps disclose truncation.
@@ -60,7 +60,7 @@ The following code changes have been made on `complete-implementation-gap-closur
 - **Business and consolidated accounting correctness:** P&L and runway exclude pending entries and calculate per currency. Business net worth is grouped by currency; top-level totals represent only the configured business currency. Internal-to-external conversion is blocked when account currencies differ from that configured currency. Net-worth snapshots now use the user's reporting currency for headline totals, preserve per-currency breakdowns, and include open investment holding values separately from linked investment-account cash. Dashboard wealth, container cards and cash flow now use reporting-currency/per-currency data rather than summing unlike currencies. The business detail UI displays additional-currency P&L, runway and net-worth values separately.
 - **Documentation/configuration:** natural-language drafts default to disabled in the API environment example; Money Copilot and help documentation describe the implemented gates, currency behavior and investment event handling.
 
-No Prisma schema or migration changes were made. The existing per-user transaction idempotency and duplicate-import unique constraints are reused. The Help Centre source document was updated; its RAG index must be re-ingested by the repository owner in the intended database environment.
+No Prisma schema or migration changes were made. The existing per-user transaction idempotency and duplicate-import unique constraints are reused. The Help Centre source document was updated; its RAG index must be re-ingested by the repository owner in the intended database environment. Investment-event UI exposes Interest and labels dividend/interest income separately from realized sale gains/losses.
 
 ## 3. Phase 1 — M-Pesa SMS and receipt parser
 
