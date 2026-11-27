@@ -231,7 +231,7 @@ describe('BusinessesService (Unit)', () => {
           date: new Date('2026-11-20'),
           category: { id: 'cat-2', name: 'Rent' },
         },
-        { type: 'EXPENSE', amount: '500', date: new Date('2026-11-30'), category: null },
+        { type: 'EXPENSE', amount: '500', currency: 'KES', date: new Date('2026-11-30'), category: null },
         // Rows inside the widened SQL window but outside the requested range.
         {
           type: 'INCOME',
