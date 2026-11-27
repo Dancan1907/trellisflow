@@ -70,6 +70,67 @@ describe('Transactions (Integration)', () => {
     await prisma.$disconnect();
   });
 
+  it('allows only one write when duplicate M-Pesa confirmations race', async () => {
+    const reference = `RACE-${randomUUID()}`;
+    const before = Number((await prisma.account.findUnique({ where: { id: accountId } }))?.currentBalance);
+
+    const results = await Promise.allSettled([
+      service.create(testUserId, {
+        type: 'INCOME',
+        amount: 100,
+        date: '2026-11-20',
+        description: 'Concurrent M-Pesa confirmation',
+        accountId,
+        mpesaReference: reference,
+      }),
+      service.create(testUserId, {
+        type: 'INCOME',
+        amount: 100,
+        date: '2026-11-20',
+        description: 'Concurrent M-Pesa confirmation',
+        accountId,
+        mpesaReference: reference,
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find((result) => result.status === 'rejected') as PromiseRejectedResult;
+    expect(rejected.reason.getStatus()).toBe(409);
+
+    const matching = await prisma.transaction.findMany({
+      where: { userId: testUserId, mpesaReference: reference },
+    });
+    expect(matching).toHaveLength(1);
+    const account = await prisma.account.findUnique({ where: { id: accountId } });
+    expect(Number(account?.currentBalance)).toBe(before + 100);
+  });
+
+  it('returns one transaction for concurrent retries with the same idempotency key', async () => {
+    const idempotencyKey = randomUUID();
+    const before = Number((await prisma.account.findUnique({ where: { id: accountId } }))?.currentBalance);
+    const input = {
+      type: 'EXPENSE' as const,
+      amount: 75,
+      date: '2026-11-21',
+      description: 'Idempotent retry',
+      accountId,
+      idempotencyKey,
+    };
+
+    const results = await Promise.all([
+      service.create(testUserId, input),
+      service.create(testUserId, input),
+    ]);
+
+    expect(results[0].id).toBe(results[1].id);
+    const matching = await prisma.transaction.findMany({
+      where: { userId: testUserId, idempotencyKey },
+    });
+    expect(matching).toHaveLength(1);
+    const account = await prisma.account.findUnique({ where: { id: accountId } });
+    expect(Number(account?.currentBalance)).toBe(before - 75);
+  });
+
   it('should create a transaction and atomically update the account balance', async () => {
     await service.create(testUserId, {
       type: 'EXPENSE',
