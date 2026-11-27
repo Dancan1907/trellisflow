@@ -209,6 +209,7 @@ describe('BusinessesService (Unit)', () => {
     });
   });
 
+  describe('multi-currency net worth', () => {
     it('keeps business net worth separate by account currency', async () => {
       mockPrisma.container.findFirst.mockResolvedValue(container({
         accounts: [
